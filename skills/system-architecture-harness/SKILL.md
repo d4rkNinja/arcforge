@@ -301,43 +301,15 @@ Use C4-style context and container views for static structure, dynamic/sequence 
 
 ## Decision Flow
 
-```dot
-digraph architecture_decision_flow {
-  rankdir=TB;
-  "Evidence and scope known?" [shape=diamond];
-  "Inspect or state assumptions" [shape=box];
-  "ASRs measurable?" [shape=diamond];
-  "Quantify requirements" [shape=box];
-  "Invariants and ownership explicit?" [shape=diamond];
-  "Model states and correctness" [shape=box];
-  "Smallest architecture satisfies ASRs?" [shape=diamond];
-  "Add only justified complexity" [shape=box];
-  "Failure, security, operations, cost covered?" [shape=diamond];
-  "Complete cross-cutting design" [shape=box];
-  "Critical gate failed?" [shape=diamond];
-  "Revise design" [shape=box];
-  "Record ADRs and validation plan" [shape=doublecircle];
+Apply this decision loop without requiring a diagram renderer or executable notation:
 
-  "Evidence and scope known?" -> "Inspect or state assumptions" [label="no"];
-  "Inspect or state assumptions" -> "ASRs measurable?";
-  "Evidence and scope known?" -> "ASRs measurable?" [label="yes"];
-  "ASRs measurable?" -> "Quantify requirements" [label="no"];
-  "Quantify requirements" -> "Invariants and ownership explicit?";
-  "ASRs measurable?" -> "Invariants and ownership explicit?" [label="yes"];
-  "Invariants and ownership explicit?" -> "Model states and correctness" [label="no"];
-  "Model states and correctness" -> "Smallest architecture satisfies ASRs?";
-  "Invariants and ownership explicit?" -> "Smallest architecture satisfies ASRs?" [label="yes"];
-  "Smallest architecture satisfies ASRs?" -> "Add only justified complexity" [label="no"];
-  "Add only justified complexity" -> "Failure, security, operations, cost covered?";
-  "Smallest architecture satisfies ASRs?" -> "Failure, security, operations, cost covered?" [label="yes"];
-  "Failure, security, operations, cost covered?" -> "Complete cross-cutting design" [label="no"];
-  "Complete cross-cutting design" -> "Critical gate failed?";
-  "Failure, security, operations, cost covered?" -> "Critical gate failed?" [label="yes"];
-  "Critical gate failed?" -> "Revise design" [label="yes"];
-  "Revise design" -> "Invariants and ownership explicit?";
-  "Critical gate failed?" -> "Record ADRs and validation plan" [label="no"];
-}
-```
+1. Determine whether evidence and scope are known. If not, inspect available evidence or state explicit assumptions.
+2. Determine whether the ASRs are measurable. If not, quantify the requirements before continuing.
+3. Determine whether invariants and ownership are explicit. If not, model states, transitions, enforcement points, and accountable owners.
+4. Test whether the smallest proposed architecture satisfies the ASRs. Add complexity only when a named requirement, invariant, risk, or constraint justifies it.
+5. Check failure behavior, security, operations, and cost. Complete every missing cross-cutting concern.
+6. Evaluate all critical gates. If any gate fails, revise the design and repeat from invariants and ownership.
+7. When no critical gate remains open, record the ADRs, validation plan, residual risks, and reversal triggers.
 
 ## Hard Decision Clauses
 
@@ -396,16 +368,20 @@ digraph architecture_decision_flow {
 
 Before calling the architecture complete:
 
-1. Run the scorecard in `references/12-architecture-review-scorecard.md`.
-2. Run `python scripts/validate_architecture.py <architecture.md> --strict` when a Markdown spec exists.
-3. Confirm all calculations have units and assumptions.
-4. Trace every ASR to a design decision and validation method.
-5. Walk every critical flow through success, duplicate, timeout, partial failure, failover, and recovery.
-6. Confirm every stateful component has ownership, consistency, backup, restore, retention, and migration semantics.
-7. Confirm every interface has auth, validation, versioning, deadlines, errors, idempotency, and observability where applicable.
-8. Confirm no critical gate or red flag remains open without an owner-approved exception.
-9. Distinguish measured evidence from estimates and unresolved assumptions.
-10. End with the smallest implementation slice that can validate the riskiest assumptions.
+1. Read every criterion in `references/12-architecture-review-scorecard.md` and assess only evidence visible in the supplied architecture, repository, measurements, or test records.
+2. For each criterion, assign 0%, 25%, 50%, 75%, or 100% of its available points according to the evidence-level definitions; cite the evidence or mark it missing.
+3. Add the earned points, round as directed by the scorecard, and keep the numeric result separate from the critical-gate decision.
+4. Inspect every critical gate and hard decision clause individually. Treat any unresolved applicable gate as a blocker regardless of score.
+5. Confirm all calculations have units and assumptions.
+6. Trace every ASR to a design decision and validation method.
+7. Walk every critical flow through success, duplicate, timeout, partial failure, failover, and recovery.
+8. Confirm every stateful component has ownership, consistency, backup, restore, retention, and migration semantics.
+9. Confirm every interface has authentication, authorization, validation, versioning, deadlines, errors, idempotency, and observability where applicable.
+10. Distinguish measured evidence from estimates and unresolved assumptions; state confidence and evidence limitations.
+11. Confirm no critical gate or red flag remains open without an accountable, explicitly documented exception.
+12. End with the smallest implementation slice that can validate the riskiest assumptions.
+
+The bundled `scripts/validate_architecture.py` file is a maintainer-only repository test helper. Do not require the user or agent runtime to execute it as part of this skill workflow.
 
 ## Reusable Assets
 

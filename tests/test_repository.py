@@ -46,6 +46,21 @@ class RepositoryContractTests(unittest.TestCase):
             self.assertIn("## Output Contract", body)
             self.assertIn("## Stop Conditions", body)
 
+    def test_primary_skills_are_instruction_only(self) -> None:
+        executable_fence = re.compile(
+            r"^```(?:bash|sh|shell|python|javascript|typescript|java|go|rust|ruby|php|powershell|cmd|dot)\s*$",
+            re.MULTILINE | re.IGNORECASE,
+        )
+        required_script_command = re.compile(
+            r"\b(?:run|execute|invoke)\b[^\n]*\b(?:python|node|npx|bash|shell|powershell)\b[^\n]*\.(?:py|js|mjs|cjs|sh|ps1)\b",
+            re.IGNORECASE,
+        )
+        for name in EXPECTED_SKILLS:
+            skill_path = ROOT / "skills" / name / "SKILL.md"
+            text = skill_path.read_text(encoding="utf-8")
+            self.assertIsNone(executable_fence.search(text), name)
+            self.assertIsNone(required_script_command.search(text), name)
+
     def test_codex_interface_metadata_is_present_and_valid(self) -> None:
         for name in EXPECTED_SKILLS:
             metadata_path = ROOT / "skills" / name / "agents" / "openai.yaml"

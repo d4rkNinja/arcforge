@@ -161,21 +161,23 @@ Verify:
 
 ### Phase 8 — Score and Decide
 
-1. Score visible evidence using the 100-point scorecard.
-2. Run the deterministic scanner when the input is Markdown:
-
-```bash
-python scripts/score_architecture.py path/to/architecture.md --format json
-```
-
-3. List critical findings independently of the numeric score.
-4. Assign one verdict:
+1. Read every criterion in `references/01-review-scorecard.md` and score only evidence visible in the supplied architecture, repository, measurements, or test records.
+2. For each scorecard criterion:
+   - cite the exact evidence;
+   - mark the criterion as satisfied, partially satisfied, contradicted, or missing;
+   - award points in proportion to the visible evidence; and
+   - record the evidence gap when full credit is not justified.
+3. Add the category points to produce a score out of 100. Recheck the arithmetic and do not infer evidence from document length, technology choice, or author confidence.
+4. Review every applicable pattern in `references/02-critical-failure-patterns.md` independently of the score. List each critical finding with its evidence, failure mechanism, impact, required condition, and owner.
+5. Assign one verdict:
    - **PASS** — score at least 85, no critical blocker, validation evidence is sufficient;
    - **CONDITIONAL** — score 60–84 or material evidence remains, with explicit conditions and owners;
    - **BLOCK** — critical blocker exists or score is below 60.
-5. State confidence and evidence limitations.
+6. State confidence as high, medium, or low and explain what evidence supports or limits that confidence.
+7. State which conclusions are verified facts, which are inferences, and which remain unvalidated claims.
+8. Report the numeric score, critical findings, and verdict as separate fields so a high score can never hide a blocker.
 
-The script is a structural aid, not a correctness or compliance certificate.
+Perform this review from the instructions and supplied evidence. Do not require Python, shell commands, or any programming-language runtime. The bundled `scripts/score_architecture.py` file is retained only as a maintainer test helper; it is not part of the installed skill workflow and cannot establish correctness or compliance.
 
 ## Critical Blockers
 

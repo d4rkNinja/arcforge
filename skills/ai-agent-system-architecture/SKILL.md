@@ -169,7 +169,7 @@ Each tool contract must define:
 - audit fields and redaction;
 - approval policy and emergency disable path.
 
-Use capability-scoped tools. Prefer `refund_order(order_id, amount)` over generic shell, SQL, browser, or HTTP access.
+Use capability-scoped tools. Prefer a narrowly defined refund capability that accepts only an order identifier and permitted amount over generic shell, database, browser, or network access.
 
 **Gate 5:** Consequential or irreversible actions require deterministic policy checks and explicit human approval unless a documented authority policy proves otherwise.
 

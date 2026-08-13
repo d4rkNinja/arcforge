@@ -23,6 +23,8 @@ ArcForge is deliberately portable. Normal installation and use do not require:
 - a provider API key; or
 - Python.
 
+All three installed skills operate through natural-language instructions. They inspect supplied evidence, apply their decision rules and scorecards, and produce the required artifact without invoking Python, shell commands, JavaScript, or another programming-language runtime.
+
 The word `harness` in `system-architecture-harness` is part of the stable skill identifier. It does not indicate a required runtime configuration.
 
 ## Included skills
@@ -219,15 +221,9 @@ To include a real Skills CLI discovery and temporary Claude Code/Codex installat
 python scripts/doctor.py --skills-cli
 ```
 
-The doctor validates frontmatter, Codex metadata, resource navigation, links, line limits, portable-only layout, evaluation cases, and positive/negative architecture-scanner fixtures. The optional CLI check confirms that all three source skills are discoverable and install into temporary `.claude/skills` and `.agents/skills` directories.
+The doctor validates frontmatter, Codex metadata, resource navigation, links, line limits, instruction-only skill workflows, portable-only layout, evaluation cases, and positive/negative architecture fixtures. The optional CLI check confirms that all three source skills are discoverable and install into temporary `.claude/skills` and `.agents/skills` directories.
 
-Run the architecture scanner directly against a Markdown specification when needed:
-
-```bash
-python skills/architecture-review-gate/scripts/score_architecture.py path/to/architecture.md --format json
-```
-
-The scanner is a structural aid. It is not a correctness, security, compliance, scalability, recovery, or operational-readiness certificate.
+The architecture skills perform scoring and verification directly from their written instructions and referenced scorecards. Bundled scripts are retained only for deterministic repository maintenance and fixture testing; installed skill workflows do not ask users or agents to execute them. Repository checks do not certify correctness, security, compliance, scalability, recovery, or operational readiness.
 
 ## Behavioral evaluation
 
