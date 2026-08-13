@@ -1,13 +1,6 @@
 ---
 name: ai-agent-system-architecture
-description: Use when designing, reviewing, or operating production AI systems involving LLMs, RAG, model routing, memory, tools, autonomous agents, multi-agent orchestration, human approval, evaluation, safety, latency, or inference cost.
-license: MIT
-compatibility: Works with Agent Skills-compatible coding agents, including Claude Code and Codex, and does not require a particular model provider or agent framework.
-metadata:
-  author: d4rkninja
-  version: "0.1.0"
-  domain: ai-agent-architecture
-  standard: agentskills.io
+description: "Use when creating or changing an AI/LLM system architecture: RAG, model routing, memory, tool use, autonomous or multi-agent workflows, safety, evaluation, latency, cost, or rollout. Trigger when model, data, policy, tool, or approval boundaries are central. For non-AI architecture use system-architecture-harness; for an independent review use architecture-review-gate."
 ---
 
 # AI and Agent System Architecture
@@ -292,6 +285,8 @@ Unless the user requests a narrower artifact, produce:
 12. **Rollout, rollback, cost model, ADRs, risks, and smallest validation slice.**
 
 Use [AI system specification template](assets/ai-system-spec-template.md), [tool contract template](assets/tool-contract-template.md), and [evaluation plan template](assets/evaluation-plan-template.md) when a file artifact is required.
+
+Use the [governed support-agent example](examples/governed-support-agent.md) when a concrete end-to-end reference is useful.
 
 ## Stop Conditions
 

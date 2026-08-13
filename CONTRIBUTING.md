@@ -5,16 +5,19 @@
 1. Open an issue or change description identifying the observed activation failure, missing architecture case, or standards update.
 2. Add a failing repository test or behavioral case under `tests/` or `evals/` before changing behavior.
 3. Make the smallest focused change to a skill, reference, asset, optional helper, validator, or documentation.
-4. Run `python scripts/doctor.py` and `npx skills add . --list`.
+4. Run `python scripts/doctor.py`; when network access is available, also run `python scripts/doctor.py --skills-cli`.
 5. Describe evidence, compatibility impact, and any agent-specific checks that were not executed.
 
 ## Skill requirements
 
 - Directory and frontmatter `name` match.
 - `description` begins with `Use when` and contains concrete activation signals.
-- `license: MIT` and semantic `metadata.version` remain present.
+- Primary frontmatter stays portable: use only `name` and `description`.
+- Each skill includes `agents/openai.yaml` with valid Codex display metadata; keep it optional to other runtimes.
+- Keep the repository-level MIT license and `VERSION` as the source of legal and release metadata.
 - Primary `SKILL.md` remains at 500 lines or fewer.
 - Local links resolve from the file that contains them.
+- Long reference files include a contents section and every bundled resource is named from `SKILL.md`.
 - Deep reference material remains one link away from the primary skill when practical.
 - Optional helpers document their dependencies and fail with useful messages.
 

@@ -2,6 +2,27 @@
 
 Interfaces are long-lived contracts and failure boundaries. Design them around semantics, compatibility, deadlines, identity, and recovery—not endpoint aesthetics alone.
 
+## Contents
+
+- 1. Interaction Choice
+- 2. API Contract Checklist
+- 3. Resource and Command Semantics
+- 4. Idempotency
+- 5. Error Model
+- 6. Deadlines, Timeouts, Retries, and Cancellation
+- 7. Pagination and Queries
+- 8. Rate Limiting and Quotas
+- 9. Event Contract
+- 10. Message Delivery Semantics
+- 11. Ordering
+- 12. Queue and Consumer Design
+- 13. Transactional Outbox Flow
+- 14. Long-Running Workflows
+- 15. WebSocket/SSE Real-Time Design
+- 16. Webhooks
+- 17. Contract Testing and Governance
+- 18. Common Mistakes
+
 ## 1. Interaction Choice
 
 | Interaction | Use when | Key design obligations |

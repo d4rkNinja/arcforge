@@ -1,13 +1,6 @@
 ---
 name: architecture-review-gate
-description: Use when independently reviewing an architecture specification, RFC, diagram, migration plan, production-readiness proposal, or system-design decision for correctness, evidence, risk, operability, and release blockers.
-license: MIT
-compatibility: Works with Agent Skills-compatible coding agents, including Claude Code and Codex; Python 3.10 or newer is optional for deterministic Markdown scoring.
-metadata:
-  author: d4rkninja
-  version: "0.1.0"
-  domain: architecture-review
-  standard: agentskills.io
+description: "Use when independently reviewing an existing architecture specification, RFC, ADR, diagram, migration plan, AI/agent design, or production-readiness proposal. Trigger for adversarial evidence checks, critical blockers, security, reliability, operability, and release approval conditions. For designing a new system use system-architecture-harness or ai-agent-system-architecture."
 ---
 
 # Architecture Review Gate

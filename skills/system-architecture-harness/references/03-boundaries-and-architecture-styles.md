@@ -2,6 +2,21 @@
 
 Choose boundaries and topology from domain integrity, ownership, deployment, scaling, failure, security, and lifecycle needs—not fashion.
 
+## Contents
+
+- 1. Start with Context
+- 2. Domain and Capability Boundaries
+- 3. Architecture Style Decision Table
+- 4. Modular Monolith as Default Starting Point
+- 5. Microservice Boundary Contract
+- 6. Control Plane vs Data Plane
+- 7. Synchronous vs Asynchronous Boundaries
+- 8. Dependency Direction
+- 9. Multi-Tenancy Models
+- 10. Build vs Buy
+- 11. Team and Ownership Topology
+- 12. Boundary Review Questions
+
 ## 1. Start with Context
 
 Identify:

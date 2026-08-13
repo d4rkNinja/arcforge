@@ -1,0 +1,4 @@
+interface:
+  display_name: "System Architecture"
+  short_description: "Evidence-backed system architecture decisions"
+  default_prompt: "Use $system-architecture-harness to design an evidence-backed production architecture."

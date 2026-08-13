@@ -1,13 +1,6 @@
 ---
 name: system-architecture-harness
-description: Use when designing, reviewing, scaling, migrating, or documenting production software systems where requirements, workload, data ownership, consistency, distributed workflows, reliability, security, performance, cost, or operational readiness must be explicit and evidence-backed.
-license: MIT
-compatibility: Works with Agent Skills-compatible coding agents, including Claude Code and Codex; Python 3.10 or newer is optional for bundled validation.
-metadata:
-  author: d4rkninja
-  version: "0.1.0"
-  domain: system-architecture
-  standard: agentskills.io
+description: "Use when creating or changing a production software architecture: greenfield design, system decomposition, migration, scaling, or reliability/security planning. Trigger for requirements, workload, data ownership, APIs, distributed workflows, operations, and cost. For AI-first architecture use ai-agent-system-architecture; for an independent review of an existing proposal use architecture-review-gate."
 ---
 
 # System Architecture Harness
@@ -422,6 +415,6 @@ Before calling the architecture complete:
 - Threat model: `assets/threat-model-template.md`
 - Risk register: `assets/risk-register-template.md`
 - Failure matrix: `assets/failure-mode-template.md`
+- API/event contract: `assets/api-event-contract-template.md`
 - Review checklist: `assets/design-review-checklist.md`
 - Worked example: `examples/worked-example-order-platform.md`
-- Pressure tests: `tests/pressure-scenarios.md`

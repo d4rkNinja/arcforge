@@ -2,6 +2,21 @@
 
 Use this scorecard after the design is complete enough to review. It is a forcing function, not a substitute for expert judgment.
 
+## Contents
+
+- 1. Scoring Rules
+- 2. Weighted Scorecard — 100 Points
+- 3. Critical Gates
+- 4. Evidence Levels
+- 5. Review Report Template
+- Verdict
+- Highest-Risk Findings
+- Score Breakdown
+- Assumption Register
+- Decision Challenges
+- Required Validation
+- 6. Review Conduct
+
 ## 1. Scoring Rules
 
 For each criterion assign:

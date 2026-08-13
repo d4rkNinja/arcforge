@@ -2,6 +2,29 @@
 
 A production architecture includes how people and automation detect, understand, change, recover, and retire it.
 
+## Contents
+
+- 1. Operability Contract
+- 2. Observability Signals
+- 3. Instrument User Journeys First
+- 4. Golden Signals and Workload-Specific Signals
+- 5. Cardinality and Data Budgets
+- 6. Logging Rules
+- 7. Distributed Tracing
+- 8. Alerting
+- 9. Dashboards
+- 10. Runbooks
+- 11. Infrastructure and Configuration
+- 12. CI/CD Quality Gates
+- 13. Progressive Delivery
+- 14. Database and Event Migrations
+- 15. Migration Patterns
+- 16. Test Portfolio
+- 17. Architecture Fitness Functions in CI/Operations
+- 18. Ownership and Service Catalog
+- 19. Documentation Set
+- 20. Common Mistakes
+
 ## 1. Operability Contract
 
 Every production component needs:

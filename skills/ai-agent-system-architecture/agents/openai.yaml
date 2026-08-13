@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Agent Architecture"
+  short_description: "Governed architecture for AI and agent systems"
+  default_prompt: "Use $ai-agent-system-architecture to design a governed AI system with bounded tools, evaluation, and rollout gates."

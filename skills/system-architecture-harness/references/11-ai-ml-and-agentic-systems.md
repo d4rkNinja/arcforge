@@ -2,6 +2,28 @@
 
 AI components are probabilistic dependencies inside a deterministic product and risk-management system. Architecture must bound their authority, quality, latency, cost, data exposure, and failure behavior.
 
+## Contents
+
+- 1. Determine Whether AI Is Necessary
+- 2. AI System Decomposition
+- 3. Requirements and Risk Classification
+- 4. Model Gateway
+- 5. Prompt and Context Engineering as Configuration
+- 6. RAG Architecture
+- 7. Agent Architecture
+- 8. Human-in-the-Loop
+- 9. Memory
+- 10. Structured Output and Tool Safety
+- 11. Evaluation
+- 12. Model and Prompt Release
+- 13. Reliability and Fallback
+- 14. Cost and Capacity
+- 15. AI Security Threats
+- 16. Privacy and Governance
+- 17. AI Architecture Output Addendum
+- 18. Critical Gates
+- 19. Common Mistakes
+
 ## 1. Determine Whether AI Is Necessary
 
 Define:

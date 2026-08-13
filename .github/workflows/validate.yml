@@ -28,3 +28,15 @@ jobs:
       - run: npx --yes skills add . --list
         env:
           DISABLE_TELEMETRY: "1"
+      - name: Verify explicit Claude Code and Codex installation
+        shell: bash
+        run: |
+          target="$(mktemp -d)"
+          cd "$target"
+          npx --yes skills add "$GITHUB_WORKSPACE" --skill '*' -a claude-code -a codex --copy -y
+          for skill in system-architecture-harness ai-agent-system-architecture architecture-review-gate; do
+            test -f ".claude/skills/$skill/SKILL.md"
+            test -f ".agents/skills/$skill/SKILL.md"
+          done
+        env:
+          DISABLE_TELEMETRY: "1"

@@ -2,6 +2,25 @@
 
 Scaling is the controlled removal or isolation of measured bottlenecks while preserving correctness and operability.
 
+## Contents
+
+- 1. Performance Model
+- 2. Scaling Order
+- 3. Stateless Compute
+- 4. Load Balancing and Routing
+- 5. Partitioning and Hot Spots
+- 6. Caching and CDN Performance
+- 7. Datastore Performance
+- 8. Queueing and Backlog
+- 9. Overload Control
+- 10. Capacity and Autoscaling
+- 11. Multi-Region Performance and Cost
+- 12. Cellular Architecture
+- 13. Cost Model and FinOps Controls
+- 14. Sustainability
+- 15. Performance Test Plan
+- 16. Common Mistakes
+
 ## 1. Performance Model
 
 Build a budget for each critical journey:

@@ -2,6 +2,26 @@
 
 Select storage from invariants, access patterns, data lifecycle, failure semantics, and operational capability. “SQL vs NoSQL” is too shallow to be an architecture decision.
 
+## Contents
+
+- 1. Data Design Sequence
+- 2. Storage Decision Matrix
+- 3. Source of Truth and Derived Data
+- 4. Invariants and Enforcement
+- 5. Transactions and Isolation
+- 6. Consistency Models
+- 7. Replication and Quorums
+- 8. Partitioning and Sharding
+- 9. IDs, Ordering, and Time
+- 10. Caching
+- 11. Search Indexes and Materialized Views
+- 12. Data Lifecycle
+- 13. Schema and Contract Evolution
+- 14. Cross-Boundary Data Patterns
+- 15. Financial and High-Integrity Data
+- 16. Object and Blob Storage
+- 17. Common Mistakes
+
 ## 1. Data Design Sequence
 
 1. Identify entities, immutable facts, aggregates, and relationships.

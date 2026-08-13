@@ -6,6 +6,14 @@ The requested URL was `https://github.com/d4rkNinja/system-design-notes`. That f
 
 No chapter prose is copied into the skill. The package converts concepts into original operating rules, decision clauses, review gates, templates, and tests.
 
+## Contents
+
+- Source Access Note
+- Chapter-by-Chapter Coverage
+- Material Additions Beyond the Source Repository
+- Corrections and Nuance Added
+- Maintenance Rule
+
 ## Chapter-by-Chapter Coverage
 
 | # | Source chapter | Concepts carried into this skill | Primary location |

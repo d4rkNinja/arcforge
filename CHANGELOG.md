@@ -8,3 +8,4 @@
 - Added repository contracts, CI, behavioral evaluation cases, packaging, and portable-agent verification support.
 - Preserved detailed system-design references and reusable architecture templates through progressive disclosure.
 - Removed native harness artifacts so the repository is a portable-skills-only distribution for Claude Code, Codex, and compatible agents.
+- Aligned all skills with the current portable structure: minimal frontmatter, optional Codex UI metadata, explicit trigger boundaries, resource navigation, and reference contents sections.

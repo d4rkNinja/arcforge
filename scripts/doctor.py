@@ -8,19 +8,26 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR = ROOT / "skills" / "architecture-review-gate" / "scripts" / "score_architecture.py"
 GOOD = ROOT / "tests" / "fixtures" / "good-architecture.md"
 BAD = ROOT / "tests" / "fixtures" / "bad-architecture.md"
+SKILLS_DIR = ROOT / "skills"
 
 
-def run(command: list[str], *, expect: int = 0) -> subprocess.CompletedProcess[str]:
+def run(
+    command: list[str],
+    *,
+    expect: int = 0,
+    cwd: Path = ROOT,
+) -> subprocess.CompletedProcess[str]:
     print("$", " ".join(command))
     result = subprocess.run(
         command,
-        cwd=ROOT,
+        cwd=cwd,
         check=False,
         capture_output=True,
         text=True,
@@ -58,9 +65,45 @@ def optional_skills_cli_check(enabled: bool) -> None:
     if not enabled:
         print("SKIP Skills CLI discovery; pass --skills-cli to run it")
         return
-    if shutil.which("npx") is None:
+    npx = shutil.which("npx.cmd") or shutil.which("npx")
+    if npx is None:
         raise RuntimeError("npx is not installed")
-    run(["npx", "--yes", "skills", "add", ".", "--list"], expect=0)
+
+    skill_names = sorted(path.name for path in SKILLS_DIR.iterdir() if path.is_dir())
+    with tempfile.TemporaryDirectory(prefix="arcforge-skills-") as temporary:
+        workspace = Path(temporary)
+        run([npx, "--yes", "skills", "add", str(ROOT), "--list"], cwd=workspace)
+        run(
+            [
+                npx,
+                "--yes",
+                "skills",
+                "add",
+                str(ROOT),
+                "--skill",
+                "*",
+                "-a",
+                "claude-code",
+                "-a",
+                "codex",
+                "--copy",
+                "-y",
+            ],
+            cwd=workspace,
+        )
+        for agent_root in (workspace / ".claude" / "skills", workspace / ".agents" / "skills"):
+            if not agent_root.is_dir():
+                raise RuntimeError(f"missing Skills CLI installation directory: {agent_root}")
+            installed = sorted(path.name for path in agent_root.iterdir() if path.is_dir())
+            if installed != skill_names:
+                raise RuntimeError(
+                    f"Skills CLI installed {installed} at {agent_root}; expected {skill_names}"
+                )
+            for skill_name in skill_names:
+                installed_skill = agent_root / skill_name / "SKILL.md"
+                if not installed_skill.is_file():
+                    raise RuntimeError(f"missing installed entrypoint: {installed_skill}")
+    print("Skills CLI discovery and explicit Claude Code/Codex installation passed")
 
 
 def parse_args() -> argparse.Namespace:

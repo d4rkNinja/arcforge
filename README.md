@@ -162,7 +162,7 @@ Claude Code project: <project>/.claude/skills/<skill-name>/
 Codex project:       <project>/.agents/skills/<skill-name>/
 ```
 
-Each destination must contain the complete skill folder, including `SKILL.md` and any referenced `references/`, `assets/`, `examples/`, or `scripts/` files.
+Each destination must contain the complete skill folder, including `SKILL.md`, optional `agents/openai.yaml`, and any referenced `references/`, `assets/`, `examples/`, or `scripts/` files.
 
 ## Agent Skills format
 
@@ -170,14 +170,16 @@ Every installable skill follows the shared format:
 
 ```text
 skill-name/
-├── SKILL.md       # required metadata and instructions
+├── SKILL.md       # required portable metadata and instructions
+├── agents/
+│   └── openai.yaml # optional Codex UI metadata
 ├── references/    # optional detailed knowledge
 ├── assets/        # optional templates and resources
 ├── examples/      # optional worked examples
 └── scripts/       # optional deterministic helpers
 ```
 
-The primary `SKILL.md` files use YAML frontmatter with a matching lowercase `name`, a concrete `description`, MIT licensing, compatibility, and version metadata. Detailed material is loaded progressively so the initial skill list stays small.
+The primary `SKILL.md` files use minimal YAML frontmatter with only a matching lowercase `name` and a concrete `description`. Codex-facing display metadata lives in the optional `agents/openai.yaml`; Claude Code and other compatible runtimes can ignore it. The repository-level `LICENSE` and `VERSION` carry legal and release metadata. Detailed material is loaded progressively so the initial skill list stays small.
 
 ## Optional helpers and maintainer checks
 
@@ -188,10 +190,11 @@ Repository maintainers can run the optional checks:
 ```bash
 python -m pip install -r requirements-dev.txt
 python scripts/doctor.py
+python scripts/doctor.py --skills-cli
 npx skills add . --list
 ```
 
-The doctor checks frontmatter, naming, links, line limits, portable-only layout, evaluation cases, and positive/negative architecture-scanner fixtures. It is a maintainer check, not an end-user installation requirement.
+The doctor checks frontmatter, Codex metadata, resource navigation, links, line limits, portable-only layout, evaluation cases, and positive/negative architecture-scanner fixtures. `--skills-cli` additionally lists the source package and installs every skill into temporary Claude Code and Codex project directories. These are maintainer checks, not end-user installation requirements.
 
 Run the architecture scanner directly when a Markdown architecture specification is available:
 
@@ -216,17 +219,23 @@ For each approved agent and model, compare a no-skill baseline with the named sk
 ├── skills/
 │   ├── system-architecture-harness/
 │   │   ├── SKILL.md
+│   │   ├── agents/
+│   │   │   └── openai.yaml
 │   │   ├── references/
 │   │   ├── assets/
 │   │   ├── examples/
 │   │   └── scripts/
 │   ├── ai-agent-system-architecture/
 │   │   ├── SKILL.md
+│   │   ├── agents/
+│   │   │   └── openai.yaml
 │   │   ├── references/
 │   │   ├── assets/
 │   │   └── examples/
 │   └── architecture-review-gate/
 │       ├── SKILL.md
+│       ├── agents/
+│       │   └── openai.yaml
 │       ├── references/
 │       ├── assets/
 │       └── scripts/
@@ -255,7 +264,7 @@ Review skill source before installation, pin trusted commits for production use,
 
 - [Agent Skills specification](https://agentskills.io/specification)
 - [Skills CLI](https://github.com/vercel-labs/skills)
-- [Claude Code skills documentation](https://code.claude.com/docs/en/skills)
+- [Claude Code skills documentation](https://code.claude.com/docs/en/slash-commands)
 - [Codex skills documentation](https://developers.openai.com/codex/skills/)
 - [Research and standards map](docs/research-and-standards.md)
 

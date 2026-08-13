@@ -2,6 +2,39 @@
 
 This catalog translates the 28 source-repository chapters into reusable architecture patterns. Load the relevant sections; do not copy a reference system blindly. Recalculate requirements and preserve domain-specific invariants.
 
+## Contents
+
+- 1. Scale from One Server to a Large Service
+- 2. Back-of-the-Envelope Estimation
+- 3. System Design Framework
+- 4. Distributed Rate Limiter
+- 5. Consistent Hashing and Membership
+- 6. Distributed Key-Value Store
+- 7. Distributed Unique-ID Generator
+- 8. URL Shortener
+- 9. Web Crawler
+- 10. Notification Platform
+- 11. News Feed
+- 12. Chat System
+- 13. Search Autocomplete
+- 14. Video Platform
+- 15. Cloud File Sync/Drive
+- 16. Proximity Search
+- 17. Nearby Friends / Live Location
+- 18. Maps and Navigation
+- 19. Distributed Message Queue
+- 20. Metrics, Monitoring, and Alerting Platform
+- 21. Ad Click/Event Aggregation
+- 22. Hotel/Resource Reservation
+- 23. Distributed Email Service
+- 24. S3-Like Object Storage
+- 25. Real-Time Gaming Leaderboard
+- 26. Payment System
+- 27. Digital Wallet
+- 28. Stock Exchange / Matching Engine
+- Cross-Pattern Selection Guide
+- Pattern Misuse Warning
+
 ## 1. Scale from One Server to a Large Service
 
 ### Baseline progression

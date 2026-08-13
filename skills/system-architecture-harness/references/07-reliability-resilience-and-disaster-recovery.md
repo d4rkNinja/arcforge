@@ -2,6 +2,29 @@
 
 Reliability is the system’s ability to deliver correct user outcomes under expected conditions and failures. Resilience is controlled degradation and recovery. Disaster recovery is the proven restoration of critical capability and data after large failures.
 
+## Contents
+
+- 1. Reliability Begins with User Journeys
+- 2. Failure Taxonomy
+- 3. Failure Matrix
+- 4. Timeouts and Deadlines
+- 5. Retries
+- 6. Circuit Breakers
+- 7. Bulkheads and Resource Isolation
+- 8. Load Shedding and Graceful Degradation
+- 9. Health, Readiness, and Liveness
+- 10. Redundancy and Failure Domains
+- 11. Leader Election, Leases, and Fencing
+- 12. Multi-Region Topologies
+- 13. RTO/RPO and Recovery Tiers
+- 14. Backup Architecture
+- 15. Data Corruption and Reconciliation
+- 16. Deployment Reliability
+- 17. Chaos and Game Days
+- 18. Incident Readiness
+- 19. Reliability Review Questions
+- 20. Common Mistakes
+
 ## 1. Reliability Begins with User Journeys
 
 For each critical journey define:

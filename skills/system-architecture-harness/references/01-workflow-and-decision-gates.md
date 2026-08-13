@@ -2,6 +2,18 @@
 
 This reference turns architecture work into an auditable control loop. It applies to greenfield design, reviews, migrations, scaling work, and incident-driven redesign.
 
+## Contents
+
+- 1. Evidence Hierarchy
+- 2. Architecture Control Loop
+- 3. Architecture Modes
+- 4. Question Priority
+- 5. Decision Record Contract
+- 6. Mandatory Flow Clauses
+- 7. Architecture Fitness Functions
+- 8. Review Severity
+- 9. Exit Criteria
+
 ## 1. Evidence Hierarchy
 
 Prefer evidence in this order:

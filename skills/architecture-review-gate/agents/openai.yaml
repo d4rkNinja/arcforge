@@ -1,0 +1,4 @@
+interface:
+  display_name: "Architecture Review Gate"
+  short_description: "Adversarial review for architecture release gates"
+  default_prompt: "Use $architecture-review-gate to independently review this architecture and report blockers, evidence gaps, and approval conditions."

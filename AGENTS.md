@@ -19,6 +19,7 @@ Portable skills live under `skills/*/`. Each skill must remain usable by Claude 
 ## Portable skill rules
 
 - Use only the shared Agent Skills frontmatter fields unless a runtime-specific field is clearly optional and isolated.
+- Keep portable `SKILL.md` frontmatter to `name` and `description`; place Codex UI metadata in the optional `agents/openai.yaml` file.
 - Do not require Python, a provider API key, a native harness CLI, or a particular agent framework for basic skill installation or activation.
 - Keep descriptions specific enough for implicit activation and include concrete trigger words.
 - Reference supporting files with paths relative to the skill directory.
@@ -48,6 +49,7 @@ End users do not need Python to install or use these skills. Maintainers may run
 ```bash
 python -m pip install -r requirements-dev.txt
 python scripts/doctor.py
+python scripts/doctor.py --skills-cli
 python skills/architecture-review-gate/scripts/score_architecture.py tests/fixtures/good-architecture.md --format json
 npx skills add . --list
 ```

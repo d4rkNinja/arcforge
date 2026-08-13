@@ -35,21 +35,64 @@ class RepositoryContractTests(unittest.TestCase):
         for name in EXPECTED_SKILLS:
             skill_dir = ROOT / "skills" / name
             metadata, body = parse_frontmatter(skill_dir / "SKILL.md")
+            self.assertEqual({"name", "description"}, set(metadata), name)
             self.assertEqual(name, metadata.get("name"))
+            self.assertRegex(name, r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
             description = metadata.get("description", "")
             self.assertTrue(description.startswith("Use when"), (name, description))
             self.assertLessEqual(len(description), 1024)
-            self.assertEqual("MIT", metadata.get("license"))
-            self.assertIsInstance(metadata.get("metadata"), dict)
-            self.assertRegex(metadata["metadata"].get("version", ""), r"^\d+\.\d+\.\d+$")
-            self.assertEqual(
-                (ROOT / "VERSION").read_text(encoding="utf-8").strip(),
-                metadata["metadata"]["version"],
-            )
             line_count = len((skill_dir / "SKILL.md").read_text(encoding="utf-8").splitlines())
             self.assertLessEqual(line_count, 500, f"{name} SKILL.md is too long")
             self.assertIn("## Output Contract", body)
             self.assertIn("## Stop Conditions", body)
+
+    def test_codex_interface_metadata_is_present_and_valid(self) -> None:
+        for name in EXPECTED_SKILLS:
+            metadata_path = ROOT / "skills" / name / "agents" / "openai.yaml"
+            self.assertTrue(metadata_path.is_file(), name)
+            metadata = yaml.safe_load(metadata_path.read_text(encoding="utf-8")) or {}
+            self.assertEqual({"interface"}, set(metadata), name)
+            interface = metadata["interface"]
+            self.assertEqual(
+                {"display_name", "short_description", "default_prompt"},
+                set(interface),
+                name,
+            )
+            self.assertTrue(interface["display_name"].strip(), name)
+            self.assertGreaterEqual(len(interface["short_description"]), 25, name)
+            self.assertLessEqual(len(interface["short_description"]), 64, name)
+            self.assertIn(f"${name}", interface["default_prompt"], name)
+
+    def test_all_bundled_resources_are_named_by_the_skill(self) -> None:
+        resource_dirs = {"assets", "examples", "references", "scripts"}
+        for skill_dir in (ROOT / "skills").iterdir():
+            if not skill_dir.is_dir():
+                continue
+            skill_text = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+            for resource in skill_dir.rglob("*"):
+                if not resource.is_file() or resource.parent.name not in resource_dirs:
+                    continue
+                relative = resource.relative_to(skill_dir).as_posix()
+                self.assertIn(relative, skill_text, f"Unlisted skill resource: {relative}")
+
+    def test_skill_path_references_resolve(self) -> None:
+        path_pattern = re.compile(
+            r"(?:assets|examples|references|scripts|tests)/[A-Za-z0-9_.-]+"
+            r"(?:/[A-Za-z0-9_.-]+)*"
+        )
+        for skill_dir in (ROOT / "skills").iterdir():
+            if not skill_dir.is_dir():
+                continue
+            skill_text = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+            for target in sorted(set(path_pattern.findall(skill_text))):
+                resolved = skill_dir / Path(target)
+                self.assertTrue(resolved.is_file(), f"Broken skill path: {target}")
+
+    def test_long_references_have_a_contents_section(self) -> None:
+        for reference in (ROOT / "skills").glob("*/references/*.md"):
+            if len(reference.read_text(encoding="utf-8").splitlines()) <= 100:
+                continue
+            self.assertIn("## Contents", reference.read_text(encoding="utf-8"), reference)
 
     def test_all_markdown_links_inside_skills_resolve(self) -> None:
         link_pattern = re.compile(r"\[[^\]]+\]\(([^)]+)\)")

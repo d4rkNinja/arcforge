@@ -2,6 +2,28 @@
 
 Security architecture protects assets and user outcomes against mistakes, malicious actors, compromised identities, unsafe dependencies, and misuse. It is a system property, not a perimeter appliance.
 
+## Contents
+
+- 1. Security Design Sequence
+- 2. Data Classification
+- 3. Threat Modeling
+- 4. Identity and Authentication
+- 5. Authorization
+- 6. Zero-Trust Principles
+- 7. Tenant Isolation
+- 8. Secrets and Key Management
+- 9. Encryption and Data Protection
+- 10. API and Input Security
+- 11. Abuse and Fraud Architecture
+- 12. Logging and Audit
+- 13. Supply-Chain Security
+- 14. Privacy by Design
+- 15. Compliance Handoff
+- 16. Security Operations and Incident Response
+- 17. Security Verification
+- 18. Critical Security Gates
+- 19. Common Mistakes
+
 ## 1. Security Design Sequence
 
 1. Identify assets, users, administrators, services, tenants, vendors, and adversaries.
