@@ -1,0 +1,15 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "System Architecture Harness",
+      "description": "Evidence-backed production architecture design, AI-system architecture, and independent review gates.",
+      "skills": [
+        "system-architecture-harness",
+        "ai-agent-system-architecture",
+        "architecture-review-gate"
+      ]
+    }
+  ]
+}

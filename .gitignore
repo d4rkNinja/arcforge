@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.venv/
+.harness/state/*
+!.harness/state/.gitkeep
+*.zip
+*.sha256
+!MANIFEST.sha256
+.DS_Store

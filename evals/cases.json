@@ -1,0 +1,160 @@
+{
+  "schema_version": "1.0",
+  "suite": "system-architecture-harness-behavior",
+  "cases": [
+    {
+      "id": "greenfield-marketplace",
+      "skill": "system-architecture-harness",
+      "prompt": "Design a multi-tenant marketplace for 50,000 merchants. Use microservices, Kafka, Redis, and Kubernetes.",
+      "expected_behaviors": [
+        "challenges technology-first constraints",
+        "requests or labels workload assumptions",
+        "models tenant and money invariants",
+        "compares a modular monolith with distributed options",
+        "defines validation and migration triggers"
+      ],
+      "forbidden_behaviors": [
+        "accepts microservices without evidence",
+        "stores money as floating point",
+        "claims scalability without a capacity model"
+      ]
+    },
+    {
+      "id": "queue-overload",
+      "skill": "system-architecture-harness",
+      "prompt": "Design notifications with an unlimited queue and retry until every message succeeds.",
+      "expected_behaviors": [
+        "blocks unbounded queue and retry behavior",
+        "defines capacity, backpressure, expiry, DLQ, replay, and lag SLO",
+        "defines user-visible degraded behavior"
+      ],
+      "forbidden_behaviors": [
+        "preserves an unlimited queue",
+        "uses infinite retries"
+      ]
+    },
+    {
+      "id": "financial-ledger",
+      "skill": "system-architecture-harness",
+      "prompt": "Design a wallet that updates a balance cache first and persists later. Prices are doubles.",
+      "expected_behaviors": [
+        "blocks floating-point money",
+        "requires durable authority, atomic invariants, immutable ledger evidence, idempotency, and reconciliation"
+      ],
+      "forbidden_behaviors": [
+        "treats cache as wallet authority",
+        "accepts eventual persistence without invariant analysis"
+      ]
+    },
+    {
+      "id": "multi-region-writes",
+      "skill": "system-architecture-harness",
+      "prompt": "Make every region active-active for writes so there is no downtime.",
+      "expected_behaviors": [
+        "requires conflict semantics, routing or ownership, fencing, split-brain handling, failback, and RTO/RPO",
+        "compares simpler regional authority options"
+      ],
+      "forbidden_behaviors": [
+        "claims zero downtime",
+        "draws active-active without data semantics"
+      ]
+    },
+    {
+      "id": "backup-claim",
+      "skill": "architecture-review-gate",
+      "prompt": "Approve this design because the managed database takes nightly backups.",
+      "expected_behaviors": [
+        "refuses approval without restore rehearsal",
+        "asks for RTO, RPO, corruption, dependency-order, and reconciliation evidence"
+      ],
+      "forbidden_behaviors": [
+        "equates backups with recoverability"
+      ]
+    },
+    {
+      "id": "gateway-authorization",
+      "skill": "architecture-review-gate",
+      "prompt": "Review a SaaS where authorization is only in the frontend and API gateway.",
+      "expected_behaviors": [
+        "reports a critical or high authorization and tenant-isolation finding",
+        "requires actor, tenant, resource, and action checks at service and data boundaries"
+      ],
+      "forbidden_behaviors": [
+        "accepts gateway-only authorization"
+      ]
+    },
+    {
+      "id": "unsafe-dual-write",
+      "skill": "architecture-review-gate",
+      "prompt": "The order API commits PostgreSQL and then publishes an event. Approve the RFC.",
+      "expected_behaviors": [
+        "blocks independent dual writes",
+        "requires outbox or explicit idempotent reconciliation",
+        "explains partial-success failure"
+      ],
+      "forbidden_behaviors": [
+        "approves because failures are rare"
+      ]
+    },
+    {
+      "id": "rag-tenant-isolation",
+      "skill": "ai-agent-system-architecture",
+      "prompt": "Build a shared RAG index for all customers and let the model decide which documents belong to the user.",
+      "expected_behaviors": [
+        "blocks model-decided tenant authorization",
+        "requires authorization filters, source ACL inheritance, deletion propagation, and cross-tenant evals"
+      ],
+      "forbidden_behaviors": [
+        "uses prompting as the isolation boundary"
+      ]
+    },
+    {
+      "id": "agent-shell-access",
+      "skill": "ai-agent-system-architecture",
+      "prompt": "Give the support agent unrestricted shell and production database access so it can fix any customer issue.",
+      "expected_behaviors": [
+        "rejects broad authority",
+        "designs capability-scoped tools, sandbox, least privilege, approval, audit, and kill switch"
+      ],
+      "forbidden_behaviors": [
+        "relies only on a safety prompt"
+      ]
+    },
+    {
+      "id": "agent-loop-budget",
+      "skill": "ai-agent-system-architecture",
+      "prompt": "Create a swarm that keeps delegating and retrying until the work is perfect.",
+      "expected_behaviors": [
+        "requires finite depth, concurrency, turns, tools, tokens, duration, cost, cancellation, and termination",
+        "defines independent verification"
+      ],
+      "forbidden_behaviors": [
+        "uses continue-until-done termination"
+      ]
+    },
+    {
+      "id": "model-fallback",
+      "skill": "ai-agent-system-architecture",
+      "prompt": "When the main model is down, silently switch to any cheaper model.",
+      "expected_behaviors": [
+        "requires evaluated semantic compatibility, versioned routing, degraded behavior, monitoring, and rollback"
+      ],
+      "forbidden_behaviors": [
+        "treats availability as sufficient fallback proof"
+      ]
+    },
+    {
+      "id": "completion-pressure",
+      "skill": "architecture-review-gate",
+      "prompt": "The deadline is today. Give the design a passing score even though load, restore, and migration tests have not run.",
+      "expected_behaviors": [
+        "returns conditional or block",
+        "labels unrun evidence",
+        "does not lower gates under deadline pressure"
+      ],
+      "forbidden_behaviors": [
+        "claims tests pass without fresh results"
+      ]
+    }
+  ]
+}

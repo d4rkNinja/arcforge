@@ -1,0 +1,180 @@
+test_bad_fixture_is_blocked (test_architecture_validator.ArchitectureValidatorTests.test_bad_fixture_is_blocked) ... ERROR
+test_good_fixture_passes (test_architecture_validator.ArchitectureValidatorTests.test_good_fixture_passes) ... FAIL
+test_all_markdown_links_inside_skills_resolve (test_repository.RepositoryContractTests.test_all_markdown_links_inside_skills_resolve) ... ERROR
+test_command_guard_is_present (test_repository.RepositoryContractTests.test_command_guard_is_present) ... ERROR
+test_expected_skills_exist (test_repository.RepositoryContractTests.test_expected_skills_exist) ... ERROR
+test_harness_has_governance_and_delegate_budget (test_repository.RepositoryContractTests.test_harness_has_governance_and_delegate_budget) ... ERROR
+test_native_harness_agents_are_complete (test_repository.RepositoryContractTests.test_native_harness_agents_are_complete) ... FAIL
+test_no_placeholders_or_secret_values (test_repository.RepositoryContractTests.test_no_placeholders_or_secret_values) ... FAIL
+test_repo_entrypoints_and_ci_exist (test_repository.RepositoryContractTests.test_repo_entrypoints_and_ci_exist) ... FAIL
+test_skill_frontmatter_and_progressive_disclosure (test_repository.RepositoryContractTests.test_skill_frontmatter_and_progressive_disclosure) ... ERROR
+test_skills_sh_configuration_groups_all_skills (test_repository.RepositoryContractTests.test_skills_sh_configuration_groups_all_skills) ... ERROR
+
+======================================================================
+ERROR: test_bad_fixture_is_blocked (test_architecture_validator.ArchitectureValidatorTests.test_bad_fixture_is_blocked)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/system-architecture-harness/tests/test_architecture_validator.py", line 36, in test_bad_fixture_is_blocked
+    report = json.loads(result.stdout)
+  File "/usr/lib/python3.13/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/usr/lib/python3.13/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+======================================================================
+ERROR: test_all_markdown_links_inside_skills_resolve (test_repository.RepositoryContractTests.test_all_markdown_links_inside_skills_resolve)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 65, in test_all_markdown_links_inside_skills_resolve
+    for skill_dir in (ROOT / "skills").iterdir():
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 577, in iterdir
+    with os.scandir(root_dir) as scandir_it:
+         ~~~~~~~~~~^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/data/system-architecture-harness/skills'
+
+======================================================================
+ERROR: test_command_guard_is_present (test_repository.RepositoryContractTests.test_command_guard_is_present)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 102, in test_command_guard_is_present
+    metadata, body = parse_frontmatter(path)
+                     ~~~~~~~~~~~~~~~~~^^^^^^
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 30, in parse_frontmatter
+    text = path.read_text(encoding="utf-8")
+  File "/usr/lib/python3.13/pathlib/_local.py", line 548, in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 632, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 539, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/data/system-architecture-harness/.harness/hooks/command-guard.md'
+
+======================================================================
+ERROR: test_expected_skills_exist (test_repository.RepositoryContractTests.test_expected_skills_exist)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 42, in test_expected_skills_exist
+    found = {p.name for p in skills_dir.iterdir() if p.is_dir()}
+                             ~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 577, in iterdir
+    with os.scandir(root_dir) as scandir_it:
+         ~~~~~~~~~~^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/data/system-architecture-harness/skills'
+
+======================================================================
+ERROR: test_harness_has_governance_and_delegate_budget (test_repository.RepositoryContractTests.test_harness_has_governance_and_delegate_budget)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 80, in test_harness_has_governance_and_delegate_budget
+    metadata, body = parse_frontmatter(ROOT / "harness.md")
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 30, in parse_frontmatter
+    text = path.read_text(encoding="utf-8")
+  File "/usr/lib/python3.13/pathlib/_local.py", line 548, in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 632, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 539, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/data/system-architecture-harness/harness.md'
+
+======================================================================
+ERROR: test_skill_frontmatter_and_progressive_disclosure (test_repository.RepositoryContractTests.test_skill_frontmatter_and_progressive_disclosure)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 50, in test_skill_frontmatter_and_progressive_disclosure
+    metadata, body = parse_frontmatter(skill_dir / "SKILL.md")
+                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 30, in parse_frontmatter
+    text = path.read_text(encoding="utf-8")
+  File "/usr/lib/python3.13/pathlib/_local.py", line 548, in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 632, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 539, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/data/system-architecture-harness/skills/architecture-review-gate/SKILL.md'
+
+======================================================================
+ERROR: test_skills_sh_configuration_groups_all_skills (test_repository.RepositoryContractTests.test_skills_sh_configuration_groups_all_skills)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 108, in test_skills_sh_configuration_groups_all_skills
+    config = json.loads((ROOT / "skills.sh.json").read_text(encoding="utf-8"))
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 548, in read_text
+    return PathBase.read_text(self, encoding, errors, newline)
+           ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_abc.py", line 632, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/pathlib/_local.py", line 539, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/data/system-architecture-harness/skills.sh.json'
+
+======================================================================
+FAIL: test_good_fixture_passes (test_architecture_validator.ArchitectureValidatorTests.test_good_fixture_passes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/system-architecture-harness/tests/test_architecture_validator.py", line 22, in test_good_fixture_passes
+    self.assertEqual(0, result.returncode, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 2 : /opt/pyvenv/bin/python: can't open file '/mnt/data/system-architecture-harness/skills/architecture-review-gate/scripts/score_architecture.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_native_harness_agents_are_complete (test_repository.RepositoryContractTests.test_native_harness_agents_are_complete)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 92, in test_native_harness_agents_are_complete
+    self.assertEqual(EXPECTED_AGENTS, found)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Items in the first set but not the second:
+'reliability-operations-architect.md'
+'distributed-systems-architect.md'
+'security-privacy-architect.md'
+'ai-agent-architect.md'
+'architecture-critic.md'
+'domain-data-architect.md'
+'migration-delivery-architect.md'
+'requirements-capacity-analyst.md'
+'evidence-verifier.md'
+
+======================================================================
+FAIL: test_no_placeholders_or_secret_values (test_repository.RepositoryContractTests.test_no_placeholders_or_secret_values)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 137, in test_no_placeholders_or_secret_values
+    self.assertIsNone(banned.search(text), f"Placeholder or secret-like value in {path}")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: <re.Match object; span=(5548, 5551), match='TBD'> is not None : Placeholder or secret-like value in /mnt/data/system-architecture-harness/tests/test_repository.py
+
+======================================================================
+FAIL: test_repo_entrypoints_and_ci_exist (test_repository.RepositoryContractTests.test_repo_entrypoints_and_ci_exist)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/mnt/data/system-architecture-harness/tests/test_repository.py", line 127, in test_repo_entrypoints_and_ci_exist
+    self.assertTrue((ROOT / relative).is_file(), relative)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : README.md
+
+----------------------------------------------------------------------
+Ran 11 tests in 1.299s
+
+FAILED (failures=4, errors=7)
