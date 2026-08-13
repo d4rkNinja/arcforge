@@ -2,24 +2,30 @@
 
 ## Purpose
 
-This repository publishes portable Agent Skills and a native AI Harness for production system architecture. Preserve both layers:
+This repository publishes portable Agent Skills for production system architecture. It is intentionally skill-only: do not add a native AI Harness configuration, root `harness.md`, `.harness/` delegates, or runtime-specific hooks.
 
-- `skills/*/SKILL.md` must remain portable across Agent Skills-compatible runtimes.
-- `harness.md` and `.harness/` may use native AI Harness features.
+Portable skills live under `skills/*/`. Each skill must remain usable by Claude Code, Codex, and other Agent Skills-compatible runtimes without depending on a vendor-specific control plane.
 
-Do not put native-only hook or delegate syntax inside portable skills unless it is clearly optional and isolated in a reference.
+## Required workflow
 
-## Required Workflow
+1. Read the affected `SKILL.md` and its linked references completely.
+2. Add or update a deterministic test or evaluation case before changing observable behavior.
+3. Keep skill frontmatter valid and make the directory name equal to the frontmatter `name`.
+4. Keep each primary `SKILL.md` at 500 lines or fewer; move deep material into `references/`, reusable forms into `assets/`, and optional deterministic helpers into the skill's own `scripts/` directory.
+5. Preserve the exact headings `## Output Contract` and `## Stop Conditions` in each primary skill.
+6. Run the maintainer validation command before claiming completion.
+7. Read full output and report any unrun agent-specific or behavioral verification honestly.
 
-1. Read the affected `SKILL.md` and linked references completely.
-2. Write or update a failing deterministic test before changing behavior.
-3. Keep skill frontmatter valid and the directory name equal to `name`.
-4. Keep each primary `SKILL.md` at 500 lines or fewer; move deep material into `references/`, reusable forms into `assets/`, and deterministic helpers into `scripts/`.
-5. Preserve exact headings `## Output Contract` and `## Stop Conditions`.
-6. Run `python scripts/doctor.py` before claiming completion.
-7. Read full output and report any unrun native or behavioral verification honestly.
+## Portable skill rules
 
-## Architecture Content Rules
+- Use only the shared Agent Skills frontmatter fields unless a runtime-specific field is clearly optional and isolated.
+- Do not require Python, a provider API key, a native harness CLI, or a particular agent framework for basic skill installation or activation.
+- Keep descriptions specific enough for implicit activation and include concrete trigger words.
+- Reference supporting files with paths relative to the skill directory.
+- Treat scripts as optional helpers; the main workflow must remain understandable from `SKILL.md`.
+- Do not put secrets, tokens, personal data, generated caches, or runtime state in the repository.
+
+## Architecture content rules
 
 - Every decision traces to a requirement, invariant, risk, or constraint.
 - Every critical claim has a validation path.
@@ -27,27 +33,28 @@ Do not put native-only hook or delegate syntax inside portable skills unless it 
 - AI systems separate model proposals from policy, permissions, durable truth, verification, and approval.
 - A numeric score never waives a critical blocker.
 
-## File Ownership
+## File ownership
 
 - General architecture: `skills/system-architecture-harness/`
 - AI/agent architecture: `skills/ai-agent-system-architecture/`
 - Independent review and scanner: `skills/architecture-review-gate/`
-- Native orchestration: `harness.md` and `.harness/`
-- Repository verification: `tests/` and `scripts/doctor.py`
-- Behavioral cases: `evals/`
+- Repository documentation: `README.md`, `docs/`, `CONTRIBUTING.md`, and `SECURITY.md`
+- Maintainer verification: `tests/` and `scripts/`
 
-## Commands
+## Maintainer commands
+
+End users do not need Python to install or use these skills. Maintainers may run:
 
 ```bash
 python -m pip install -r requirements-dev.txt
 python scripts/doctor.py
-python -m unittest discover -s tests -p 'test_*.py' -v
 python skills/architecture-review-gate/scripts/score_architecture.py tests/fixtures/good-architecture.md --format json
+npx skills add . --list
 ```
 
-## Prohibited Changes
+## Prohibited changes
 
-- Do not weaken tests, score thresholds, critical blockers, command guards, or evidence gates to make a change pass.
-- Do not commit secrets, provider tokens, personal data, generated caches, extracted archives, or runtime state.
+- Do not reintroduce native harness files, delegates, hooks, or undocumented runtime configuration.
+- Do not weaken tests, scanner thresholds, critical blockers, or evidence gates to make a change pass.
 - Do not add undocumented broad shell, network, filesystem, SQL, cloud, or deployment authority.
-- Do not claim `harness validate`, Skills CLI discovery, or real-agent evals passed unless they were run in the current change and their output was inspected.
+- Do not claim Skills CLI discovery, agent loading, or behavioral evaluations passed unless they were run in the current change and their output was inspected.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run deterministic health checks for the architecture skills and harness."""
+"""Run deterministic health checks for the portable architecture skills."""
 
 from __future__ import annotations
 
@@ -54,26 +54,18 @@ def verify_scanner() -> None:
         raise RuntimeError("negative architecture fixture was not blocked strongly enough")
 
 
-def optional_external_checks(use_skills_cli: bool, use_harness_cli: bool) -> None:
-    if use_skills_cli:
-        if shutil.which("npx") is None:
-            raise RuntimeError("npx is not installed")
-        run(["npx", "--yes", "skills", "add", ".", "--list"], expect=0)
-    else:
+def optional_skills_cli_check(enabled: bool) -> None:
+    if not enabled:
         print("SKIP Skills CLI discovery; pass --skills-cli to run it")
-
-    if use_harness_cli:
-        if shutil.which("harness") is None:
-            raise RuntimeError("AI Harness CLI is not installed")
-        run(["harness", "validate"], expect=0)
-    else:
-        print("SKIP native harness validation; pass --harness-cli to run it")
+        return
+    if shutil.which("npx") is None:
+        raise RuntimeError("npx is not installed")
+    run(["npx", "--yes", "skills", "add", ".", "--list"], expect=0)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--skills-cli", action="store_true", help="run Skills CLI discovery")
-    parser.add_argument("--harness-cli", action="store_true", help="run native AI Harness validation")
     return parser.parse_args()
 
 
@@ -95,11 +87,11 @@ def main() -> int:
             expect=0,
         )
         verify_scanner()
-        optional_external_checks(args.skills_cli, args.harness_cli)
+        optional_skills_cli_check(args.skills_cli)
     except (RuntimeError, json.JSONDecodeError) as exc:
         print(f"DOCTOR FAILED: {exc}", file=sys.stderr)
         return 1
-    print("DOCTOR PASS: repository contracts and deterministic fixtures are valid")
+    print("DOCTOR PASS: portable skill contracts and deterministic fixtures are valid")
     return 0
 
 

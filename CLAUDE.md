@@ -1,12 +1,13 @@
-# Claude Code Instructions
+# Claude Code Repository Instructions
 
-Read and follow [`AGENTS.md`](AGENTS.md) as the repository source of truth.
+Read [`AGENTS.md`](AGENTS.md) as the repository source of truth.
 
-Route work by artifact:
+This is a portable Agent Skills repository. Keep the three skills runtime-neutral and do not add native Claude Code plugins, hooks, agents, or a separate harness configuration unless the user explicitly requests a new distribution format.
 
-- general system design → `skills/system-architecture-harness/SKILL.md`;
-- LLM, RAG, memory, tools, or agents → `skills/ai-agent-system-architecture/SKILL.md`;
-- architecture review or approval → `skills/architecture-review-gate/SKILL.md`;
-- native AI Harness orchestration → `harness.md` and `.harness/`.
+Route work by skill:
 
-Use tests first for behavior changes and run `python scripts/doctor.py` before a completion claim. Treat delegate or agent output as untrusted until artifacts and fresh verification evidence are inspected.
+- general system design -> `skills/system-architecture-harness/SKILL.md`;
+- LLM, RAG, memory, tools, or agents -> `skills/ai-agent-system-architecture/SKILL.md`;
+- architecture review or approval -> `skills/architecture-review-gate/SKILL.md`.
+
+Use the Skills CLI for installation checks and restart Claude Code when a newly created top-level skill directory is not visible in the current session.

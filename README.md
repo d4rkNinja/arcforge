@@ -1,39 +1,40 @@
 # ArcForge
 
-> Production architecture skills and a governed AI Harness for designing, challenging, and verifying real systems.
+> Portable production-architecture skills for Claude Code, Codex, and compatible Agent Skills runtimes.
 
-ArcForge is a GitHub-ready collection of portable Agent Skills plus a native AI Harness control plane. It helps AI agents turn product goals, existing systems, incidents, and migration requests into architecture that can be implemented, operated, reviewed, measured, and safely changed.
+ArcForge is an instruction-first collection of reusable Agent Skills for designing, reviewing, scaling, migrating, and governing production software systems.
 
-The current package version is **0.1.0**. The canonical GitHub repository is [`d4rkNinja/arcforge`](https://github.com/d4rkNinja/arcforge). The installable skill identifiers remain stable while ArcForge serves as the project brand.
+This repository is intentionally portable. It contains `SKILL.md` packages and their optional references, templates, examples, and helpers. It does not require a native AI Harness runtime, a root `harness.md`, a `.harness/` directory, a provider API key, or Python for normal installation and use.
 
-## What this project is
+Current release: **0.1.0**
 
-ArcForge deliberately keeps two layers separate:
+Repository: [`d4rkNinja/arcforge`](https://github.com/d4rkNinja/arcforge)
 
-1. **Portable skills** - standards-compatible `SKILL.md` packages that can be installed into Agent Skills-compatible tools and coding agents.
-2. **Native harness** - `harness.md`, bounded specialist delegates, command governance, evidence gates, and evaluation artifacts for the AI Harness runtime.
+## Included skills
 
-The central model is:
+Each capability is independently installable.
 
-```text
-Harness = Instructions + Constraints + Feedback + Memory + Evaluation + Governance
-```
+| Skill | Use it for | Primary result |
+|---|---|---|
+| [`system-architecture-harness`](skills/system-architecture-harness/SKILL.md) | Greenfield design, scaling, modernization, migration, reliability, security, data, APIs, operations, and incident-driven redesign | Evidence-backed production architecture with decisions, trade-offs, risks, validation, and implementation slices |
+| [`ai-agent-system-architecture`](skills/ai-agent-system-architecture/SKILL.md) | LLM, RAG, memory, model routing, tools, autonomous agents, multi-agent workflows, evaluation, safety, latency, and inference economics | Governed AI-system architecture with control boundaries, tool contracts, budgets, evaluation, and rollout gates |
+| [`architecture-review-gate`](skills/architecture-review-gate/SKILL.md) | Independent review of RFCs, ADRs, diagrams, migrations, production-readiness proposals, and AI architectures | Adversarial findings, evidence gaps, blockers, score, verdict, and approval conditions |
 
-The model proposes. The harness constrains, verifies, records, and decides what may happen next.
+The word `harness` in the first skill's stable package name is an existing skill identifier. It does not refer to a required native runtime configuration.
 
-## Why ArcForge exists
+## Core principles
 
-Architecture is treated as a chain of explicit decisions under constraints - not a diagram, a technology list, or a popularity contest.
+Architecture is a chain of explicit decisions under constraints - not a diagram, a technology list, or a popularity contest.
 
-No architecturally significant decision is accepted without:
+Every significant decision should identify:
 
-- a requirement, invariant, risk, or constraint that motivates it;
+- the requirement, invariant, risk, or constraint that motivates it;
 - a realistic alternative;
-- a trade-off and consequence;
+- the trade-off and consequence;
 - an owner and decision horizon;
 - a validation method and reversal trigger.
 
-The project is intentionally strict about failure modes that are often hidden behind optimistic architecture language:
+The skills are intentionally strict about common production failure modes:
 
 - no floating-point money or unprotected business invariants;
 - no uncoordinated database-plus-broker dual writes;
@@ -41,32 +42,14 @@ The project is intentionally strict about failure modes that are often hidden be
 - no cache or search index accidentally becoming durable authority;
 - no active-active write claim without conflict, ownership, fencing, and recovery semantics;
 - no gateway-only authorization or implicit internal trust;
-- no backup claim without a restore rehearsal and stated RTO/RPO;
+- no backup claim without restore rehearsal and stated RTO/RPO;
 - no consequential AI action without scoped authority, policy, approval, audit, and a kill switch.
 
 A numeric score never waives a critical correctness, security, recovery, or evidence blocker.
 
-## Included skills
-
-Each skill is independently installable and can be used without the native harness.
-
-| Skill | Use it for | Primary output |
-|---|---|---|
-| [`system-architecture-harness`](skills/system-architecture-harness/SKILL.md) | Greenfield design, scaling, modernization, migrations, reliability, security, data, APIs, operations, and incident-driven redesign | Complete production architecture specification, decisions, risks, validation plan, and implementation slices |
-| [`ai-agent-system-architecture`](skills/ai-agent-system-architecture/SKILL.md) | LLM, RAG, memory, model routing, tools, autonomous agents, multi-agent workflows, evaluation, safety, latency, and inference economics | Governed AI system design with control plane, tool contracts, evaluation, budgets, safety, and rollout gates |
-| [`architecture-review-gate`](skills/architecture-review-gate/SKILL.md) | Independent review of RFCs, ADRs, diagrams, migrations, production-readiness proposals, and AI architectures | Adversarial findings, evidence gaps, critical blockers, score, verdict, and approval conditions |
-
-### Choosing a skill
-
-- Use `system-architecture-harness` for general production system work.
-- Use `ai-agent-system-architecture` when models, retrieval, memory, tools, or agents materially affect the design.
-- Use `architecture-review-gate` for an independent quality gate or release decision.
-- For mixed systems, use the general skill as the primary architecture output and add the AI-specific sections.
-- For formal approval, always attach an independent review and fresh evidence.
-
 ## Architecture workflow
 
-The skills use an evidence-first workflow and may move backward when new evidence invalidates an assumption:
+The skills use an evidence-first workflow and can move backward when new evidence invalidates an assumption:
 
 ```text
 DISCOVER -> FRAME -> QUANTIFY -> MODEL -> OPTIONS -> DESIGN -> CHALLENGE -> VERIFY -> RECORD
@@ -74,165 +57,143 @@ DISCOVER -> FRAME -> QUANTIFY -> MODEL -> OPTIONS -> DESIGN -> CHALLENGE -> VERI
               +---------------- revise when evidence changes -------+
 ```
 
-The workflow requires the agent to:
+The workflow covers current-state discovery, measurable requirements, capacity, invariants, ownership, data and interface semantics, overload, reliability, security, observability, delivery, migration, cost, independent challenge, and fresh validation.
 
-1. inspect the current system and separate facts, constraints, measurements, estimates, and assumptions;
-2. define actors, tenants, critical journeys, non-goals, quality attributes, ownership, and risk;
-3. quantify workload, burst, concurrency, storage, bandwidth, dependency quotas, latency, recovery, and cost;
-4. model invariants, states, source of truth, consistency, concurrency, ordering, idempotency, reconciliation, and data lifecycle;
-5. compare viable alternatives and select the smallest sufficient architecture;
-6. design runtime components, data, APIs, events, critical flows, overload, reliability, security, observability, delivery, migration, and economics;
-7. run independent challenge and pre-mortems for data loss, invariant breach, cross-tenant access, overload, dependency or region failure, unsafe migration, cost runaway, operator error, and AI tool misuse;
-8. verify claims with current tests, calculations, scans, rehearsals, and scenario walkthroughs;
-9. record ADRs, assumptions, risks, evidence, owners, review triggers, and the smallest safe implementation slices.
-
-## AI system guardrails
+## AI-system guardrails
 
 The AI skill treats an AI product as governed software rather than a prompt wrapped around an API.
 
-It separates the probabilistic model from the deterministic control plane:
+It separates the probabilistic model from deterministic boundaries for:
 
-```text
-request boundary
-  -> context and retrieval
-  -> policy and model routing
-  -> bounded planner/orchestrator
-  -> capability-scoped tools
-  -> verifier and human control plane
-  -> durable state and evidence
-```
+- request identity, tenant, intent, risk, and quota;
+- context, retrieval, provenance, freshness, privacy, and memory;
+- policy, model routing, structured outputs, fallbacks, and budgets;
+- capability-scoped tools with authorization, deadlines, idempotency, audit, and approval;
+- bounded orchestration with finite depth, concurrency, iterations, tokens, duration, and spend;
+- verification, human review, safe degraded modes, rollback, and kill switches;
+- evaluation data, traces, versions, cost, safety, and resulting state.
 
-The AI architecture guidance requires:
+## Install with the Skills CLI
 
-- a measurable task contract and deterministic or human baseline;
-- explicit risk classification: informational, reversible, consequential, or irreversible;
-- separate quality, safety, latency, availability, privacy, and cost requirements;
-- tenant-aware retrieval with authorization inheritance, provenance, freshness, deletion, and no-result behavior;
-- scoped memory with provenance, confidence, retention, correction, and deletion semantics;
-- typed model outputs and evaluated fallbacks;
-- capability-scoped tools instead of broad shell, SQL, browser, filesystem, cloud, or network authority;
-- bounded depth, concurrency, iterations, tool calls, tokens, duration, and spend;
-- prompt-injection, indirect-injection, exfiltration, privilege-escalation, poisoned-data, and denial-of-wallet defenses;
-- golden, adversarial, trajectory, deterministic, human, reliability, and online evaluation;
-- traceable model, prompt, retriever, index, policy, tool, approval, cost, and resulting-state evidence;
-- safe degraded modes, manual paths, rollback criteria, and emergency kill switches.
+### 1. List available skills
 
-## Native AI Harness
-
-The native harness is the orchestration layer at the repository root:
-
-- [`harness.md`](harness.md) contains runtime frontmatter and the principal architecture orchestrator prompt.
-- [`.harness/agents/`](.harness/agents/) contains bounded specialist delegates.
-- [`.harness/hooks/command-guard.md`](.harness/hooks/command-guard.md) blocks common destructive command patterns before execution.
-- [`evals/`](evals/) contains runtime-neutral behavioral pressure cases.
-- [`tests/`](tests/) and [`scripts/doctor.py`](scripts/doctor.py) provide deterministic repository verification.
-
-The default harness configuration includes:
-
-- OpenAI provider configuration with `gpt-4o` as the example model;
-- `OPENAI_API_KEY` as the example secret environment variable;
-- bounded retries with exponential backoff and a maximum retry count;
-- maximum context history and token limits;
-- denied filesystem deletion and metadata operations;
-- delegation capped at depth 2, five concurrent delegates, and bounded iterations.
-
-Change the provider, model, endpoint, and secret binding to match the approved runtime before adoption. Keep credentials in environment variables or a secret manager. Never commit them or place them in prompts, memory, traces, examples, or generated artifacts.
-
-### Specialist delegates
-
-Delegates return bounded findings. They do not concurrently mutate the shared architecture document; the orchestrator integrates their work.
-
-| Delegate | Focus |
-|---|---|
-| `requirements-capacity-analyst` | Requirements, workload, SLOs, estimates, breakpoints, and cost drivers |
-| `domain-data-architect` | Domain boundaries, invariants, state, data ownership, consistency, caches, and tenancy |
-| `distributed-systems-architect` | APIs, events, queues, retries, ordering, scale, and multi-region behavior |
-| `reliability-operations-architect` | SLOs, incidents, DR, overload, observability, on-call, and recovery evidence |
-| `security-privacy-architect` | Identity, authorization, tenant isolation, privacy, abuse, and compliance handoffs |
-| `ai-agent-architect` | AI control planes, memory, tools, evaluation, safety, and inference economics |
-| `migration-delivery-architect` | Transition states, compatibility, backfills, cutover, rollout, and rollback |
-| `architecture-critic` | Independent adversarial review and release blockers |
-| `evidence-verifier` | Fresh command, test, calculation, restore, migration, and acceptance evidence |
-
-### Command governance
-
-The command hook is a safety layer, not a replacement for sandboxing or human approval. It blocks common patterns such as recursive destructive deletion, hard resets, force pushes, filesystem formatting, operating-system shutdown, and piping remote scripts directly into a shell.
-
-Architecture requests never authorize production deployment, destructive commands, force pushes, secret exposure, or irreversible external actions.
-
-## Installation
-
-### Prerequisites
-
-- Git for cloning or pinning the repository.
-- Node.js and `npx` for Skills CLI discovery and installation.
-- Python 3.10 or newer for the bundled validators and repository checks.
-- The native `harness` CLI only when using the AI Harness runtime.
-
-### Inspect the local package
-
-```bash
-npx skills add . --list
-```
-
-### Install one skill locally
-
-```bash
-npx skills add . --skill system-architecture-harness
-```
-
-### Install all three skills
-
-```bash
-npx skills add . --skill '*' --agent '*'
-```
-
-### Install selected skills into selected agents
-
-```bash
-npx skills add . \
-  --skill system-architecture-harness \
-  --skill architecture-review-gate \
-  --agent codex \
-  --agent claude-code \
-  --agent cursor \
-  --agent github-copilot
-```
-
-### Install from GitHub
-
-Install from the canonical GitHub repository:
+This command only lists skills. It does not install them:
 
 ```bash
 npx skills add d4rkNinja/arcforge --list
-npx skills add d4rkNinja/arcforge --skill system-architecture-harness
 ```
 
-The repository-level [`skills.sh.json`](skills.sh.json) groups all three skills for compatible catalog and index surfaces. Keep the skill names stable after publication because installation and catalog identity depend on them.
+### 2. Recommended: install for Claude Code and Codex in a project
 
-## Run the native harness
-
-Set the provider credential through the environment or an approved secret manager:
+Run the command from the project where the skills should be available:
 
 ```bash
-export OPENAI_API_KEY="your-secret"
-harness validate
-harness run
+cd path/to/your-project
+npx skills add d4rkNinja/arcforge --skill '*' -a claude-code -a codex --copy -y
 ```
 
-On PowerShell:
+This explicitly targets both agents and uses project scope. The expected destinations are:
 
-```powershell
-$env:OPENAI_API_KEY = "your-secret"
-harness validate
-harness run
+```text
+your-project/
+├── .claude/
+│   └── skills/
+│       ├── system-architecture-harness/
+│       ├── ai-agent-system-architecture/
+│       └── architecture-review-gate/
+└── .agents/
+    └── skills/
+        ├── system-architecture-harness/
+        ├── ai-agent-system-architecture/
+        └── architecture-review-gate/
 ```
 
-The example configuration in [`harness.md`](harness.md) is a starting point, not proof of provider availability, production readiness, or security. Validate the actual provider, model, tool permissions, network policy, data handling, and approval workflow in the target environment.
+### 3. Install globally for both agents
 
-## Architecture review scanner
+Use this when the skills should be available across projects:
 
-Run the deterministic Markdown scanner against an architecture specification:
+```bash
+npx skills add d4rkNinja/arcforge --skill '*' -a claude-code -a codex -g --copy -y
+```
+
+Install only one skill when needed:
+
+```bash
+npx skills add d4rkNinja/arcforge \
+  --skill architecture-review-gate \
+  -a claude-code -a codex \
+  -g --copy -y
+```
+
+The `--copy` flag avoids symlink permission issues on systems where symlinks are restricted. The CLI supports symlinks as an alternative when your environment allows them.
+
+## Why an installed skill may not appear
+
+The common mistake is using a discovery command as if it were an installation command, or relying on automatic agent detection.
+
+1. `npx skills add ... --list` only lists the source skills.
+2. An install without `-a claude-code -a codex` relies on the CLI's auto-detection and may target only one detected agent.
+3. Project scope installs into the current project. It will not automatically make the skill global or available in a different project.
+4. The source repository's `skills/` directory is the package layout. Claude Code and Codex load the installed copies from their own agent directories.
+5. If a new top-level skill directory was created while an agent was already running, restart the agent when it does not appear.
+6. Check that the installed directory contains `SKILL.md` and that its frontmatter `name` matches the directory name.
+
+Verify the installation:
+
+```bash
+npx skills ls -a claude-code -a codex
+```
+
+Then check the agent-specific locations directly:
+
+| Agent | Project skills | User skills |
+|---|---|---|
+| Claude Code | `.claude/skills/<skill-name>/SKILL.md` | `~/.claude/skills/<skill-name>/SKILL.md` |
+| Codex | `.agents/skills/<skill-name>/SKILL.md` | `~/.agents/skills/<skill-name>/SKILL.md` |
+
+Claude Code can invoke a skill explicitly as `/system-architecture-harness`. Codex can invoke it explicitly with `$system-architecture-harness`. Both agents can also activate a skill implicitly when the task matches its description.
+
+### Manual fallback
+
+If the Skills CLI cannot write to the target agent directory, copy the skill folders manually:
+
+```text
+Claude Code project: <project>/.claude/skills/<skill-name>/
+Codex project:       <project>/.agents/skills/<skill-name>/
+```
+
+Each destination must contain the complete skill folder, including `SKILL.md` and any referenced `references/`, `assets/`, `examples/`, or `scripts/` files.
+
+## Agent Skills format
+
+Every installable skill follows the shared format:
+
+```text
+skill-name/
+├── SKILL.md       # required metadata and instructions
+├── references/    # optional detailed knowledge
+├── assets/        # optional templates and resources
+├── examples/      # optional worked examples
+└── scripts/       # optional deterministic helpers
+```
+
+The primary `SKILL.md` files use YAML frontmatter with a matching lowercase `name`, a concrete `description`, MIT licensing, compatibility, and version metadata. Detailed material is loaded progressively so the initial skill list stays small.
+
+## Optional helpers and maintainer checks
+
+Users do not need Python to install or activate the skills. Some skills include optional Python helpers for deterministic architecture validation and scoring; an agent may run them only when the task calls for that evidence.
+
+Repository maintainers can run the optional checks:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python scripts/doctor.py
+npx skills add . --list
+```
+
+The doctor checks frontmatter, naming, links, line limits, portable-only layout, evaluation cases, and positive/negative architecture-scanner fixtures. It is a maintainer check, not an end-user installation requirement.
+
+Run the architecture scanner directly when a Markdown architecture specification is available:
 
 ```bash
 python skills/architecture-review-gate/scripts/score_architecture.py \
@@ -240,105 +201,13 @@ python skills/architecture-review-gate/scripts/score_architecture.py \
   --format json
 ```
 
-The scanner checks visible evidence across scope, requirements, boundaries, data correctness, interfaces, performance, reliability, security, operations, decisions, cost, and validation. It also flags dangerous patterns such as:
-
-- floating-point financial values;
-- independent database and broker writes;
-- unbounded retry or queue behavior;
-- authoritative caches or search indexes without recovery semantics;
-- unsupported end-to-end exactly-once claims;
-- incomplete active-active write semantics;
-- internal-network trust;
-- gateway-only authorization;
-- backup claims without restore evidence;
-- direct deployment without rollback or progressive delivery;
-- technology-first microservice justification.
-
-Verdicts are structural gates, not certificates:
-
-| Verdict | Meaning |
-|---|---|
-| `PASS` | Score is at least 85, no critical finding exists, and visible evidence is sufficient for the scanner |
-| `CONDITIONAL` | Score is 60-84 or material evidence remains unresolved |
-| `BLOCK` | A critical finding exists or the score is below 60 |
-
-The scanner cannot prove correctness, security, compliance, scalability, recoverability, or operational readiness. Pair it with expert review and fresh runtime evidence.
-
-## Validation
-
-Install development dependencies:
-
-```bash
-python -m pip install -r requirements-dev.txt
-```
-
-Run the deterministic repository gate:
-
-```bash
-python scripts/doctor.py
-```
-
-The doctor runs:
-
-- the repository unit tests;
-- skill frontmatter, naming, link, line-count, and output-contract checks;
-- native harness artifact and delegate checks;
-- command-guard checks;
-- Skills.sh grouping checks;
-- positive and negative architecture-scanner fixtures.
-
-Equivalent Make targets are available:
-
-```bash
-make test
-make doctor
-make package
-```
-
-The package command creates a reproducible ZIP, updates [`MANIFEST.sha256`](MANIFEST.sha256), and writes a checksum beside the ZIP. Generated archives should stay outside the repository unless explicitly needed for distribution.
-
-### Optional external checks
-
-Skills specification validation, when the reference validator is installed:
-
-```bash
-skills-ref validate skills/system-architecture-harness
-skills-ref validate skills/ai-agent-system-architecture
-skills-ref validate skills/architecture-review-gate
-```
-
-Native runtime validation:
-
-```bash
-harness validate
-```
-
-These checks are intentionally separate from the default doctor command. Do not claim they passed unless they were run in the current change and their complete output was inspected.
+The scanner is a structural aid, not a correctness, security, compliance, scalability, recovery, or operational-readiness certificate.
 
 ## Behavioral evaluation
 
-[`evals/cases.json`](evals/cases.json) is a runtime-neutral pressure suite covering:
+[`evals/cases.json`](evals/cases.json) contains pressure cases for technology-first design, overload, financial correctness, multi-region writes, authorization, RAG isolation, unsafe tools, unbounded agent loops, model fallback, and deadline pressure.
 
-- technology-first greenfield design;
-- queue and retry overload;
-- financial ledger correctness;
-- multi-region write semantics;
-- backup and restore claims;
-- gateway-only authorization;
-- unsafe database-plus-broker dual writes;
-- RAG tenant isolation;
-- broad agent shell access;
-- unbounded agent loops;
-- unsafe model fallback;
-- deadline pressure and unrun evidence.
-
-For each approved agent and model, compare:
-
-1. no-skill baseline;
-2. named portable skill enabled;
-3. native harness enabled, when adopted.
-
-Use at least five fresh-context trials per condition. Score expected and forbidden behaviors, read flagged outputs, and report activation rate, instruction adherence, blocker recall, false-positive rate, output completeness, latency, and cost. A deterministic repository pass proves package structure and scanner behavior; it does not prove behavioral uplift in real agents.
+For each approved agent and model, compare a no-skill baseline with the named skill enabled. Use fresh-context trials, score expected and forbidden behaviors, read flagged outputs, and report activation, instruction adherence, blocker recall, false-positive rate, completeness, latency, and cost. A deterministic repository pass does not prove real-agent behavioral uplift.
 
 ## Repository layout
 
@@ -361,50 +230,34 @@ Use at least five fresh-context trials per condition. Score expected and forbidd
 │       ├── references/
 │       ├── assets/
 │       └── scripts/
-├── harness.md
-├── .harness/
-│   ├── agents/
-│   └── hooks/
+├── docs/
 ├── evals/
 ├── tests/
-├── scripts/
-├── docs/
+├── scripts/                 # maintainer-only validation helpers
 ├── skills.sh.json
 ├── CONTRIBUTING.md
 ├── SECURITY.md
+├── VERSION
 └── LICENSE
 ```
 
-### Progressive disclosure
-
-Primary skills stay compact and portable. Detailed knowledge lives one link away in `references/`; reusable architecture artifacts live in `assets/`; deterministic helpers live in `scripts/`; worked examples and pressure cases live in `examples/` and `tests/`.
-
-This keeps the skills useful across runtimes without injecting a giant prompt into every architecture task.
+There is deliberately no root `harness.md`, `.harness/` directory, native delegate configuration, or required provider runtime.
 
 ## Contributing
 
-Read [`AGENTS.md`](AGENTS.md) before changing the repository. The contribution workflow is:
+Read [`AGENTS.md`](AGENTS.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md) before changing the repository. Preserve portable frontmatter, progressive disclosure, the `## Output Contract` and `## Stop Conditions` headings, and the stable skill identifiers.
 
-1. describe the observed failure, missing architecture case, or standards change;
-2. add a failing deterministic test or behavioral case when behavior is changing;
-3. make the smallest focused change;
-4. preserve portable skill boundaries, frontmatter, output contracts, and stop conditions;
-5. run `python scripts/doctor.py`;
-6. document evidence, compatibility impact, and any native or behavioral checks that were not run.
+## Security
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full repository contract.
+Review skill source before installation, pin trusted commits for production use, run optional validators in a sandboxed environment, keep credentials in secret bindings, and apply least privilege to every agent runtime. See [`SECURITY.md`](SECURITY.md).
 
-## Security and safe adoption
+## Standards and source documentation
 
-Skills contain instructions and executable helpers. Review the source before installation, pin trusted commits for production use, run validators in a sandboxed environment, keep provider credentials in secret bindings, and apply least privilege to every agent runtime.
-
-Report suspected malicious instructions, unsafe executable behavior, secret exposure, cross-tenant risk, command-guard bypass, or supply-chain concerns through a private GitHub security advisory after publication. Do not put credentials, personal data, or exploitable customer information in public issues.
-
-Read [`SECURITY.md`](SECURITY.md) for the security policy. ArcForge is not a security certification, compliance approval, penetration test, or substitute for domain-owner review.
-
-## Standards and provenance
-
-The repository structure and runtime artifacts are documented in [`docs/research-and-standards.md`](docs/research-and-standards.md), including the Agent Skills specification, Skills.sh conventions, native AI Harness references, and source coverage notes.
+- [Agent Skills specification](https://agentskills.io/specification)
+- [Skills CLI](https://github.com/vercel-labs/skills)
+- [Claude Code skills documentation](https://code.claude.com/docs/en/skills)
+- [Codex skills documentation](https://developers.openai.com/codex/skills/)
+- [Research and standards map](docs/research-and-standards.md)
 
 ## License
 

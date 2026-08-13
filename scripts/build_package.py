@@ -25,8 +25,6 @@ def included_files() -> list[Path]:
             continue
         if path.name in EXCLUDED_NAMES or path.suffix in EXCLUDED_SUFFIXES:
             continue
-        if relative.parts[:2] == (".harness", "state") and path.name != ".gitkeep":
-            continue
         files.append(path)
     return sorted(files, key=lambda value: value.as_posix())
 

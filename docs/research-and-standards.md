@@ -1,53 +1,41 @@
 # Research and Standards Map
 
-This repository was structured from current primary and ecosystem sources reviewed on 2026-08-13.
+This repository is a portable Agent Skills distribution. It does not depend on a native AI Harness runtime or a provider-specific orchestration file.
 
-## Portable Agent Skills
+## Agent Skills format
 
-- Skills.sh documentation: https://www.skills.sh/docs
-- Skills CLI source and usage: https://github.com/vercel-labs/skills
-- Agent Skills specification: https://agentskills.io/specification
-- Agent Skills progressive disclosure: https://agentskills.io/skill-creation/best-practices
-- Reference validator: https://github.com/agentskills/agentskills/tree/main/skills-ref
-- Skills.sh page grouping schema: https://skills.sh/schemas/skills.sh.schema.json
+Primary sources:
+
+- [Agent Skills specification](https://agentskills.io/specification)
+- [Agent Skills best practices](https://agentskills.io/skill-creation/best-practices)
+- [Skills CLI](https://github.com/vercel-labs/skills)
+- [Skills.sh documentation](https://www.skills.sh/docs)
 
 Applied decisions:
 
 - each installable capability lives in `skills/<slug>/SKILL.md`;
-- frontmatter has stable `name`, concrete `description`, license, compatibility, and metadata;
-- detailed knowledge is loaded from `references/`, reusable forms from `assets/`, and deterministic helpers from `scripts/`;
-- repository grouping is declared in `skills.sh.json`;
-- portable skills do not depend on one vendor-specific runtime.
+- frontmatter uses stable `name`, concrete `description`, license, compatibility, and metadata fields;
+- every skill keeps its primary instructions in `SKILL.md` and loads deeper material progressively from `references/`, `assets/`, `examples/`, or its own optional `scripts/` directory;
+- the repository grouping is declared in `skills.sh.json`;
+- no skill requires a particular vendor, model provider, native harness CLI, or root runtime configuration for basic use.
 
-## Harness Engineering
+## Agent discovery and installation
 
-- Skills.sh harness-engineering skill: https://www.skills.sh/github/awesome-copilot/harness-engineering
-- Harness Skills workflow documentation: https://developer.harness.io/docs/platform/harness-ai/harness-skills/
+The installation and discovery guidance follows the current agent documentation:
 
-Applied formula:
+- [Claude Code skills](https://code.claude.com/docs/en/skills) loads project skills from `.claude/skills/<skill-name>/SKILL.md` and personal skills from `~/.claude/skills/<skill-name>/SKILL.md`.
+- [Codex skills](https://developers.openai.com/codex/skills/) loads repository skills from `.agents/skills` and user skills from `~/.agents/skills`.
+- [Skills CLI agent paths and options](https://github.com/vercel-labs/skills#readme) supports explicit `--agent`, `--global`, `--copy`, `--skill`, and `--yes` flags.
 
-```text
-Harness = Instructions + Constraints + Feedback + Memory + Evaluation + Governance
+The README therefore recommends explicit per-agent installation instead of relying on auto-detection:
+
+```bash
+npx skills add d4rkNinja/arcforge --skill '*' -a claude-code -a codex --copy -y
 ```
 
-The repository therefore includes durable instructions, deterministic checks, failure memory through eval cases, CI drift checks, explicit governance, and an adoption/installation guide rather than only three prompt files.
+Run that command from the target project for project-scoped installation. Use `-g` when the skills should be available across projects, then verify with `npx skills ls -g -a claude-code -a codex`.
 
-## Native AI Harness
-
-- AI Harness introduction: https://htekdev.github.io/ai-harness/
-- `harness.md` frontmatter: https://htekdev.github.io/ai-harness/reference/harness-md.html
-- Hook artifact schema: https://htekdev.github.io/ai-harness/reference/hook-artifact.html
-- Sub-agent artifact schema: https://htekdev.github.io/ai-harness/reference/sub-agent-artifact.html
-
-Applied decisions:
-
-- root `harness.md` combines runtime frontmatter with the orchestrator system prompt;
-- `.harness/agents/*.md` uses filename-derived identity and bounded role prompts;
-- `.harness/hooks/command-guard.md` uses a `tool.pre` decision hook;
-- tool policy and delegation budgets are in the execution configuration;
-- native artifacts complement portable skills rather than replacing them.
-
-## System Architecture Knowledge
+## Architecture knowledge
 
 The production architecture references were derived from the earlier architecture package built from the `d4rkNinja/system-design-notes` request and expanded with production requirements, C4 views, consistency, overload, SLOs, disaster recovery, security, privacy, migrations, operations, economics, and AI-system governance.
 

@@ -1,4 +1,4 @@
-name: validate-skills-and-harness
+name: validate-portable-skills
 
 on:
   push:

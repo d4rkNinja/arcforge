@@ -2,7 +2,7 @@
 name: system-architecture-harness
 description: Use when designing, reviewing, scaling, migrating, or documenting production software systems where requirements, workload, data ownership, consistency, distributed workflows, reliability, security, performance, cost, or operational readiness must be explicit and evidence-backed.
 license: MIT
-compatibility: Works with Agent Skills-compatible coding agents; Python 3.10 or newer is optional for bundled validation.
+compatibility: Works with Agent Skills-compatible coding agents, including Claude Code and Codex; Python 3.10 or newer is optional for bundled validation.
 metadata:
   author: d4rkninja
   version: "0.1.0"

@@ -2,7 +2,7 @@
 name: ai-agent-system-architecture
 description: Use when designing, reviewing, or operating production AI systems involving LLMs, RAG, model routing, memory, tools, autonomous agents, multi-agent orchestration, human approval, evaluation, safety, latency, or inference cost.
 license: MIT
-compatibility: Works with Agent Skills-compatible coding agents and does not require a particular model provider or agent framework.
+compatibility: Works with Agent Skills-compatible coding agents, including Claude Code and Codex, and does not require a particular model provider or agent framework.
 metadata:
   author: d4rkninja
   version: "0.1.0"

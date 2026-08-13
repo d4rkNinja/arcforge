@@ -2,7 +2,7 @@
 name: architecture-review-gate
 description: Use when independently reviewing an architecture specification, RFC, diagram, migration plan, production-readiness proposal, or system-design decision for correctness, evidence, risk, operability, and release blockers.
 license: MIT
-compatibility: Works with Agent Skills-compatible coding agents; Python 3.10 or newer is optional for deterministic Markdown scoring.
+compatibility: Works with Agent Skills-compatible coding agents, including Claude Code and Codex; Python 3.10 or newer is optional for deterministic Markdown scoring.
 metadata:
   author: d4rkninja
   version: "0.1.0"
