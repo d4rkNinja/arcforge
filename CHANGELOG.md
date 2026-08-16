@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 — 2026-08-17
+
+- Added `docs/skills/` — a user-facing guide for every skill (index plus one page per skill: what it covers, when to use it, what a run produces, companion skills, a try-it prompt, and links into the skill), linked from the README.
+- Rewrote the README to be user-centric: what each skill does for the user, when to use it, install and invocation examples, and a pick-a-skill routing table — with the internal knowledge-base machinery removed from the document entirely.
+- Fixed stale repository documentation after the 0.3.0 expansion: `CLAUDE.md` now routes all fourteen skills (it previously said "the three skills" and omitted the eleven implementation skills), and the README architecture section disambiguated its phrasing before the full rewrite.
+- Documented the implementation-suite cases (`impl-*`) in `evals/README.md`, including the co-activation and architecture-boundary cases.
+- Re-verified with deeper checks than 0.3.0: YAML parsing of every `SKILL.md` frontmatter and `agents/openai.yaml`, exhaustive markdown link scanning (including paths with spaces or parentheses), in-paper anchor resolution, `skills.sh.json` ↔ skill-directory consistency, README numeric claims, and knowledge-graph paths — all clean.
+
 ## 0.3.0 — 2026-08-17
 
 - Added the backend implementation intelligence layer: eleven portable skills that load production implementation papers before code is written (`auth-access`, `api-contracts`, `data-storage`, `transactions-consistency`, `async-messaging`, `resilience-flow-control`, `security-privacy`, `production-operations`, `migration-evolution`, `quality-release`, `runtime-delivery`).

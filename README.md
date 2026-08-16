@@ -1,278 +1,134 @@
 # ArcForge
 
-> Architecture and implementation skills that make AI agents think before they build.
+> Skills that make AI coding agents think before they build.
 
-**Current release: 0.3.0** · 14 portable skills · Built for Claude Code, Codex, and any Agent Skills-compatible runtime.
+**14 portable skills** for Claude Code, Codex, and any Agent Skills-compatible runtime. MIT licensed.
 
-AI coding agents write code quickly. They are much less reliable at deciding what should be built, where durable state belongs, how a system fails, what it costs, or which trade-offs a team can safely operate. ArcForge gives agents structured workflows — expressed entirely as natural-language instructions — so those decisions become explicit, evidence-backed, and reviewable before implementation.
+AI agents write code fast. They are less reliable at the decisions that decide whether that code survives production: what must never break, what happens when a dependency dies, what an attacker will try, what can be rolled back, and what "done" actually means. ArcForge gives your agent structured skills so it asks — and answers — those questions before and while it writes code.
 
-ArcForge ships skills in two layers:
+You get two kinds of skills:
 
-1. **Architecture skills (3)** — design and review whole systems: requirements, boundaries, data ownership, failure, security, operations, and independent adversarial review.
-2. **Backend implementation skills (11)** — load production engineering papers *before writing code* for a specific feature: authentication, caching, transactions, queues, multi-tenancy, migrations, and more.
+- **Design & review skills** — plan and challenge whole systems: requirements before technology, evidence before confidence, independent review before approval.
+- **Implementation skills** — build backend features with built-in senior-engineer expertise: each skill carries the rules, edge cases, failure modes, and release checklists a first draft usually misses.
 
-Both layers are instruction-only. No scripts, no API keys, no vendor runtime — install and the agent model does the reasoning.
+Both layers are pure instructions. No scripts, no API keys, no vendor lock-in — install, invoke, and your agent does the reasoning.
 
-- [Install](#install) · [Choose a skill](#choose-a-skill) · [How naming works](#how-naming-works) · [See it in action](#see-it-in-action)
+[Install](#install) · [Use it](#use-it) · [Pick a skill](#pick-a-skill)
 
-## Contents
+## Design & review skills
 
-- [Why ArcForge exists](#why-arcforge-exists)
-- [The 14 skills](#the-14-skills)
-- [How naming works](#how-naming-works)
-- [Choose a skill](#choose-a-skill)
-- [How the implementation skills work](#how-the-implementation-skills-work)
-- [How the architecture skills work](#how-the-architecture-skills-work)
-- [Install](#install)
-- [See it in action](#see-it-in-action)
-- [Skill package structure](#skill-package-structure)
-- [Repository structure](#repository-structure)
-- [The knowledge base behind the implementation skills](#the-knowledge-base-behind-the-implementation-skills)
-- [Design principles](#design-principles)
-- [What ArcForge is not](#what-arcforge-is-not)
-- [Compatibility and honest limits](#compatibility-and-honest-limits)
-- [Contributing](#contributing)
-- [Standards](#standards)
-- [Security](#security)
-- [License](#license)
+| Skill | ID | Use it when |
+|---|---|---|
+| **Design Production Systems** | `system-architecture-harness` | You are starting or re-architecting a production system, changing storage or service boundaries, or planning scale, reliability, or migrations |
+| **Design AI & Agent Systems** | `ai-agent-system-architecture` | You are building anything model-powered: chat assistants, RAG, agents with tools, model routing, or AI features that take real actions |
+| **Review Software Architecture** | `architecture-review-gate` | A design already exists and you want an independent, adversarial review before committing budget — RFCs, ADRs, migration plans, or post-incident redesigns |
 
-## Why ArcForge exists
+What you get from a run: a traceable set of decisions — requirements, workload numbers, data ownership, failure and recovery behavior, security boundaries, alternatives with trade-offs, and a validation plan — instead of a fashionable diagram.
 
-An agent can produce a convincing first draft while still making the decisions that cause production failures:
+## Implementation skills
 
-- coding before requirements and non-goals are clear, or before hidden correctness rules are known;
-- choosing databases, queues, caches, or microservices before modeling access patterns and invariants;
-- storing money in floating point, retrying forever, or writing to two systems "atomically" in one transaction;
-- enforcing authorization only in the UI or a gateway;
-- treating a cache or model output as durable truth; assuming replication is backup;
-- implementing password reset without reuse protection, rate limiting, or account-enumeration defenses;
-- shipping a column rename without a compatibility window; claiming "tests pass" equals "production-ready."
+Use these whenever the agent is about to **write or change backend code**. The skill loads the domain's production guidance, forces the key questions to be answered first, and turns the must/should/never rules into decisions, tests, and stop conditions.
 
-The architecture layer makes those decisions part of a visible, challengeable workflow. The implementation layer puts a production checklist in front of the code: the rules, failure modes, security boundaries, migration gates, and verification evidence that experienced engineers apply and first drafts skip.
+| Skill | ID | Use it when |
+|---|---|---|
+| **Implement Auth & Access Control** | `auth-access` | Adding login, signup, password reset, sessions, tokens, OAuth, MFA, API keys, permissions, or multi-tenant isolation |
+| **Implement API & Client Contracts** | `api-contracts` | Building endpoints, validation, error responses, pagination, versioning, webhooks, realtime channels, or SDKs |
+| **Implement Data & Storage** | `data-storage` | Modeling data, choosing identifiers, handling money and time, indexes, soft delete, file uploads, or search |
+| **Implement Transactions & Consistency** | `transactions-consistency` | Writing transactional or concurrent code: locking, idempotency, retries, state machines, sagas, or sharding |
+| **Implement Async Jobs & Messaging** | `async-messaging` | Adding background jobs, scheduled work, queues, events, outbox patterns, batch pipelines, email, or notifications |
+| **Implement Resilience & Flow Control** | `resilience-flow-control` | Adding caching, rate limiting, quotas, retries, timeouts, circuit breakers, or overload protection |
+| **Implement Security & Privacy** | `security-privacy` | Handling secrets, encryption, TLS, sensitive data, log redaction, abuse protection, or token generation |
+| **Implement Observability & Operations** | `production-operations` | Adding logging, metrics, tracing, health checks, audit trails, runbooks, backups, or disaster recovery |
+| **Implement Migrations & Evolution** | `migration-evolution` | Changing schemas, running backfills, evolving API/event contracts, or cutting features over safely |
+| **Verify Quality & Release Readiness** | `quality-release` | Deciding whether a change is actually done: test strategy, failure and load evidence, and the final release checklist |
+| **Implement Runtime & Delivery** | `runtime-delivery` | Changing configuration, connection pools, startup/shutdown behavior, deployment ordering, or CI/CD |
 
-## The 14 skills
-
-Every skill is a directory under `skills/` with a `SKILL.md` entry point. The table shows the human-facing display name, the stable ID (used for installation and invocation), and what it produces.
-
-### Architecture layer
-
-| Display name | Stable ID | Use it when | Primary result |
-|---|---|---|---|
-| Design Production Systems | `system-architecture-harness` | Designing or changing a production system, its boundaries, storage, scale, or reliability | An evidence-backed architecture specification with alternatives, ADRs, and implementation slices |
-| Design AI & Agent Systems | `ai-agent-system-architecture` | Building LLM, RAG, memory, tool-use, or agent systems | A governed AI architecture with bounded authority, evaluation, and rollout gates |
-| Review Software Architecture | `architecture-review-gate` | Independently reviewing an architecture, RFC, migration, incident, or release proposal | A five-gate evidence vector, findings, blockers, verdict, and approval conditions |
-
-### Implementation layer
-
-Each implementation skill routes the task to production papers, forces the pre-implementation questions to be answered, and turns every MUST/SHOULD/AVOID/NEVER rule into a decision, a test, or a documented exception — before code is written.
-
-| Display name | Stable ID | Covers | Papers |
-|---|---|---|---:|
-| Implement Auth & Access Control | `auth-access` | login, password reset, sessions, tokens, OAuth, MFA, API keys, RBAC/ABAC, multi-tenancy, admin ops | 11 |
-| Implement API & Client Contracts | `api-contracts` | endpoints, validation, error models, pagination, versioning, webhooks, realtime, SDKs/CLIs | 13 |
-| Implement Data & Storage | `data-storage` | schemas, identifiers, money, time, constraints, indexes, soft delete, files, search, lifecycle | 19 |
-| Implement Transactions & Consistency | `transactions-consistency` | isolation, locking, state machines, idempotency, sagas, replication, sharding, distributed locks | 13 |
-| Implement Async Jobs & Messaging | `async-messaging` | background jobs, cron, queues, events, outbox/inbox, batch, dedup, email, notifications | 10 |
-| Implement Resilience & Flow Control | `resilience-flow-control` | caching, rate limiting, quotas, retries, timeouts, circuit breakers, backpressure | 10 |
-| Implement Security & Privacy | `security-privacy` | secrets, crypto, TLS, sensitive-data lifecycle, redaction, abuse protection, randomness | 10 |
-| Implement Observability & Operations | `production-operations` | logging, metrics, tracing, health, audit, runbooks, backup/restore, DR, multi-region | 16 |
-| Implement Migrations & Evolution | `migration-evolution` | schema change, backfills, contract evolution, CDC, zero-downtime, feature cutover, legacy | 11 |
-| Verify Quality & Release Readiness | `quality-release` | test strategy, concurrency/failure/load evidence, performance, release checklist | 10 |
-| Implement Runtime & Delivery | `runtime-delivery` | project foundations, config, connection pools, shutdown, deploy ordering, CI/CD | 11 |
-
-## How naming works
-
-- **Display name** — what you see in agent UIs (for example, *Implement Auth & Access Control*).
-- **Stable ID** — the directory name and frontmatter `name`, used everywhere else: installation (`--skill auth-access`), Claude Code (`/auth-access`), Codex (`$auth-access`), and cross-references between skills.
-
-The three architecture skills keep their original IDs for backward compatibility; the eleven implementation skill IDs are name-descriptive with no shared prefix — they read naturally in commands (`/transactions-consistency`, `/async-messaging`).
-
-Skills cross-reference each other by ID in their descriptions and boundary maps, so an agent implementing "checkout" knows to combine `transactions-consistency` with `async-messaging` rather than guessing.
-
-## Choose a skill
-
-| Your task | Skill to use |
-|---|---|
-| Design a new system, migration, or scaling change | `system-architecture-harness` |
-| Build an AI/agent feature or platform | `ai-agent-system-architecture` |
-| Review an architecture, RFC, or post-incident redesign | `architecture-review-gate` |
-| Implement or change a specific backend feature | the matching implementation skill from the table above |
-| Decide whether a change is ready to ship | `quality-release` (plus `architecture-review-gate` for formal approval) |
-
-If a task spans domains, activate every matching skill: "implement checkout" needs `transactions-consistency` and `async-messaging` together. Each skill's **Boundary Map** section names its common co-activations.
-
-## How the implementation skills work
-
-Every implementation skill follows the same shape:
-
-1. **Route** — a table maps the task ("password reset", "add caching", "rename a column") to its primary paper(s).
-2. **Read** — the paper is loaded from the skill's `references/papers/` before any code.
-3. **Answer** — the paper's *Questions that must be answered before implementation* are answered, or each open point is labeled as an assumption with its design impact.
-4. **Inspect** — when changing an existing system, the paper's *Existing-codebase checks* run first: map every entry point, constraint, and bypass path.
-5. **Map rules to decisions** — each applicable MUST/SHOULD/AVOID/NEVER becomes a decision with an enforcement point and a test; nothing is silently downgraded.
-6. **Verify** — the paper's verification checklist becomes the test plan, and the skill's `## Stop Conditions` list halts the work if a rule lacks a decision, test, or documented exception.
-
-Each skill also carries a worked example in `examples/` that calibrates the expected output, and each `agents/openai.yaml` provides Codex display metadata (optional, isolated, ignored by Claude Code).
-
-## How the architecture skills work
-
-The shared lifecycle is Discover → Frame → Quantify → Model → Compare → Design → Challenge → Verify → Record. Decisions trace to requirements, invariants, risks, or constraints; every critical claim has a validation path. The three skills enforce hard gates — for example:
-
-- no architecture decision without a motivating requirement, an alternative, a stated trade-off, and a validation path;
-- no "scales to X" claim without a capacity model; no invariant without an enforcement point;
-- replication is not backup; "internal network" is not an authorization model;
-- the model proposes, the harness constrains — AI output never owns permissions or durable truth;
-- review verdicts keep a five-gate evidence vector, and no aggregate score can waive a correctness, security, recovery, tenancy, overload, migration, or evidence blocker.
-
-See each skill's `SKILL.md` for its full workflow, `references/` for depth, `assets/` for reusable templates, and `examples/` for worked calibration artifacts.
+Real tasks span several skills — "implement checkout" needs `transactions-consistency` and `async-messaging` together. Every skill lists its neighbors, so the agent knows which companions to load.
 
 ## Install
 
-Project-scoped installation for Claude Code and Codex:
+Into a project, for Claude Code and Codex:
 
 ~~~bash
 npx --yes skills add d4rkNinja/arcforge --skill '*' -a claude-code -a codex --copy -y
 ~~~
 
-Install globally instead:
+Globally, across all projects:
 
 ~~~bash
 npx --yes skills add d4rkNinja/arcforge --skill '*' -a claude-code -a codex --copy -g -y
 ~~~
 
-Install one skill only:
+Just one skill:
 
 ~~~bash
 npx --yes skills add d4rkNinja/arcforge --skill auth-access -a claude-code -a codex --copy -y
 ~~~
 
-List available skills:
+## Use it
 
-~~~bash
-npx --yes skills add d4rkNinja/arcforge --list
-~~~
+Invoke by skill ID after installing — `/auth-access` in Claude Code, `$auth-access` in Codex — or just name the skill in your prompt. The **bold names** above are display names; the **IDs** are what you type.
 
-After installation, invoke by stable ID: `/auth-access` in Claude Code, `$auth-access` in Codex, or simply name the skill in a prompt.
-
-## See it in action
-
-Implementation example:
+Implement a feature safely:
 
 ~~~text
 Implement password reset for our API: email link, single use,
 and it must not let attackers enumerate accounts. Use auth-access.
 ~~~
 
-A good run consults the authentication/sessions papers, states reset-token lifetime, reuse, and storage rules, defines lockout and enumeration defenses, and lists the tests that prove each rule — before writing code.
+A good run states the reset-token rules (lifetime, storage, reuse), the lockout and enumeration defenses, and the tests that prove each rule — before any code is written.
 
-Architecture example:
+Design a system:
 
 ~~~text
 Design a multi-tenant order platform with finite inventory, prepaid
-checkout, tenant-scoped authorization, asynchronous fulfillment events,
-and a regional recovery target. Compare a modular monolith with
-distributed alternatives. Use system-architecture-harness.
+checkout, and a regional recovery target. Compare a modular monolith
+with distributed alternatives. Use system-architecture-harness.
 ~~~
 
-Review example:
+Review a proposal:
 
 ~~~text
-Review this architecture RFC for production readiness. Reconstruct the
-data and trust boundaries, challenge the capacity and recovery claims,
-and return blockers, evidence gaps, and approval conditions.
-Use architecture-review-gate.
+Review this architecture RFC for production readiness. Challenge the
+capacity and recovery claims and return blockers and approval
+conditions. Use architecture-review-gate.
 ~~~
 
-Each implementation skill's `examples/` folder contains one full worked example showing the expected shape and depth of a run.
+## Pick a skill
 
-## Skill package structure
+| Your situation | Start with |
+|---|---|
+| New system, migration, or big architecture change | `system-architecture-harness` |
+| Anything powered by an LLM or agents | `ai-agent-system-architecture` |
+| Judging a design that already exists | `architecture-review-gate` |
+| Writing or changing backend code | the matching implementation skill above |
+| Deciding if a change is ready to ship | `quality-release` |
 
-Every skill follows the same portable layout:
+## How it works
 
-~~~text
-skills/<stable-id>/
-├── SKILL.md            Core workflow, routing, output contract, stop conditions
-├── references/         Deep material loaded on demand
-│   └── papers/         (implementation skills) production papers
-├── examples/           Worked calibration examples
-├── assets/             Reusable templates (architecture skills)
-└── agents/
-    └── openai.yaml     Optional Codex UI metadata
-~~~
+**Implementation skills** follow one shape: route the task to the right domain guidance → answer the pre-implementation questions (or label the assumptions) → check the existing codebase before editing → turn every rule into a decision, an enforcement point, and a test → stop if any rule is left unhandled. Each ships with a worked example showing what a good run looks like.
 
-This is progressive disclosure: only `name` and `description` are read at discovery, the `SKILL.md` loads on activation, and references load only when the task needs them. Primary `SKILL.md` files stay well under the 500-line specification limit.
-
-## Repository structure
-
-~~~text
-skills/                                14 portable skills (all instruction-only)
-├── system-architecture-harness/       + 6 boundary/code-architecture papers
-├── ai-agent-system-architecture/      + 6 AI-backend papers
-├── architecture-review-gate/
-├── auth-access/  api-contracts/  data-storage/  transactions-consistency/
-├── async-messaging/  resilience-flow-control/  security-privacy/
-└── production-operations/  migration-evolution/  quality-release/  runtime-delivery/
-
-backend-engineering-knowledge-base/    Canonical 146-paper corpus + validator + packager
-evals/                                 36 runtime-neutral behavioral cases
-docs/                                  Standards and provenance map
-.github/                               Portable skill discovery CI
-~~~
-
-## The knowledge base behind the implementation skills
-
-The eleven implementation skills are built on a canonical corpus of **146 production papers** (roughly 923,000 words, 1,881 canonical subtopics) organized in three layers: primitives (reusable reasoning units), systems (subsystems with lifecycle and ownership), and cross-cutting controls (security, reliability, operations).
-
-Each paper covers the hidden production work of its topic: correctness model and invariants, architecture trade-offs, ownership and lifecycle, subtopic-by-subtopic rules with failure modes, normative MUST/SHOULD/MAY/AVOID/NEVER lists, testing requirements, AI-agent failure modes, pre-implementation questions, existing-codebase checks, and a scoped bibliography.
-
-Skills receive **restructured copies**: the packager (`backend-engineering-knowledge-base/tools/package_papers.py`) removes corpus bookkeeping, deduplicates generator boilerplate, collapses fully-templated subtopics into a compact "Default obligations" list, and front-loads the pre-implementation questions — about 31% smaller per paper with every domain-specific rule preserved. Same-skill paper links stay relative so each installed skill is self-contained; cross-skill links become explicit skill pointers. The canonical corpus remains in the repository and is validated by `tools/validate_corpus.py`.
-
-## Design principles
-
-- **Evidence before confidence** — claims need a validation path; assumptions are labeled, not hidden.
-- **Requirements before topology** — no technology choice before workload, invariants, and ownership are known; the smallest architecture that satisfies the requirements is the default.
-- **Ownership before replication** — every piece of durable state has a named source of truth; derived stores have rebuild paths.
-- **Correctness has an enforcement point** — invariants are protected by constraints, transactions, conditional writes, or policy — not by hope.
-- **Resources are bounded** — queues, retries, fan-out, concurrency, tokens, and spend have hard limits.
-- **Authorization happens at the action boundary** — enforced where state is read or changed, never only at a gateway.
-- **Failure and recovery are designed** — timeouts, degraded modes, RTO/RPO, restore drills, and rollback paths exist before launch, and are rehearsed, not assumed.
-- **AI proposals are not authority** — model output is separated from policy, permissions, durable state, verification, approval, and audit.
-- **No score waives a blocker** — critical failures cannot be averaged away.
+**Design & review skills** run a gated workflow — discover, frame, quantify, model, compare, design, challenge, verify, record — with hard rules like: no technology choice before workload and invariants are known; replication is not backup; "internal network" is not an authorization model; and no review score can waive a critical failure.
 
 ## What ArcForge is not
 
-- not a fixed microservices blueprint or a preferred technology list;
-- not an interview cheat sheet or a generic "best practices" prompt;
-- not a reason to introduce distributed systems before evidence justifies them;
-- not a replacement for engineering judgment, security testing, legal advice, or domain approval;
-- not a guarantee that agent-generated designs or code are correct — it is a structured process for reaching, recording, and challenging decisions.
+- Not a template that forces microservices or any specific stack.
+- Not a guarantee that agent output is correct — it makes the reasoning visible so you can challenge it.
+- Not a replacement for security testing, legal review, or domain experts.
 
-## Compatibility and honest limits
+## Repository layout
 
-**Verified in this repository:** portable Agent Skills packaging (shared frontmatter only, optional isolated Codex metadata), progressive disclosure, CI-checked Skills CLI discovery, and explicit installation into Claude Code and Codex skill directories.
+~~~text
+skills/     The 14 skills (each: SKILL.md, references, examples)
+docs/       Skill guides (one page per skill), standards, provenance
+evals/      Behavioral test prompts and review expectations
+.github/    CI checks for skill discovery and installation
+~~~
 
-**Not claimed:** ArcForge does not claim every harness discovers every skill automatically, that installation guarantees correct output, or that behavioral quality is proven by packaging. The 36 behavioral cases in `evals/` are prompts and review expectations, not executable tests — they establish evidence only when run repeatedly with a named target model and independently reviewed. Model outputs vary by model, version, context, and run.
+New here? Browse the [skill guides](docs/skills/) — one page per skill explaining what it covers, when to use it, and what a run produces.
 
-## Contributing
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) first. The rules that matter most:
-
-- one skill per directory, directory name equals frontmatter `name`, primary `SKILL.md` ≤ 500 lines;
-- `## Output Contract` and `## Stop Conditions` headings are mandatory in every skill;
-- add or update a runtime-neutral behavioral case in `evals/cases.json` before changing observable skill behavior, and run affected cases with an approved target model;
-- implementation papers are changed in the canonical corpus, then re-packaged — never hand-edited inside skills;
-- report honestly what was verified and what was not.
-
-Maintainers check discovery with `npx skills add . --list` when network access is available.
-
-## Standards
-
-ArcForge follows the portable [Agent Skills specification](https://agentskills.io/specification) and distributes through the [Skills CLI](https://github.com/vercel-labs/skills). Architecture references map to the [C4 model](https://c4model.com/), [Architecture Decision Records](https://adr.github.io/), [Google SRE guidance](https://sre.google/sre-book/service-level-objectives/), [NIST Zero Trust Architecture](https://csrc.nist.gov/pubs/sp/800/207/final), [NIST AI Risk Management Framework](https://www.nist.gov/itl/ai-risk-management-framework), and [OWASP GenAI guidance](https://owasp.org/www-project-top-10-for-large-language-model-applications/), adapted to the actual system rather than treated as certification. Full provenance: [docs/research-and-standards.md](docs/research-and-standards.md).
-
-## Security
-
-See [SECURITY.md](SECURITY.md). ArcForge skills are instructions and reference material, not a security certification; the consuming runtime and its operators remain responsible for tool permissions, data access, credentials, approvals, and incident response.
+Contributing: [CONTRIBUTING.md](CONTRIBUTING.md) · Agent rules: [AGENTS.md](AGENTS.md) · Standards: [docs/research-and-standards.md](docs/research-and-standards.md) · Security: [SECURITY.md](SECURITY.md)
 
 ## License
 
-Released under the [MIT License](LICENSE).
+[MIT](LICENSE)

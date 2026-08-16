@@ -19,6 +19,8 @@ The real-paper expansion adds six further pressure dimensions:
 
 These cases are intended to pressure-test architecture guidance, not to reward terminology. Reviewers should mark a behavior present only when the output supplies the requested reasoning and evidence; a named ledger, matrix, or confidence label without its underlying dimensions is insufficient.
 
+The implementation-suite cases (0.3.0) cover the eleven backend implementation skills. Each `impl-*` case pairs a realistic, deadline-pressured implementation request with the paper-derived behaviors that must appear (rules loaded or derived, pre-implementation questions answered or labeled, bounds and verification named) and the failures that must not (unbounded retries, floating-point money, secrets in logs, snapshot-as-DR claims, destructive one-shot migrations, happy-path-only readiness). Two further cases check cross-skill co-activation (checkout spanning `transactions-consistency` and `async-messaging`) and the architecture boundary (an implementation skill must redirect whole-system design to `system-architecture-harness` rather than answering from implementation papers).
+
 ## Evaluation Protocol
 
 For each approved target agent and model:
