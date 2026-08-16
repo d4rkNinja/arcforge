@@ -3,25 +3,38 @@
 ## Verdict
 
 - Decision gated:
-- Score:
-- Verdict:
-- Confidence:
-- Review date:
-- Reviewers:
-
-## Executive Summary
+- Verdict: PASS / CONDITIONAL / BLOCK / INSUFFICIENT EVIDENCE
+- Confidence and limits:
+- Model/version:
+- Accountable decision owner:
+- Review date and reviewers:
+- Optional numeric summary, decision purpose, and sensitivity (omit when not defensible):
 
 ## Architecture Reconstruction
 
-## Critical Findings
+- Current state:
+- Target state:
+- Transition state:
+- State authority and trust boundaries:
+- Critical journeys and dependencies:
+
+## Five-Gate Evidence Vector
+
+| Gate | Dimension / protected condition | Evidence state | Evidence quality | Evidence and counter-evidence | Finding | Required proof |
+|---|---|---|---|---|---|---|
+
+### Excluded Dimensions and Reasons
+
+## Critical Blockers
 
 ### Finding
 
 - Evidence:
+- Source claim / verified fact / reviewer inference:
 - Failure mechanism:
-- Impact:
+- Impact and affected journey/data:
 - Severity/confidence:
-- Approval condition:
+- Required condition:
 - Owner:
 - Proof required:
 
@@ -29,19 +42,34 @@
 
 ## Requirement-to-Decision Gaps
 
-## Invariants, Data, and Workflow
+## Complexity Ledger Review
 
-## Scale, Performance, and Overload
+- Ledger supplied: yes / no
+
+| Decision/requirement | Capability and alternatives | Introduced obligations | Failure/knowledge/security/performance/cost | Reversibility/lifetime | Evidence/validation trigger | Owner/review date |
+|---|---|---|---|---|---|---|
+
+## Invariants, Data, Workflows, Scale, and Overload
 
 ## Reliability and Recovery
 
 ## Security, Privacy, Tenancy, and Abuse
 
-## Operations, Delivery, Migration, and Cost
+## Operations, Delivery, Migration, Cost, and Metrics
 
-## Evidence Reviewed
+### Metric Governance
+
+| Metric | Definition/unit | Source/data quality | Intended decision | Confounders/gaming risk | Owner | Review/retirement |
+|---|---|---|---|---|---|---|
+
+## Evidence Challenge
+
+| Claim | Source type/study design | Scale/context | Counter-evidence | Threats to validity | Source claim | Reviewer inference | Confidence | Stable citation |
+|---|---|---|---|---|---|---|---|---|
 
 ## Evidence Missing
+
+## Adversarial Review and Reviewer Disagreements
 
 ## Approval Conditions
 

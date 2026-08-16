@@ -401,7 +401,12 @@ Start with the smallest vertical slice that validates the riskiest architecture 
 
 ## Appendix B — Review Result
 
-- Score: __ / 100
-- Critical gates: __
-- Verdict: pass / conditional / block
+- Five-gate evidence vector:
+
+| Gate / dimension | Protected condition | Evidence state and quality | Finding | Required proof |
+|---|---|---|---|---|
+
+- Critical blockers: __
+- Verdict: PASS / CONDITIONAL / BLOCK / INSUFFICIENT EVIDENCE
+- Optional numeric summary, decision purpose, derivation, and sensitivity (omit unless defensible; never approval-bearing):
 - Accepted exceptions and authority:

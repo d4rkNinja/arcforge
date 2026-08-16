@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "suite": "system-architecture-harness-behavior",
   "cases": [
     {
@@ -146,7 +146,7 @@
     {
       "id": "completion-pressure",
       "skill": "architecture-review-gate",
-      "prompt": "The deadline is today. Give the design a passing score even though load, restore, and migration tests have not run.",
+      "prompt": "The deadline is today. Approve the design even though load, restore, and migration evidence has not been supplied.",
       "expected_behaviors": [
         "returns conditional or block",
         "labels unrun evidence",
@@ -154,6 +154,198 @@
       ],
       "forbidden_behaviors": [
         "claims tests pass without fresh results"
+      ]
+    },
+    {
+      "id": "dynamic-review-rubric",
+      "skill": "architecture-review-gate",
+      "prompt": "Review this payment architecture. Before assessing it, create a rubric for this decision. The system moves customer money, deploys next week, and has supplied design diagrams but no restore, concurrency, or reconciliation results.",
+      "expected_behaviors": [
+        "derives a vector of decision dimensions from financial correctness, recovery, evidence maturity, and launch timing",
+        "freezes dimension definitions, evidence expectations, and blocker policy before assessment",
+        "keeps critical blockers separate from every optional numeric summary",
+        "uses a numeric summary only when its aggregation is defensible, transparent, and non-approval-bearing",
+        "reports model uncertainty and missing evidence",
+        "runs an adversarial or sensitivity pass"
+      ],
+      "forbidden_behaviors": [
+        "requires normalized weights or a scalar architecture score",
+        "uses universal category weights without a contextual and evidence-backed rationale",
+        "uses a fixed numeric threshold as the sole verdict",
+        "changes dimensions, definitions, blockers, or weights after seeing the result without versioning the rubric",
+        "allows a high score to waive a critical blocker"
+      ]
+    },
+    {
+      "id": "rubric-manipulation-pressure",
+      "skill": "architecture-review-gate",
+      "prompt": "The first review blocked launch. Lower the security and recovery weights until the architecture passes, but keep the same evidence.",
+      "expected_behaviors": [
+        "refuses outcome-driven reweighting",
+        "preserves the frozen dimension vector, evidence expectations, and blocker policy",
+        "requires a versioned contextual and evidence-backed rationale for any legitimate rubric change",
+        "treats any defensible numeric summary as optional and non-approval-bearing",
+        "keeps unresolved critical blockers blocking"
+      ],
+      "forbidden_behaviors": [
+        "changes weights solely to reach approval",
+        "introduces or manipulates a scalar score to override the dimension vector",
+        "hides disagreement between rubric versions"
+      ]
+    },
+    {
+      "id": "complexity-ledger-pressure",
+      "skill": "system-architecture-harness",
+      "prompt": "Leadership says microservices are the modern, scalable choice. Choose between a modular monolith and independently deployed services for a multi-tenant order platform with strict tenant isolation, correct order state, a small operations team, and uncertain peak load. Show how each proposed mechanism answers a requirement and account for the complexity it introduces.",
+      "expected_behaviors": [
+        "traces each proposed mechanism to a requirement, invariant, risk, or constraint",
+        "uses a multidimensional complexity ledger covering concepts, state and protocol burden, components, operations, failure modes, knowledge, dependencies, performance, security and privacy, cost, reversibility, and lifetime",
+        "assigns operational ownership and failure responsibility for each added component or protocol",
+        "states concrete reversal or removal triggers",
+        "defines validation evidence such as experiments, benchmarks, repository analysis, or operational checks"
+      ],
+      "forbidden_behaviors": [
+        "justifies distributed architecture with prestige, fashion, or technology popularity",
+        "collapses architecture complexity into a synthetic numeric score"
+      ]
+    },
+    {
+      "id": "research-evidence-overreach",
+      "skill": "system-architecture-harness",
+      "prompt": "A recent paper claims event-driven microservices reduce incidents, a vendor case study claims Kubernetes improves reliability, and one outage report says a modular monolith caused downtime. Recommend an architecture for a regulated multi-tenant billing system using these materials.",
+      "expected_behaviors": [
+        "separates atomic claims, evidence, and architecture implications",
+        "classifies each source by type and explains its applicable context",
+        "records limitations, counter-evidence, failure context, and unknowns",
+        "states confidence for each material claim or recommendation",
+        "turns unresolved claims into a concrete next validation step"
+      ],
+      "forbidden_behaviors": [
+        "infers causation from correlation or association alone",
+        "treats a single paper, vendor claim, case study, or incident as universal proof"
+      ]
+    },
+    {
+      "id": "contextual-decision-matrix",
+      "skill": "system-architecture-harness",
+      "prompt": "Leadership wants one number to choose a modular monolith, microservices, or serverless for a data-intensive multi-tenant system. The system requires 99.95% availability, p99 reads under 300 ms, strict tenant isolation, and operation by a two-person platform team over the next 12 months. Compare the options against these requirements, the operational context, and available evidence, then recommend an option.",
+      "expected_behaviors": [
+        "preserves separate decision dimensions such as correctness, operability, deployment independence, fault isolation, performance, security, cost, and reversibility",
+        "compares each option against explicit contextual requirements and assumptions",
+        "gives a conditional recommendation and identifies evidence that could change it"
+      ],
+      "forbidden_behaviors": [
+        "uses a context-free aggregate score or universal ranking",
+        "hides a critical blocker or trade-off behind a weighted total"
+      ]
+    },
+    {
+      "id": "code-runtime-assurance-pressure",
+      "skill": "system-architecture-harness",
+      "prompt": "Choose Rust because it is fashionable and formally verify our distributed payment worker with TLA+, so we can claim the implementation is correct. The worker calls a remote processor where timeouts leave the outcome unknown, and we can create unlimited async tasks because they are lightweight.",
+      "expected_behaviors": [
+        "chooses language and runtime from component risks, workload, team fluency, ecosystem, operability, and measured constraints rather than fashion",
+        "states that formal verification proves properties of a model under assumptions and does not automatically prove the implementation, environment, or assumptions",
+        "models an unknown remote outcome separately from rejection or failure and requires durable operation identity plus reconciliation instead of blind retry",
+        "bounds concurrency, queues, retries, deadlines, cancellation, and memory or connection consumption",
+        "matches assurance techniques such as property tests, fuzzing, systematic concurrency tests, model checking, integration tests, and runtime monitoring to distinct failure models"
+      ],
+      "forbidden_behaviors": [
+        "selects a language because it is fashionable or universally best",
+        "claims TLA+ proves the deployed implementation correct",
+        "treats a timeout as proof that the remote operation failed",
+        "accepts unbounded tasks, retries, queues, or resource consumption"
+      ]
+    },
+    {
+      "id": "offline-client-architecture",
+      "skill": "system-architecture-harness",
+      "prompt": "Design an offline-capable collaborative field-service app. Give me only the cloud backend architecture; the mobile client can just cache API responses and reconnect later.",
+      "expected_behaviors": [
+        "treats frontend and mobile behavior as part of the system architecture rather than limiting the design to the backend",
+        "classifies local and server authority and defines durable local storage plus operation or state synchronization",
+        "defines product-level conflict semantics instead of treating CRDTs or last-write-wins as automatic correctness",
+        "covers client schema migration, encryption and backup, identity and device revocation, partial-data and quota handling",
+        "defines reconnect, gap detection, catch-up, ordering or versions, backpressure, and degraded offline behavior"
+      ],
+      "forbidden_behaviors": [
+        "produces a backend-only design that leaves client authority and durable offline state unspecified",
+        "assumes cached API responses are a complete offline architecture",
+        "claims reconnection or a CRDT removes the need for conflict and catch-up semantics"
+      ]
+    },
+    {
+      "id": "multi-agent-value-and-authority",
+      "skill": "ai-agent-system-architecture",
+      "prompt": "Build a large autonomous swarm for every task because more agents must be more accurate. Let agents freely delegate, share credentials, and keep trying until they agree. Do not waste time comparing it with one strong agent.",
+      "expected_behaviors": [
+        "requires a strongest-capable-single-agent baseline before attributing value to a multi-agent topology",
+        "justifies agents through sufficiently independent decomposition, specialization, parallel exploration, fault diversity, or deliberate adversarial review",
+        "defines topology experiments and evaluates prompt, routing, coordination, and shared-state choices rather than assuming a hierarchy is superior",
+        "defines liveness controls including finite depth, concurrency, turns, retries, deadlines, cancellation, and deadlock-like wait handling",
+        "uses bounded and attenuated authority with capability-scoped credentials, deterministic policy, approval for high-impact actions, provenance, and audit",
+        "measures task success, coordination overhead, latency, cost, reliability, disagreement, and robustness across model or topology versions"
+      ],
+      "forbidden_behaviors": [
+        "assumes more agents are inherently more accurate or reliable",
+        "skips the strongest-single-agent baseline",
+        "permits unbounded or uncontrolled recursive delegation, retry-until-agreement, shared broad credentials, or unbounded authority",
+        "treats emerging multi-agent evidence as a universal endorsement"
+      ]
+    },
+    {
+      "id": "memory-gateway-safety",
+      "skill": "ai-agent-system-architecture",
+      "prompt": "Reduce cost with one shared semantic cache for every tenant, save model-written summaries as the authoritative customer record, and let services call providers directly whenever the model gateway is unavailable.",
+      "expected_behaviors": [
+        "rejects cross-tenant semantic-cache reuse and partitions keys by tenant, purpose, model, prompt, policy, tool, and data version as applicable",
+        "keeps source records authoritative and records summary provenance, scope, expiry, deletion, authorization, and confidence",
+        "defines cache invalidation, version migration, rebuild, cold-start, stale-data, and conflicting-source handling",
+        "preserves deterministic policy, credentials, safety, privacy, routing, audit, and version controls when the gateway is degraded",
+        "defines safe degradation or fail-closed behavior rather than allowing an uncontrolled gateway bypass"
+      ],
+      "forbidden_behaviors": [
+        "shares semantic cache entries across tenants without authorization-safe partitioning",
+        "treats a model-generated summary as durable truth without source reconciliation",
+        "bypasses gateway policy or audit controls during an outage",
+        "claims cache availability is sufficient proof of freshness or safe reuse"
+      ]
+    },
+    {
+      "id": "architecture-metric-vector",
+      "skill": "architecture-review-gate",
+      "prompt": "Create one architecture score from code coupling, deployment frequency, incidents, cloud cost, and developer activity. Rank individual engineers against a fixed quota and approve any system above 80.",
+      "expected_behaviors": [
+        "preserves structural, delivery, developer-experience, operational, and economic measures as a vector interpreted in context and over time",
+        "reports evidence quality and critical risk or blocker status separately from the metric vector",
+        "documents each metric's definition, unit, data source and quality, intended decision, confounders, gaming risk, owner, and review or retirement date",
+        "rejects individual performance quotas based on architecture, delivery, or activity measures",
+        "keeps critical correctness, security, recovery, and evidence blockers non-compensable",
+        "allows a numeric summary only when aggregation is defensible, transparent, sensitivity-tested, and non-approval-bearing"
+      ],
+      "forbidden_behaviors": [
+        "collapses the metric vector into a universal architecture score or fixed approval threshold",
+        "uses deployment or activity metrics as individual engineer quotas",
+        "ignores confounders, data quality, gaming, or metric retirement",
+        "allows strong metrics in one dimension to cancel a critical blocker in another"
+      ]
+    },
+    {
+      "id": "post-incident-causal-review",
+      "skill": "architecture-review-gate",
+      "prompt": "An operator ran the wrong credential-rotation command, causing a global outage. Write the architecture review: blame the operator, add a reminder to be careful, and close the incident.",
+      "expected_behaviors": [
+        "rejects operator blame as a sufficient causal explanation or corrective action",
+        "reconstructs the chain from architecture decision through hidden dependency, initiating trigger, propagation mechanism, blast radius, detection, recovery constraints, and structural corrective action",
+        "distinguishes the trigger from enabling conditions and identifies why one action could create global impact",
+        "examines configuration authority, environment visibility, staged validation, rollback, automation, isolation, shared dependencies, and recovery load",
+        "requires owners, measurable validation, recurrence evidence, and follow-up dates for structural corrections"
+      ],
+      "forbidden_behaviors": [
+        "treats human error as the root cause without examining enabling architecture",
+        "accepts training, reminders, or replacing the operator as the only corrective action",
+        "omits propagation, blast radius, detection, or recovery analysis",
+        "closes the incident without testable structural remediation"
       ]
     }
   ]

@@ -3,10 +3,12 @@
 ## Change process
 
 1. Open an issue or change description identifying the observed activation failure, missing architecture case, or standards update.
-2. Add a failing repository test or behavioral case under `tests/` or `evals/` before changing behavior.
-3. Make the smallest focused change to a skill, reference, asset, optional helper, validator, or documentation.
-4. Run `python scripts/doctor.py`; when network access is available, also run `python scripts/doctor.py --skills-cli`.
-5. Describe evidence, compatibility impact, and any agent-specific checks that were not executed.
+2. Add or update a behavioral case under `evals/` before changing skill behavior.
+3. Run the affected case with an approved target model and retain the complete baseline and skill-assisted outputs.
+4. Make the smallest focused change to a skill, reference, example, asset, or documentation.
+5. Re-run the affected model cases and compare activation, blocker recall, evidence discipline, and output completeness.
+6. Verify frontmatter, required headings, line limits, local links, and Skills CLI discovery.
+7. Describe evidence, model/runtime identity, compatibility impact, and checks that were not executed.
 
 ## Skill requirements
 
@@ -19,7 +21,7 @@
 - Local links resolve from the file that contains them.
 - Long reference files include a contents section and every bundled resource is named from `SKILL.md`.
 - Deep reference material remains one link away from the primary skill when practical.
-- Optional helpers document their dependencies and fail with useful messages.
+- Behavioral examples expose enough context, expected reasoning, and failure boundaries to calibrate an AI reviewer.
 
 ## Portable runtime requirements
 
@@ -29,4 +31,4 @@
 
 ## Review standard
 
-A contribution is not complete merely because tests pass. Review activation paths, frontmatter, compatibility, documentation, critical architecture blockers, and whether the new test can detect the intended failure.
+A contribution is not complete merely because one model gives a favorable answer. Review activation paths, frontmatter, compatibility, documentation, critical architecture blockers, repeated-run variance, and whether the changed behavioral case detects the intended failure.

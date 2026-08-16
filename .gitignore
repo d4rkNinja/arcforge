@@ -1,8 +1,7 @@
-__pycache__/
-*.py[cod]
-.venv/
 .harness/state/*
 !.harness/state/.gitkeep
+docs/superpowers/
+eval-results/
 *.zip
 *.sha256
 !MANIFEST.sha256

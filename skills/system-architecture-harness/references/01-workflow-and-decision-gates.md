@@ -88,7 +88,7 @@ Use for an existing design or implementation.
 1. Establish the intended requirements before judging the design.
 2. Inspect evidence; do not review only a diagram.
 3. Reconstruct actual runtime and data flows.
-4. Score each dimension with supporting evidence.
+4. Assess each dimension with its protected condition, evidence state, evidence quality, finding, and required proof.
 5. Separate correctness/security blockers from improvements.
 6. Rank findings by risk reduction per unit effort.
 7. Preserve good existing choices; avoid novelty-driven rewrites.

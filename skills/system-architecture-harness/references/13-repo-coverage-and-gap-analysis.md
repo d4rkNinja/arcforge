@@ -128,12 +128,12 @@ The source is an excellent interview-note collection, but production architectur
 - memory privacy/poisoning and model/prompt/index rollback;
 - NIST AI RMF and OWASP GenAI risk framing.
 
-### 10. Executable quality controls
+### 10. AI-led quality controls
 
-- 100-point architecture scorecard with non-waivable gates;
-- Markdown architecture validator;
-- Agent Skills package validator;
-- pressure scenarios and acceptance tests;
+- contextual, model-generated architecture rubrics with non-waivable gates;
+- adversarial second-pass and sensitivity review;
+- runtime-neutral pressure scenarios and acceptance evidence;
+- worked examples for calibration and comparison;
 - reusable architecture/ADR/SLO/threat/risk/failure templates.
 
 ## Corrections and Nuance Added
@@ -156,8 +156,9 @@ When the source repository or standards evolve:
 
 1. compare chapter/source changes;
 2. identify a real behavior or retrieval gap;
-3. add/update a pressure or acceptance scenario first;
+3. add or update a pressure or acceptance scenario first;
 4. modify the smallest relevant reference;
-5. run package and architecture-validator tests;
-6. update `VERSION` and `14-source-map.md`;
-7. record incompatible workflow changes in a changelog if introduced.
+5. run the affected cases through an approved target model and retain the reviewed evidence;
+6. verify portable discovery and all local references;
+7. update `VERSION` and `14-source-map.md`;
+8. record incompatible workflow changes in a changelog if introduced.

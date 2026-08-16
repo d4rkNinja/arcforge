@@ -94,5 +94,5 @@ Use this as a final go/no-go gate. A checked item means evidence exists, not mer
 - [ ] Every high-risk assumption has a validation method, owner, threshold, and due point.
 - [ ] Failure modes and critical risks are recorded with owners and drills.
 - [ ] The design includes explicit unresolved questions rather than hiding them.
-- [ ] The architecture scorecard has no failed critical gate.
-- [ ] The final verdict is one of: approve, approve with conditions, revise, or reject.
+- [ ] The contextual AI review has no unresolved critical gate.
+- [ ] The final verdict is one of: PASS, CONDITIONAL, BLOCK, or INSUFFICIENT EVIDENCE, with critical blockers kept non-compensable.

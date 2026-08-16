@@ -1,6 +1,6 @@
 ---
 name: system-architecture-harness
-description: "Use when creating or changing a production software architecture: greenfield design, system decomposition, migration, scaling, or reliability/security planning. Trigger for requirements, workload, data ownership, APIs, distributed workflows, operations, and cost. For AI-first architecture use ai-agent-system-architecture; for an independent review of an existing proposal use architecture-review-gate."
+description: "Use when creating or changing a production software architecture: greenfield design, system decomposition, migration, scaling, or reliability/security planning. Trigger for requirements, workload, data ownership, APIs, distributed workflows, operations, cost, architecture research, source corpora, complexity, language/runtime choice, formal assurance, browser/mobile/desktop clients, offline/local-first sync, platform engineering, governance, technical debt, or rewrites. For AI-first architecture use ai-agent-system-architecture; for an independent review of an existing proposal use architecture-review-gate."
 ---
 
 # System Architecture Harness
@@ -35,7 +35,7 @@ Use this skill for:
 - cloud, on-premises, hybrid, multi-region, edge, or offline-first deployments;
 - migrations, decompositions, re-platforming, and legacy modernization;
 - production readiness, threat modeling, disaster recovery, and operational design;
-- architecture specifications, RFCs, ADRs, review scorecards, and implementation handoff.
+- architecture specifications, RFCs, ADRs, contextual AI reviews, and implementation handoff.
 
 Do not use it as a substitute for product discovery, legal advice, formal safety certification, penetration testing, or domain-expert approval. It should expose when those are required.
 
@@ -44,8 +44,9 @@ Do not use it as a substitute for product discovery, legal advice, formal safety
 | Mode | Trigger | Primary output |
 |---|---|---|
 | **Explore** | Requirements are incomplete or several concepts are plausible | assumptions, questions, options, recommendation |
+| **Research** | A paper, source corpus, incident set, architecture claim, or conflicting technical guidance may change a design decision | atomic claims, evidence map, dimensional comparison, complexity ledger, validation path |
 | **Design** | Building a new system or major capability | complete architecture specification |
-| **Review** | An architecture or codebase already exists | evidence-based findings, score, risks, prioritized remediation |
+| **Review** | An architecture or codebase already exists | evidence-based findings, contextual rubric, risks, prioritized remediation |
 | **Scale** | Current system works but misses load, latency, availability, or cost goals | bottleneck model, target design, staged changes |
 | **Migrate** | Moving data, traffic, runtime, ownership, or architecture style | current/target states, transition states, cutover and rollback |
 | **Incident-driven** | Repeated incidents reveal structural faults | failure analysis, violated assumptions, resilience changes |
@@ -69,9 +70,35 @@ Read only the references needed for the task. The workflow and gates are always 
 | Telemetry, release, operations, ownership | `references/09-observability-operations-and-delivery.md` |
 | Familiar system patterns or specialized domains | `references/10-domain-pattern-catalog.md` |
 | LLM, RAG, ML, agent, model-serving system | `references/11-ai-ml-and-agentic-systems.md` |
-| Formal review or final quality gate | `references/12-architecture-review-scorecard.md` |
+| Formal review or final quality gate | `references/12-contextual-architecture-review.md` |
 | Source-repository coverage and additions | `references/13-repo-coverage-and-gap-analysis.md` |
 | Standards and source provenance | `references/14-source-map.md` |
+| Paper, source corpus, incident set, architecture claim, or conflicting technical guidance | `references/15-evidence-complexity-and-research.md` |
+| Module/code boundaries, language/runtime, concurrency, OS/network semantics, or assurance depth | `references/16-code-runtime-and-assurance.md` |
+| Browser/mobile/desktop, rendering, offline/local-first, real-time, or search | `references/17-client-platform-architecture.md` |
+| Developer platform, repository/build topology, governance, technical debt, rewrite, migration, or metrics | `references/18-platform-governance-and-evolution.md` |
+
+## Research Mode
+
+Research mode supplements the normal architecture workflow; it does not replace its phases,
+gates, or hard blockers. When the input may change a design decision:
+
+1. Load [`15-evidence-complexity-and-research.md`](references/15-evidence-complexity-and-research.md)
+   along with the workflow reference and any domain references that apply.
+2. Decompose the decision, requirements, invariants, risks, constraints, alternatives, and
+   unknowns before synthesizing sources.
+3. Keep each material conclusion separate as **Claim → Evidence → Counter-evidence or
+   limitations → Applicable context → Failure context → Confidence → Conditional architecture
+   implication → Next validation**.
+4. Classify the source type and preserve its scope. Do not infer causation from correlation or
+   universalize a vendor claim, case study, paper, or isolated incident beyond its context.
+5. Open a dimensional complexity ledger for each added mechanism, covering concepts/state/
+   protocols/components, operations, failure modes, knowledge, dependencies, performance,
+   security/privacy, cost, reversibility, and lifetime. Never replace these dimensions with a
+   synthetic score.
+6. Use the [`Architecture Evidence Map`](assets/architecture-evidence-map-template.md),
+   [`Complexity Ledger`](assets/complexity-ledger-template.md), and [`worked example`](examples/complexity-ledger-example.md)
+   as output aids. Route any resulting design decision back through the normal workflow gates.
 
 ## Architecture Workflow
 
@@ -265,12 +292,12 @@ Provide:
 1. Compare at least two viable alternatives for each architecturally significant decision.
 2. Record decisions as ADRs with context, options, outcome, consequences, validation, and reversal trigger.
 3. Run pre-mortem and adversarial review: “How does this fail, get abused, lose data, overspend, or become impossible to operate?”
-4. Score the design using `references/12-architecture-review-scorecard.md`.
+4. Generate and freeze a decision-specific review rubric using `references/12-contextual-architecture-review.md`, then assess the visible evidence.
 5. List unresolved risks with owner, probability, impact, mitigation, trigger, and due date.
 6. Define architecture fitness functions and acceptance evidence.
 7. Separate launch blockers from follow-up work.
 
-**Gate 11:** A design may pass only if no critical gate fails, even when its numeric score is high.
+**Gate 11:** A design may pass only if no critical gate fails, regardless of strengths elsewhere or any optional numeric summary.
 
 ## Output Contract
 
@@ -296,6 +323,17 @@ Unless the user asks for a narrower deliverable, produce these sections in this 
 18. **Risks and open questions** — ranked with owners and next evidence.
 19. **Validation plan** — tests, experiments, load model, chaos/restore drills, exit criteria.
 20. **Implementation slices** — smallest safe vertical milestones; no speculative big-bang plan.
+
+For Research mode, include atomic claim records or an evidence map, source classification,
+limitations or counter-evidence, applicable and failure context, qualitative confidence with a
+rationale, a dimensional complexity ledger for every added mechanism, conditional alternatives,
+and a concrete next validation step. Do not emit a context-free or synthetic complexity score.
+
+For code/runtime or assurance decisions, include the component risk matrix, bounded resource
+model, explicit unknown/cancellation semantics, and failure-model-to-assurance mapping. For
+stateful clients, include rendering/state authority, lifecycle, offline/sync/conflict semantics,
+accessibility/performance budgets, and reconnect/recovery validation. For platform or evolution
+decisions, include ownership, exception governance, TCO, migration states, and metric governance.
 
 Use C4-style context and container views for static structure, dynamic/sequence views for difficult flows, and deployment views for runtime topology. Draw only diagrams that answer a decision question.
 
@@ -327,6 +365,18 @@ Apply this decision loop without requiring a diagram renderer or executable nota
 - **IF** an external dependency is critical, **THEN** model its timeout, quota, degraded mode, data contract, incident path, and replacement/exit risk.
 - **IF** an AI model or agent can cause irreversible or high-impact actions, **THEN** constrain tools and data, require policy checks and human approval, and log tamper-evident decision evidence.
 - **IF** an operational claim cannot be observed, tested, or rehearsed, **THEN** it is an assumption—not a guarantee.
+- **IF** a language or runtime is proposed, **THEN** compare component risk, workload,
+  safety, ecosystem, team fluency, operability, measured constraints, and migration cost;
+  never select it from fashion or a universal ranking.
+- **IF** a remote state-changing call times out, **THEN** preserve an unknown outcome,
+  use a durable operation identity and status/reconciliation path, and do not blind-retry.
+- **IF** async tasks, client sync, or background work is proposed, **THEN** bound tasks,
+  queues, memory, connections, batches, retries, deadlines, cancellation, and backpressure.
+- **IF** formal verification is proposed, **THEN** state model properties and assumptions,
+  link them to implementation/runtime evidence, and never claim the model proves deployment.
+- **IF** offline mutation or collaboration is required, **THEN** include client authority,
+  durable local state, sync/version/gap semantics, product conflicts, schema migration,
+  encryption, revocation, quotas, reconnect, catch-up, reconciliation, and degraded UX.
 
 ## Common Rationalizations
 
@@ -362,26 +412,31 @@ Apply this decision loop without requiring a diagram renderer or executable nota
 - SLOs with no user journey or error-budget action;
 - rollout with no compatibility window, rollback, or data migration plan;
 - AI agent with broad tools, untrusted prompt context, or irreversible actions without approval;
-- numeric review score used to waive a critical correctness or security failure.
+- contextual review score used to waive a critical correctness or security failure.
+- fashionable language/runtime choice or formal-model claim with no implementation,
+  environment, assumption, and runtime evidence;
+- offline/client design reduced to cached responses with no authority, durable operation,
+  conflict, migration, revocation, quota, reconnect, or reconciliation semantics;
+- rewrite, platform mandate, exception, or architecture metric with no outcome, owner,
+  lifecycle cost, migration/exit path, or gaming/confounder review.
 
 ## Verification Before Completion
 
 Before calling the architecture complete:
 
-1. Read every criterion in `references/12-architecture-review-scorecard.md` and assess only evidence visible in the supplied architecture, repository, measurements, or test records.
-2. For each criterion, assign 0%, 25%, 50%, 75%, or 100% of its available points according to the evidence-level definitions; cite the evidence or mark it missing.
-3. Add the earned points, round as directed by the scorecard, and keep the numeric result separate from the critical-gate decision.
-4. Inspect every critical gate and hard decision clause individually. Treat any unresolved applicable gate as a blocker regardless of score.
-5. Confirm all calculations have units and assumptions.
-6. Trace every ASR to a design decision and validation method.
-7. Walk every critical flow through success, duplicate, timeout, partial failure, failover, and recovery.
-8. Confirm every stateful component has ownership, consistency, backup, restore, retention, and migration semantics.
-9. Confirm every interface has authentication, authorization, validation, versioning, deadlines, errors, idempotency, and observability where applicable.
-10. Distinguish measured evidence from estimates and unresolved assumptions; state confidence and evidence limitations.
-11. Confirm no critical gate or red flag remains open without an accountable, explicitly documented exception.
-12. End with the smallest implementation slice that can validate the riskiest assumptions.
-
-The bundled `scripts/validate_architecture.py` file is a maintainer-only repository test helper. Do not require the user or agent runtime to execute it as part of this skill workflow.
+1. Read `references/12-contextual-architecture-review.md` and derive applicable dimensions from the decision, ASRs, invariants, risks, transition state, and required evidence.
+2. Publish and freeze the model-generated dimensions, evidence anchors, exclusions, blocker policy, and context-specific decision conditions before assessing the design. Define weights or a numeric mapping only when a decision owner has a defensible, explicitly optional use for a non-authorizing summary.
+3. Assess only visible evidence; cite it, distinguish missing evidence from contradiction, and explain each earned contribution.
+4. Run an adversarial second pass and test whether plausible changes in assumptions, evidence quality, or decision context change the conclusion. If an optional numeric summary is used, also test plausible alternative mappings or weights; expose instability instead of averaging it away.
+5. Inspect every critical gate and hard decision clause individually. Treat any unresolved applicable gate as a blocker regardless of strengths elsewhere or any optional numeric summary.
+6. Confirm all calculations have units and assumptions.
+7. Trace every ASR to a design decision and validation method.
+8. Walk every critical flow through success, duplicate, timeout, partial failure, failover, and recovery.
+9. Confirm every stateful component has ownership, consistency, backup, restore, retention, and migration semantics.
+10. Confirm every interface has authentication, authorization, validation, versioning, deadlines, errors, idempotency, and observability where applicable.
+11. Distinguish measured evidence from estimates and unresolved assumptions; state confidence, model identity/version when available, and evidence limitations.
+12. Confirm no critical gate or red flag remains open without an accountable, explicitly documented exception.
+13. End with the smallest implementation slice that can validate the riskiest assumptions.
 
 ## Reusable Assets
 
@@ -393,4 +448,11 @@ The bundled `scripts/validate_architecture.py` file is a maintainer-only reposit
 - Failure matrix: `assets/failure-mode-template.md`
 - API/event contract: `assets/api-event-contract-template.md`
 - Review checklist: `assets/design-review-checklist.md`
+- Architecture Evidence Map: `assets/architecture-evidence-map-template.md`
+- Complexity Ledger: `assets/complexity-ledger-template.md`
 - Worked example: `examples/worked-example-order-platform.md`
+- Complexity Ledger worked example: `examples/complexity-ledger-example.md`
+- Contextual architecture comparison: `examples/contextual-architecture-comparison.md`
+- Code, runtime, and assurance: `references/16-code-runtime-and-assurance.md`
+- Client and platform architecture: `references/17-client-platform-architecture.md`
+- Platform, governance, economics, and evolution: `references/18-platform-governance-and-evolution.md`

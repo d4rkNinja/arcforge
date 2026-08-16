@@ -1,6 +1,6 @@
 # Architecture Specification: Multi-Tenant Order and Inventory Platform
 
-> Status: Example — conditionally approved  
+> Status: Example — blocked pending launch evidence
 > Owners: Commerce Platform team  
 > Reviewers: Product, Security, SRE, Finance Operations, Data  
 > Decision horizon: launch through 18 months  
@@ -36,7 +36,7 @@ Deploy stateless application instances across three availability zones behind a 
 - [x] Proposed
 - [x] Reviewed
 - [ ] Fully accepted
-- [x] Conditional: load, restore, and payment-sandbox ambiguity tests must pass before launch
+- [x] Blocked: load, restore, and payment-sandbox ambiguity tests must pass before launch
 
 ## 2. Context and Scope
 
@@ -719,7 +719,8 @@ The implementation begins with the smallest vertical path that proves the highes
 
 ## Appendix B — Review Result
 
-- Score: 91 / 100 before required launch evidence; expected 95+ after tests.
-- Critical gates: conditionally pass; restore and payment ambiguity evidence remain open.
-- Verdict: approve with conditions.
+- Five-gate evidence vector: A problem/fitness = designed with assumptions still to validate; B state/boundaries = designed; C failure/assurance = missing decisive restore and payment-ambiguity evidence; D delivery/operation = designed with launch drills open; E economics/complexity/evolution = estimated with validation pending.
+- Critical blockers: full-volume restore evidence, payment ambiguity/reconciliation evidence, and resolution of Q-01 remain open.
+- Verdict: **BLOCK** until the named evidence satisfies the recorded pass conditions; strengths in other gates cannot compensate.
+- Optional numeric summary: omitted because it would not aid this launch decision and cannot authorize approval.
 - Accepted exceptions: single-region write availability accepted by Product and Engineering for launch horizon.

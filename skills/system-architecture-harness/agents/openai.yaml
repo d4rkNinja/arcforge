@@ -1,4 +1,4 @@
 interface:
-  display_name: "System Architecture"
-  short_description: "Evidence-backed system architecture decisions"
-  default_prompt: "Use $system-architecture-harness to design an evidence-backed production architecture."
+  display_name: "Design Production Systems"
+  short_description: "Evidence-backed architecture for production systems"
+  default_prompt: "Use $system-architecture-harness to design or change a production system with explicit requirements, trade-offs, and validation."

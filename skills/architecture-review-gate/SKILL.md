@@ -1,6 +1,6 @@
 ---
 name: architecture-review-gate
-description: "Use when independently reviewing an existing architecture specification, RFC, ADR, diagram, migration plan, AI/agent design, or production-readiness proposal. Trigger for adversarial evidence checks, critical blockers, security, reliability, operability, and release approval conditions. For designing a new system use system-architecture-harness or ai-agent-system-architecture."
+description: "Use when independently reviewing an architecture specification, RFC, ADR, diagram, migration plan, AI/agent design, production-readiness proposal, architecture metrics, or post-incident structural causes. Trigger for adversarial evidence checks, fitness gates, critical blockers, complexity obligations, incident causality, and release approval conditions. For designing a new system use system-architecture-harness or ai-agent-system-architecture."
 ---
 
 # Architecture Review Gate
@@ -9,7 +9,7 @@ description: "Use when independently reviewing an existing architecture specific
 
 Perform an independent, adversarial architecture review. Reconstruct the system from evidence, challenge the riskiest decisions, distinguish missing evidence from actual defects, and block approval when a critical invariant, security boundary, recovery path, or operational control is absent.
 
-**Core principle:** A high score cannot waive a critical failure.
+**Core principle:** Review architecture as an evidence-backed vector of qualities and obligations. No scalar summary can waive a critical failure.
 
 ```text
 NO APPROVAL WITHOUT FRESH EVIDENCE THAT:
@@ -32,6 +32,7 @@ Use this skill for:
 - data, API, queue, cache, migration, and disaster-recovery review;
 - AI/agent architecture review;
 - post-incident structural review;
+- architecture fitness-function and metric review;
 - comparison of current and target architecture.
 
 Review mode is independent. Do not rewrite the architecture or implement fixes unless the user explicitly changes the task.
@@ -50,10 +51,12 @@ Review mode is independent. Do not rewrite the architecture or implement fixes u
 
 ## Required Context Loading
 
-- Use [100-point scorecard](references/01-review-scorecard.md) for every formal gate.
+- Use [contextual architecture evidence vector](references/01-contextual-ai-review-rubric.md) for every formal gate.
 - Use [critical failure patterns](references/02-critical-failure-patterns.md) for blocker review.
 - Use [evidence and challenge guide](references/03-evidence-challenge-guide.md) for claim verification.
-- For historical source details, consult [production scorecard source](references/production-scorecard-source.md).
+- Use [rubric calibration guide](references/04-rubric-calibration-guide.md) when selecting dimensions, evidence anchors, decision conditions, or multi-model review.
+- Use [fitness gates, incident causality, and metric governance](references/05-fitness-gates-incidents-and-metrics.md) for formal gates, post-incident review, or architecture metrics.
+- Use [strong review input](examples/review-input-strong.md) and [critical review input](examples/review-input-critical.md) to calibrate the evidence expected before judging a proposal.
 
 ## Review Workflow
 
@@ -94,6 +97,16 @@ For each architecturally significant requirement, identify:
 - reversal or review trigger.
 
 A decision with no traceable motivation is unsupported. A requirement with no decision or control is uncovered.
+
+Organize the trace through five gates without treating them as equally weighted categories:
+
+- **A — Problem and fitness:** measurable requirements, constraints, stakeholders, and unacceptable failure;
+- **B — State and boundaries:** authority, invariants, communication semantics, and the capability purchased by each boundary;
+- **C — Failure and assurance:** partial failure, detection, recovery, security, and test evidence;
+- **D — Delivery and operation:** safe change, observability, capacity, ownership, and restore ability;
+- **E — Economics, complexity, and evolution:** lifecycle cost, obligations, reversibility, lifetime, and revision triggers.
+
+Report each gate's evidence state and decision test. Do not average a failed gate into stronger evidence elsewhere.
 
 ### Phase 3 — Challenge Correctness and Data Semantics
 
@@ -159,25 +172,34 @@ Verify:
 - restore drills, game days, capacity tests, chaos tests, and migration rehearsals;
 - cost drivers, unit economics, budgets, lock-in, and exit paths.
 
-### Phase 8 — Score and Decide
+### Phase 8 — Assess the Evidence Vector and Decide
 
-1. Read every criterion in `references/01-review-scorecard.md` and score only evidence visible in the supplied architecture, repository, measurements, or test records.
-2. For each scorecard criterion:
-   - cite the exact evidence;
-   - mark the criterion as satisfied, partially satisfied, contradicted, or missing;
-   - award points in proportion to the visible evidence; and
-   - record the evidence gap when full credit is not justified.
-3. Add the category points to produce a score out of 100. Recheck the arithmetic and do not infer evidence from document length, technology choice, or author confidence.
-4. Review every applicable pattern in `references/02-critical-failure-patterns.md` independently of the score. List each critical finding with its evidence, failure mechanism, impact, required condition, and owner.
-5. Assign one verdict:
-   - **PASS** — score at least 85, no critical blocker, validation evidence is sufficient;
-   - **CONDITIONAL** — score 60–84 or material evidence remains, with explicit conditions and owners;
-   - **BLOCK** — critical blocker exists or score is below 60.
-6. State confidence as high, medium, or low and explain what evidence supports or limits that confidence.
-7. State which conclusions are verified facts, which are inferences, and which remain unvalidated claims.
-8. Report the numeric score, critical findings, and verdict as separate fields so a high score can never hide a blocker.
+1. Read `references/01-contextual-ai-review-rubric.md` and derive decision-specific dimensions from the five gates, ASRs, invariants, failure impact, regulatory context, change scope, and supplied evidence.
+2. Before assessing the proposal, publish and freeze each applicable dimension, why it matters, its evidence anchors, required evidence maturity, and the condition it protects. Explain exclusions.
+3. For every dimension, cite evidence and classify it as observed, validated, implemented, designed, claimed, inferred, contradicted, or missing. Keep evidence quality separate from blocker status.
+4. Inspect the proposal's Complexity Ledger. If none exists, report the absence. Review at least: decision, requirement, capability, alternatives, introduced concepts/state/protocol/configuration/dependencies, operational responsibility, failure modes, knowledge, security, performance, cost, reversibility, expected lifetime, evidence, validation trigger, owner, and review date.
+5. Perform an adversarial second pass. Challenge omitted dimensions, hidden dependencies, duplicated credit, unsupported inference, technology favoritism, and whether stronger evidence changes the conclusion. This is a completed review pass, not a list of future adversarial tests: report what was challenged, what changed, and why the verdict did or did not move.
+6. Review every applicable pattern in `references/02-critical-failure-patterns.md` independently. A critical blocker forces **BLOCK** regardless of strengths elsewhere.
+7. Assign one verdict:
+   - **PASS** — no blocker, every required decision condition is met, and evidence maturity is sufficient;
+   - **CONDITIONAL** — no blocker, but named evidence or remediation conditions remain;
+   - **BLOCK** — a critical blocker exists or a required decision condition fails;
+   - **INSUFFICIENT EVIDENCE** — the review contract or decisive evidence is too incomplete for a responsible verdict.
+8. State confidence, model identity/version when available, evidence limitations, and which conclusions are source claims, verified facts, reviewer inferences, or unvalidated claims.
 
-Perform this review from the instructions and supplied evidence. Do not require Python, shell commands, or any programming-language runtime. The bundled `scripts/score_architecture.py` file is retained only as a maintainer test helper; it is not part of the installed skill workflow and cannot establish correctness or compliance.
+Keep the dimension vector primary. A numeric summary is optional only when the decision owner has a defensible use for it, the derivation and assumptions are transparent, no universal threshold is implied, and sensitivity analysis shows what changes under plausible alternatives. It never determines approval.
+
+### Phase 9 — Review Incidents and Metrics When Applicable
+
+For a post-incident review, trace:
+
+`decision → hidden dependency → trigger → propagation → blast radius → detection → recovery constraints → structural correction`
+
+Separate the initiating trigger from the architectural enabling conditions. Do not substitute retraining or replacing the triggering person for structural correction.
+
+For every architecture metric, require definition, unit, source, data quality, intended decision, confounders, gaming risk, owner, and review/retirement date. Use metric vectors and within-system trends; never use architecture metrics to rank individual engineers.
+
+Perform this review through the active AI model and the supplied references. No executable helper or external model API is required.
 
 ## Critical Blockers
 
@@ -212,21 +234,22 @@ Prioritize by impact and exploitability/frequency, not count.
 
 Produce sections in this order:
 
-1. **Verdict, score, confidence, and decision being gated.**
+1. **Verdict, confidence, model disclosure, and decision being gated.**
 2. **Architecture reconstruction** — concise current/target model.
-3. **Critical findings** — evidence, impact, failure scenario, required condition.
-4. **High and medium findings** — ranked, deduplicated, actionable.
-5. **Requirement-to-decision gaps.**
-6. **Invariant, data, and workflow findings.**
-7. **Scale and overload findings.**
-8. **Reliability and recovery findings.**
+3. **Five-gate evidence vector** — dimension, protected condition, evidence state, evidence quality, finding, and required proof.
+4. **Critical blockers** — evidence, impact, failure scenario, required condition.
+5. **High and medium findings** — ranked, deduplicated, actionable.
+6. **Requirement-to-decision and Complexity Ledger gaps.**
+7. **Invariant, data, workflow, scale, and overload findings.**
+8. **Reliability, recovery, and post-incident causal findings.**
 9. **Security, privacy, tenancy, and abuse findings.**
-10. **Operations, delivery, migration, and cost findings.**
-11. **Evidence reviewed and evidence missing.**
-12. **Approval conditions** with owner, proof, and due/review trigger.
-13. **Positive evidence** worth preserving.
+10. **Operations, delivery, migration, cost, and metric-governance findings.**
+11. **Evidence reviewed, evidence challenged, and evidence missing.**
+12. **Adversarial and sensitivity second-pass findings** — challenges run, result changes, and verdict sensitivity.
+13. **Approval conditions** with owner, proof, and due/review trigger.
+14. **Positive evidence** worth preserving.
 
-Use [review report template](assets/architecture-review-report-template.md) for a file artifact.
+Use [review report template](assets/architecture-review-report-template.md) for a file artifact. Use [post-incident review template](assets/post-incident-architecture-review-template.md) for an incident. Use [review checklist](assets/architecture-review-checklist.md) for a compact gate artifact. Read [the contextual review example](examples/contextual-review-example.md) or [post-incident structural review example](examples/post-incident-structural-review-example.md) when calibrating a first review.
 
 ## Stop Conditions
 

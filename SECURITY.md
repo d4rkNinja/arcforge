@@ -8,13 +8,12 @@ Report suspected malicious instructions, unsafe executable behavior, secret expo
 
 Security-sensitive surfaces include:
 
-- executable helpers under `skills/*/scripts/` and `scripts/`;
 - skill instructions, references, examples, and templates;
 - installation paths, symlinks/copies, and repository distribution;
 - examples that could normalize unsafe production behavior.
 
 ## Consumer guidance
 
-Review skill source before installation, pin trusted commits for production use, run optional validators in a sandboxed environment, keep provider credentials in secret bindings, and apply least privilege to every agent runtime.
+Review skill source before installation, pin trusted commits for production use, treat model-generated reviews as advisory evidence, keep provider credentials in secret bindings, and apply least privilege to every agent runtime.
 
-Skills are instructions and optional code, not a security certification. Agent behavior, tool permissions, data access, and approval policies remain the responsibility of the consuming runtime and its operators.
+Skills are instructions and reference material, not a security certification. Agent behavior, tool permissions, data access, and approval policies remain the responsibility of the consuming runtime and its operators.

@@ -55,6 +55,7 @@ Load only what the task needs:
 - Tools, permissions, and threat controls: [Tool security and governance](references/03-tool-security-governance.md)
 - Evaluation, tracing, and release gates: [Evaluation and observability](references/04-evaluation-observability.md)
 - Serving, routing, latency, and cost: [Model serving and economics](references/05-model-serving-economics.md)
+- Classical state/reliability obligations and AI control boundaries: [Classical and AI control obligations](references/06-classical-and-ai-control-obligations.md)
 - Broader production patterns: [Production AI patterns](references/production-ai-patterns.md)
 
 ## Architecture Workflow
@@ -66,6 +67,7 @@ Follow the phases in order. Return to an earlier phase when evidence invalidates
 1. Name the user, decision, workflow, and business outcome.
 2. Define the smallest unit of success that can be scored.
 3. Establish a deterministic or human baseline before claiming model value.
+   For multi-agent proposals, compare against the strongest practical single-agent design using the same task contract and tools.
 4. Classify the action:
    - **informational** — produces content for review;
    - **reversible** — changes state with reliable undo;
@@ -180,15 +182,20 @@ For autonomous or multi-agent flows, define:
 - orchestration pattern and why it is needed;
 - roles, inputs, deliverables, and forbidden responsibilities;
 - shared contracts and source of truth;
-- maximum depth, workers, turns, tool calls, tokens, duration, and spend;
+- maximum depth, workers, turns, tool calls, tokens, duration, retries per unit, and spend;
 - cancellation, checkpoint, resume, and deduplication;
 - progress and termination predicates;
 - conflict resolution and independent verification;
-- degraded single-agent or manual path.
+- degraded single-agent or manual path;
+- evidence that the topology beats the strongest single-agent baseline after coordination, repeated context, latency, and cost;
+- a frozen experiment matrix that varies prompt, model/routing, coordination pattern, and shared-state policy rather than testing only agent count;
+- repeated per-topology task success, overhead, latency, cost, reliability, disagreement, and robustness results across model, prompt, and topology versions;
+- wait-for relationships, no-progress detection, duplicate-work identifiers, and orphan recovery;
+- attenuated delegated authority with ephemeral per-task credentials.
 
 Parallelize only independent work. Serialize decisions that mutate shared contracts, schemas, or production state.
 
-**Gate 6:** “Continue until done” is not a termination policy.
+**Gate 6:** “Continue until done” is not a termination policy. Do not approve a multi-agent topology without an explicit finite retry cap and the complete topology experiment matrix and result vector above.
 
 ### Phase 7 — Engineer Security, Safety, and Privacy
 
@@ -238,7 +245,11 @@ Define:
 - model, prompt, index, policy, and tool version labels;
 - quality, safety, latency, cost, and business SLIs;
 - alerts, runbooks, incident ownership, and kill switches;
-- replay-safe evidence for debugging without exposing protected data.
+- replay-safe evidence for debugging without exposing protected data;
+- authoritative, derived, ephemeral, and sensitive state; invariant/transaction owners; and unknown-outcome reconciliation;
+- queue delivery, ordering, replay, backpressure, and backlog drain behavior;
+- cache origin, complete versioned identity, invalidation, and cold-start capacity;
+- restore-tested RPO/RTO and mixed-version schema/configuration rollout.
 
 **Gate 9:** If an AI action cannot be reconstructed from evidence, it is not production-operable.
 
@@ -262,6 +273,11 @@ Define:
 - **IF** an agent calls a tool, **THEN** enforce identity, tenant, authorization, typed arguments, deadline, audit, and idempotency where applicable.
 - **IF** a tool can change consequential state, **THEN** require policy evaluation and an approval or pre-authorized bounded mandate.
 - **IF** agents delegate, **THEN** cap depth, concurrency, iterations, tokens, cost, and shared-state access.
+- **IF** an agent delegates authority, **THEN** attenuate capability and tenant scope and issue revocable, ephemeral per-task credentials.
+- **IF** multiple agents are proposed, **THEN** require repeated evidence against the strongest single-agent baseline; explicitly vary prompt, routing, coordination, and shared-state choices; cap retries; account for wait cycles and duplicate work; and measure robustness across model, prompt, and topology versions.
+- **IF** a model-generated summary is stored, **THEN** treat it as a rebuildable non-authoritative view with source IDs, revisions, conflicts, and deletion semantics.
+- **IF** an AI response is cached, **THEN** include tenant/permission, model, prompt, policy, tool, and data versions in identity as applicable.
+- **IF** a parser or generic executor processes hostile input, **THEN** isolate it and bound CPU, memory, processes, disk, time, input, output, and egress.
 - **IF** a model provider fails, **THEN** degrade safely rather than silently changing semantics.
 - **IF** a model judge gates release, **THEN** calibrate it against human labels and keep deterministic blockers independent.
 - **IF** user or tenant data enters training, fine-tuning, memory, logs, or evals, **THEN** record lawful basis, consent/contract, retention, deletion, and access controls.
@@ -283,10 +299,11 @@ Unless the user requests a narrower artifact, produce:
 10. **Evaluation plan** with golden, adversarial, trajectory, and online evidence.
 11. **Reliability and observability** including degraded modes and kill switches.
 12. **Rollout, rollback, cost model, ADRs, risks, and smallest validation slice.**
+13. **Production-obligation evidence** covering state classes and invariants, unknown outcomes, queues/caches, restore-tested recovery, mixed-version rollout, supply-chain provenance, gateway safety, and critical risk floors.
 
-Use [AI system specification template](assets/ai-system-spec-template.md), [tool contract template](assets/tool-contract-template.md), and [evaluation plan template](assets/evaluation-plan-template.md) when a file artifact is required.
+Use [AI system specification template](assets/ai-system-spec-template.md), [tool contract template](assets/tool-contract-template.md), [evaluation plan template](assets/evaluation-plan-template.md), and [AI production readiness checklist](assets/ai-production-readiness-checklist.md) when a file artifact is required.
 
-Use the [governed support-agent example](examples/governed-support-agent.md) when a concrete end-to-end reference is useful.
+Use the [governed support-agent example](examples/governed-support-agent.md) for a single bounded agent or the [bounded multi-tenant agent-platform example](examples/bounded-agent-platform-example.md) for multi-agent, memory, and recovery decisions.
 
 ## Stop Conditions
 
@@ -303,7 +320,14 @@ Stop and revise the architecture when any of these appears:
 - “the prompt says not to” used as the only security control;
 - evaluation based only on demonstrations, generic benchmarks, or a single model judge;
 - traces that omit prompt/model/tool/policy versions or expose secrets and personal data;
-- no manual path, read-only mode, rollback, or kill switch for high-impact workflows.
+- no manual path, read-only mode, rollback, or kill switch for high-impact workflows;
+- gateway bypass permits direct model/provider or tool access outside policy, tenant, or audit controls;
+- a model-produced summary, embedding, index, or cache silently becomes authoritative state;
+- no reconciliation path exists for an unknown remote outcome;
+- multi-agent topology has no measured advantage over the strongest single-agent baseline;
+- multi-agent evaluation omits any prompt, routing, coordination, or shared-state factor, lacks a finite retry cap, or does not measure robustness across model, prompt, and topology versions;
+- delegated credentials are ambient, long-lived, cross-tenant, or broader than the parent authority;
+- a critical security, privacy, isolation, invariant, or unauthorized-action floor can be waived by an aggregate score.
 
 ## Verification Before Completion
 
@@ -316,3 +340,6 @@ Before approval:
 5. Run the candidate against fixed golden and adversarial datasets.
 6. Confirm deterministic blockers cannot be waived by model-generated confidence.
 7. Record remaining uncertainty, owner, validation method, and release trigger.
+8. Restore the declared recovery set and compare observed RPO/RTO with targets.
+9. Exercise cache cold start, queue overload/replay, unknown outcomes, mixed-version rollout, supply-chain revocation, gateway isolation, and agent wait-cycle/duplicate-work handling.
+10. Verify business, engagement, and model-judge aggregates cannot override critical risk floors.
