@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Data & Storage"
+  short_description: "Production rules for schemas, identifiers, money, files, search, and lifecycle"
+  default_prompt: "Use $data-storage before modeling data, choosing identifiers, handling money or time, designing indexes, or implementing files, search, retention, and cleanup."

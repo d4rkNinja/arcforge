@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Authentication & Access Control"
+  short_description: "Production rules for login, sessions, tokens, permissions, and tenancy"
+  default_prompt: "Use $auth-access before implementing login, sessions, OAuth, MFA, API keys, permissions, or multi-tenancy; read the relevant papers and answer their pre-implementation questions first."

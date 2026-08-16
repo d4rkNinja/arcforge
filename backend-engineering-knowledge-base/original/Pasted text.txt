@@ -1,0 +1,2662 @@
+
+# 1. Project & Runtime Foundations
+
+* Project structure
+* Module/package boundaries
+* Application bootstrap
+* Dependency injection
+* Configuration loading
+* Environment variables
+* Secrets loading
+* Runtime validation
+* Graceful startup
+* Graceful shutdown
+* Process signals
+* Dependency initialization order
+* Resource cleanup
+* Worker lifecycle
+* Request lifecycle
+* Application versioning
+* Build metadata
+* Environment separation
+* Development/staging/production behavior
+
+---
+
+# 2. Configuration Management
+
+* Static configuration
+* Dynamic configuration
+* Environment configuration
+* Tenant configuration
+* User configuration
+* Configuration hierarchy
+* Defaults
+* Overrides
+* Validation
+* Schema validation
+* Secret separation
+* Runtime reload
+* Configuration versioning
+* Rollback
+* Invalid configuration behavior
+* Missing configuration behavior
+
+---
+
+# 3. Identity
+
+* User identity
+* Internal identity
+* External identity
+* Identity providers
+* Stable identifiers
+* Email as attribute vs identity
+* Phone as attribute vs identity
+* Identity linking
+* Identity merging
+* Duplicate identities
+* Identity lifecycle
+* Anonymous identities
+* Guest identities
+* Machine identities
+* Service identities
+
+---
+
+# 4. Authentication
+
+* Signup
+* Login
+* Logout
+* Email/password
+* Username/password
+* Phone authentication
+* OTP
+* Magic links
+* Passwordless login
+* Session authentication
+* Token authentication
+* JWT
+* Opaque tokens
+* Access tokens
+* Refresh tokens
+* Token rotation
+* Token revocation
+* Token reuse detection
+* Session expiry
+* Idle expiry
+* Absolute expiry
+* Remember-me
+* Device sessions
+* Concurrent sessions
+* Logout one device
+* Logout all devices
+* Password reset
+* Password change
+* Email verification
+* Phone verification
+* Account recovery
+* Account lockout
+* Suspicious login
+* Brute-force protection
+* Credential stuffing protection
+
+---
+
+# 5. OAuth / Social Authentication
+
+* OAuth 2.0
+* OpenID Connect
+* Authorization code flow
+* PKCE
+* State validation
+* Nonce validation
+* Redirect URI validation
+* Provider token validation
+* Provider subject identifiers
+* Missing email
+* Unverified email
+* Changed email
+* Hidden email
+* Apple Private Relay
+* Apple first-authorization behavior
+* Provider account linking
+* Provider account unlinking
+* Existing-password-account linking
+* Duplicate provider identities
+* Provider token refresh
+* Provider revocation
+* Provider outages
+
+---
+
+# 6. MFA / Strong Authentication
+
+* TOTP
+* SMS MFA
+* Email MFA
+* Push MFA
+* Recovery codes
+* Backup factors
+* MFA enrollment
+* MFA removal
+* MFA recovery
+* Trusted devices
+* Step-up authentication
+* Passkeys
+* WebAuthn
+* Security keys
+* Challenge validation
+* Replay protection
+
+---
+
+# 7. Sessions
+
+* Session creation
+* Session storage
+* Session cookies
+* Secure cookies
+* HttpOnly
+* SameSite
+* Session rotation
+* Session fixation
+* Session hijacking
+* Session invalidation
+* Session limits
+* Device metadata
+* Session history
+* Concurrent session handling
+* Distributed sessions
+* Session cache
+* Session cleanup
+
+---
+
+# 8. Authorization
+
+* Permissions
+* Roles
+* RBAC
+* ABAC
+* ReBAC
+* ACLs
+* Policy-based authorization
+* Ownership checks
+* Resource-level authorization
+* Field-level authorization
+* Row-level authorization
+* Hierarchical permissions
+* Permission inheritance
+* Role inheritance
+* Custom roles
+* System roles
+* Scoped roles
+* Temporary access
+* Delegated access
+* Impersonation
+* Service-to-service authorization
+* Default-deny
+* Permission cache invalidation
+
+---
+
+# 9. Users & Account Lifecycle
+
+* User creation
+* Activation
+* Deactivation
+* Suspension
+* Ban
+* Soft deletion
+* Hard deletion
+* Restoration
+* Account anonymization
+* Account export
+* Account merge
+* Account deduplication
+* Profile changes
+* Email changes
+* Phone changes
+* Username changes
+* User preferences
+* User metadata
+* User status
+* Onboarding state
+
+---
+
+# 10. Multi-Tenancy
+
+* Tenant identification
+* Tenant context
+* Tenant isolation
+* Shared database
+* Shared schema
+* Schema-per-tenant
+* Database-per-tenant
+* Hybrid models
+* Tenant-aware queries
+* Tenant-aware caches
+* Tenant-aware jobs
+* Tenant-aware events
+* Tenant-aware files
+* Tenant provisioning
+* Tenant suspension
+* Tenant deletion
+* Tenant migration
+* Tenant backup
+* Tenant restore
+* Tenant quotas
+* Tenant routing
+* Cross-tenant leakage prevention
+* Tenant impersonation
+
+---
+
+# 11. Request Lifecycle
+
+* Request parsing
+* Request validation
+* Request context
+* Authentication middleware
+* Authorization middleware
+* Correlation ID
+* Request ID
+* Deadlines
+* Timeouts
+* Cancellation
+* Context propagation
+* Request body limits
+* Content-type validation
+* Response construction
+* Response headers
+* Request cleanup
+
+---
+
+# 12. Input Validation
+
+* Required fields
+* Optional fields
+* Null handling
+* Empty strings
+* Whitespace
+* Length limits
+* Numeric ranges
+* Enum validation
+* Date validation
+* Time validation
+* URL validation
+* Email validation
+* Phone validation
+* UUID/ID validation
+* Nested validation
+* Cross-field validation
+* Conditional validation
+* Business invariants
+* Unknown fields
+* Type coercion
+* Unicode handling
+* Malformed payloads
+
+---
+
+# 13. Error Architecture
+
+* Domain errors
+* Validation errors
+* Authentication errors
+* Authorization errors
+* Not-found errors
+* Conflict errors
+* Infrastructure errors
+* Database errors
+* External-provider errors
+* Retryable errors
+* Non-retryable errors
+* Error codes
+* HTTP status mapping
+* Public vs internal error details
+* Error wrapping
+* Error propagation
+* Sensitive-data masking
+* Localization
+* Structured errors
+* Error correlation
+
+---
+
+# 14. API Design
+
+* REST
+* RPC
+* gRPC
+* GraphQL
+* Async APIs
+* Resource design
+* Command design
+* Endpoint naming
+* Request contracts
+* Response contracts
+* HTTP methods
+* Status codes
+* Partial updates
+* Bulk APIs
+* Batch APIs
+* Nested resources
+* Sparse fields
+* Resource expansion
+* API consistency
+* API documentation
+
+---
+
+# 15. API Versioning & Compatibility
+
+* URL versioning
+* Header versioning
+* Content negotiation
+* Backward compatibility
+* Forward compatibility
+* Deprecation
+* Sunset periods
+* Contract evolution
+* Client compatibility
+* SDK compatibility
+* Mobile-client compatibility
+* Breaking-change detection
+* Compatibility tests
+
+---
+
+# 16. Pagination
+
+* Offset pagination
+* Page-number pagination
+* Cursor pagination
+* Keyset pagination
+* Stable ordering
+* Duplicate prevention
+* Missing-record prevention
+* Concurrent writes
+* Cursor encoding
+* Cursor validation
+* Maximum page size
+* Default limits
+* Total counts
+* Expensive counts
+* Deep pagination
+
+---
+
+# 17. Filtering / Sorting / Query APIs
+
+* Filtering
+* Sorting
+* Search parameters
+* Multiple filters
+* Range filters
+* Date filters
+* Null filters
+* Nested filters
+* Allowed fields
+* Operator validation
+* Query complexity limits
+* Index-aware filtering
+* Stable sorting
+* User-controlled query safety
+
+---
+
+# 18. Identifiers
+
+* Auto-increment IDs
+* UUIDv4
+* UUIDv7
+* ULID
+* Snowflake IDs
+* Database IDs
+* Public IDs
+* Private IDs
+* Sequential IDs
+* Human-readable IDs
+* Composite IDs
+* Collision handling
+* Enumeration prevention
+* ID exposure
+* ID migration
+
+---
+
+# 19. Time & Date Handling
+
+* UTC storage
+* Local timezone
+* Timezone conversion
+* DST
+* Date-only values
+* Time-only values
+* Timestamps
+* Expiration
+* Scheduling
+* Recurrence
+* Clock skew
+* Server clocks
+* Monotonic clocks
+* User timezone
+* Database timezone
+* API timezone representation
+* Inclusive/exclusive ranges
+
+---
+
+# 20. Money / Numeric Precision
+
+Keep this technical rather than financial-domain specific.
+
+* Integer representation
+* Decimal representation
+* Floating-point risks
+* Fixed precision
+* Rounding
+* Rounding modes
+* Currency precision
+* Overflow
+* Underflow
+* Numeric validation
+* Serialization precision
+* Database precision
+* Calculation determinism
+
+---
+
+# 21. Database Modeling
+
+* Tables
+* Collections
+* Documents
+* Relationships
+* Embedded data
+* References
+* One-to-one
+* One-to-many
+* Many-to-many
+* Optional relationships
+* Polymorphic relationships
+* Hierarchies
+* Metadata
+* Temporal data
+* Versioned records
+* Derived fields
+* Denormalization
+
+---
+
+# 22. Database Constraints
+
+* Primary keys
+* Foreign keys
+* Unique constraints
+* Composite uniqueness
+* Check constraints
+* Not-null constraints
+* Referential integrity
+* Cascade behavior
+* Restrict behavior
+* Default values
+* Data invariants
+* Application validation vs DB constraints
+* Constraint race conditions
+
+---
+
+# 23. Database Transactions
+
+* ACID
+* Transaction boundaries
+* Commit
+* Rollback
+* Isolation levels
+* Read committed
+* Repeatable read
+* Serializable
+* Snapshot isolation
+* Transaction retries
+* Deadlocks
+* Lock timeouts
+* Long transactions
+* Nested transactions
+* Savepoints
+* Transaction scope
+* Transaction + network call
+* Transaction + queue publishing
+
+---
+
+# 24. Concurrency Anomalies
+
+* Lost updates
+* Dirty reads
+* Non-repeatable reads
+* Phantom reads
+* Write skew
+* Double writes
+* Duplicate creation
+* Check-then-act races
+* Read-modify-write races
+* Concurrent delete/update
+* Concurrent state transitions
+
+---
+
+# 25. Concurrency Control
+
+* Optimistic locking
+* Version columns
+* Compare-and-swap
+* Pessimistic locking
+* Row locks
+* Advisory locks
+* Atomic updates
+* Conditional updates
+* Mutexes
+* Semaphores
+* Distributed locks
+* Fencing tokens
+* Lease expiration
+
+---
+
+# 26. Data Integrity
+
+* Invariants
+* Referential integrity
+* Duplicate prevention
+* Orphan prevention
+* Atomic changes
+* Partial writes
+* Stale writes
+* Corruption detection
+* Integrity validation
+* Repair jobs
+* Reconciliation
+* Consistency checks
+* Derived-data rebuilding
+
+---
+
+# 27. Indexing
+
+* Single-column indexes
+* Composite indexes
+* Unique indexes
+* Partial indexes
+* Sparse indexes
+* Covering indexes
+* Full-text indexes
+* Geo indexes
+* Vector indexes
+* Index order
+* Selectivity
+* Write overhead
+* Index bloat
+* Unused indexes
+* Index migrations
+
+---
+
+# 28. Query Design
+
+* Query plans
+* N+1 queries
+* Joins
+* Aggregations
+* Batch reads
+* Projection
+* Over-fetching
+* Under-fetching
+* Query limits
+* Query timeouts
+* Slow-query detection
+* Explain plans
+* Query caching
+* Read replicas
+
+---
+
+# 29. Schema Evolution
+
+* Additive changes
+* Destructive changes
+* Column changes
+* Field renaming
+* Type changes
+* Default changes
+* Nullable → required
+* Expand-and-contract
+* Dual-read
+* Dual-write
+* Backward compatibility
+* Old-client compatibility
+
+---
+
+# 30. Database Migrations
+
+* Schema migrations
+* Online migrations
+* Zero-downtime migrations
+* Migration ordering
+* Migration locks
+* Long-running migrations
+* Rollback
+* Forward-only migrations
+* Migration verification
+* Deployment coordination
+* Multi-service migration safety
+
+---
+
+# 31. Data Migrations & Backfills
+
+* Historical data migration
+* Backfills
+* Batch processing
+* Chunking
+* Resume support
+* Idempotent migration
+* Progress tracking
+* Validation
+* Rollback strategy
+* Reconciliation
+* Production load control
+* Dual systems during migration
+
+---
+
+# 32. Soft Delete / Hard Delete
+
+* Deleted-at fields
+* Query filtering
+* Unique constraints with soft deletion
+* Cascading soft delete
+* Restoration
+* Purging
+* Retention
+* Orphan cleanup
+* References to deleted records
+* Auditability
+* Privacy deletion
+
+---
+
+# 33. Data Lifecycle
+
+* Creation
+* Mutation
+* Archival
+* Retention
+* Expiration
+* Deletion
+* Purging
+* Legal hold
+* Anonymization
+* Cold storage
+* Lifecycle jobs
+
+---
+
+# 34. Immutable Data
+
+* Append-only records
+* Immutable events
+* Immutable audit logs
+* Immutable history
+* Correction records
+* Versioning
+* Tamper detection
+* Hash chains
+* Why mutation should sometimes be forbidden
+
+---
+
+# 35. State Machines
+
+* States
+* Events
+* Allowed transitions
+* Forbidden transitions
+* Transition guards
+* Side effects
+* Terminal states
+* Transition history
+* Concurrent transitions
+* Idempotent transitions
+* Recovery
+* Invalid-state repair
+
+---
+
+# 36. Idempotency
+
+* Idempotent API requests
+* Idempotency keys
+* Key generation
+* Key scope
+* Request fingerprinting
+* Response replay
+* Storage
+* Expiration
+* Concurrent duplicates
+* Failed first attempts
+* Retry safety
+* Job idempotency
+* Event idempotency
+* Webhook idempotency
+
+---
+
+# 37. Caching
+
+* Local cache
+* Distributed cache
+* Cache-aside
+* Read-through
+* Write-through
+* Write-behind
+* TTL
+* Eviction
+* Cache keys
+* Namespacing
+* Serialization
+* Cache invalidation
+* Cache warming
+* Negative caching
+* Cache stampede
+* Cache penetration
+* Hot keys
+* Stale reads
+* Cache consistency
+* Cache failures
+
+---
+
+# 38. Rate Limiting
+
+* IP limits
+* User limits
+* Token limits
+* Tenant limits
+* Endpoint limits
+* Global limits
+* Fixed window
+* Sliding window
+* Token bucket
+* Leaky bucket
+* Distributed rate limiting
+* Burst handling
+* Retry-after
+* Rate-limit headers
+* Fail-open vs fail-closed
+
+---
+
+# 39. Quotas
+
+* Request quotas
+* Storage quotas
+* Compute quotas
+* Resource quotas
+* Daily/monthly quotas
+* Soft limits
+* Hard limits
+* Overage
+* Reset windows
+* Tenant quotas
+* Quota reservation
+* Concurrent usage
+
+---
+
+# 40. File Handling
+
+* Upload
+* Download
+* Multipart uploads
+* Chunked uploads
+* Resumable uploads
+* Large files
+* Filename sanitization
+* MIME validation
+* Extension validation
+* File signatures
+* Size limits
+* Storage paths
+* Object storage
+* Signed URLs
+* Private files
+* Public files
+* File ownership
+* File permissions
+* Virus scanning
+* Malware scanning
+* Duplicate files
+* File cleanup
+* Orphaned objects
+
+---
+
+# 41. Media Processing
+
+* Image resize
+* Image compression
+* Format conversion
+* Thumbnail generation
+* Video processing
+* Audio processing
+* Async processing
+* Processing states
+* Failed processing
+* Reprocessing
+* Original-file preservation
+* Metadata stripping
+
+---
+
+# 42. Search
+
+* Exact search
+* Prefix search
+* Full-text search
+* Fuzzy search
+* Typo tolerance
+* Ranking
+* Tokenization
+* Stemming
+* Stop words
+* Filters
+* Facets
+* Autocomplete
+* Search permissions
+* Index synchronization
+* Reindexing
+* Search consistency
+* Search pagination
+
+---
+
+# 43. Background Jobs
+
+* Job queues
+* Workers
+* Job payloads
+* Job IDs
+* Retries
+* Backoff
+* Jitter
+* Timeout
+* Cancellation
+* Deduplication
+* Priority
+* Scheduling
+* Progress
+* Worker crashes
+* Job recovery
+* Poison jobs
+* Dead-letter queues
+* Idempotent jobs
+
+---
+
+# 44. Scheduled Jobs
+
+* Cron
+* Recurring tasks
+* Delayed tasks
+* Missed executions
+* Duplicate executions
+* Timezone-aware scheduling
+* DST
+* Distributed schedulers
+* Leader election
+* Catch-up behavior
+* Long-running scheduled jobs
+
+---
+
+# 45. Messaging / Queues
+
+* Queues
+* Topics
+* Pub/sub
+* Streams
+* Consumer groups
+* Producers
+* Consumers
+* Message acknowledgment
+* Redelivery
+* Ordering
+* Partitioning
+* Delivery guarantees
+* At-most-once
+* At-least-once
+* Exactly-once claims
+* Dead-letter queues
+* Poison messages
+* Backpressure
+* Consumer lag
+
+---
+
+# 46. Event Systems
+
+* Domain events
+* Integration events
+* Event schemas
+* Event metadata
+* Event IDs
+* Event versioning
+* Event ordering
+* Event deduplication
+* Event replay
+* Event storage
+* Event delivery
+* Eventual consistency
+* Event consumers
+* Handler failures
+* Event fanout
+
+---
+
+# 47. Transactional Outbox / Inbox
+
+* Outbox table
+* Outbox publishing
+* Polling
+* CDC-based publishing
+* Duplicate publication
+* Inbox deduplication
+* Delivery state
+* Failure recovery
+* Ordering
+* Cleanup
+* Transaction atomicity
+
+---
+
+# 48. Distributed Transactions
+
+* Local transactions
+* Two-phase commit
+* Sagas
+* Choreography
+* Orchestration
+* Compensating actions
+* Partial failures
+* Retry safety
+* Compensation failure
+* Consistency boundaries
+* Transaction ownership
+
+---
+
+# 49. Webhooks
+
+* Registration
+* Event selection
+* Endpoint verification
+* Signing
+* Signature verification
+* Timestamp validation
+* Replay protection
+* Secret rotation
+* Delivery retries
+* Backoff
+* Duplicate delivery
+* Out-of-order delivery
+* Timeout
+* Delivery logs
+* Disablement
+* Dead-lettering
+* Webhook versioning
+
+---
+
+# 50. Realtime Communication
+
+* WebSockets
+* SSE
+* Long polling
+* Connections
+* Reconnection
+* Authentication
+* Authorization
+* Connection expiry
+* Heartbeats
+* Presence
+* Channels
+* Rooms
+* Broadcast
+* Message ordering
+* Message loss
+* Offline clients
+* Horizontal scaling
+* Connection limits
+
+---
+
+# 51. External Integrations
+
+* API clients
+* Authentication
+* Credentials
+* Token refresh
+* Provider rate limits
+* Timeouts
+* Retries
+* Provider errors
+* Version changes
+* Data mapping
+* Sync state
+* Partial synchronization
+* Reconciliation
+* Provider outages
+* Fallback providers
+* Circuit breakers
+
+---
+
+# 52. Retry Engineering
+
+* Retryable operations
+* Non-retryable operations
+* Retry count
+* Exponential backoff
+* Jitter
+* Retry budgets
+* Duplicate side effects
+* Retry storms
+* Nested retries
+* Client + server retries
+* Retry-after handling
+
+---
+
+# 53. Timeout Engineering
+
+* Request timeout
+* Database timeout
+* External API timeout
+* Queue timeout
+* Job timeout
+* Connection timeout
+* Read timeout
+* Write timeout
+* Deadline propagation
+* Timeout budgets
+* Cascading timeout design
+
+---
+
+# 54. Circuit Breakers
+
+* Closed state
+* Open state
+* Half-open state
+* Failure thresholds
+* Recovery
+* Per-provider breakers
+* Per-endpoint breakers
+* Fallback behavior
+* Monitoring
+* Distributed circuit breakers
+
+---
+
+# 55. Resilience
+
+* Partial failure
+* Graceful degradation
+* Fallbacks
+* Bulkheads
+* Load shedding
+* Backpressure
+* Failure isolation
+* Dependency isolation
+* Retry control
+* Timeout control
+* Brownout modes
+* Emergency switches
+
+---
+
+# 56. Logging
+
+* Structured logs
+* Log levels
+* Context
+* Request IDs
+* Trace IDs
+* User IDs
+* Tenant IDs
+* Error logs
+* Audit vs application logs
+* Sensitive-data redaction
+* Log sampling
+* Log retention
+* Log volume control
+
+---
+
+# 57. Metrics
+
+* Counters
+* Gauges
+* Histograms
+* Latency
+* Throughput
+* Error rate
+* Queue depth
+* DB pool usage
+* Cache hit ratio
+* External dependency metrics
+* Business-neutral operational metrics
+* High-cardinality labels
+* Metric cardinality control
+
+---
+
+# 58. Distributed Tracing
+
+* Trace IDs
+* Span IDs
+* Parent/child spans
+* Context propagation
+* DB spans
+* Cache spans
+* Queue spans
+* External API spans
+* Async trace propagation
+* Sampling
+* Trace privacy
+
+---
+
+# 59. Health Checks
+
+* Liveness
+* Readiness
+* Startup probes
+* Dependency checks
+* Shallow vs deep health checks
+* Database health
+* Cache health
+* Queue health
+* External dependency health
+* Health-check overload
+
+---
+
+# 60. Audit Logging
+
+* Actor
+* Action
+* Resource
+* Timestamp
+* Request context
+* Before/after data
+* Authentication events
+* Authorization events
+* Admin actions
+* Immutable audit logs
+* Audit retention
+* Audit search
+* Sensitive-field masking
+* Tamper resistance
+
+---
+
+# 61. Security Fundamentals
+
+* Input validation
+* Output encoding
+* Least privilege
+* Default deny
+* Defense in depth
+* Secure defaults
+* Trust boundaries
+* Attack surface
+* Threat modeling
+* Secure failure
+* Sensitive-data handling
+
+---
+
+# 62. Web/API Security
+
+* SQL injection
+* NoSQL injection
+* Command injection
+* XSS
+* CSRF
+* SSRF
+* XXE
+* Path traversal
+* Open redirects
+* Host-header attacks
+* Request smuggling
+* CORS
+* CSP
+* Security headers
+* Mass assignment
+* Broken object authorization
+
+---
+
+# 63. Secrets Management
+
+* Environment secrets
+* Secret stores
+* Vault
+* KMS
+* Secret access
+* Secret rotation
+* Secret revocation
+* Secret auditing
+* Secret leakage prevention
+* Local development
+* CI/CD secrets
+* Log redaction
+
+---
+
+# 64. Cryptography
+
+* Hashing
+* Password hashing
+* Salting
+* Encryption at rest
+* Encryption in transit
+* Symmetric encryption
+* Asymmetric encryption
+* Key derivation
+* Signing
+* Verification
+* Randomness
+* Nonces
+* Key rotation
+* Envelope encryption
+* Avoiding custom crypto
+
+---
+
+# 65. TLS / PKI
+
+* TLS
+* Certificates
+* Certificate chains
+* Certificate validation
+* Certificate renewal
+* Expiration
+* mTLS
+* Private CAs
+* Certificate revocation
+* Hostname validation
+* Certificate pinning
+
+---
+
+# 66. Privacy & Sensitive Data
+
+* PII classification
+* Sensitive fields
+* Data minimization
+* Data masking
+* Anonymization
+* Pseudonymization
+* Retention
+* Deletion
+* Export
+* Consent
+* Access controls
+* Logs containing PII
+* Backups containing deleted data
+
+---
+
+# 67. Abuse Protection
+
+* Brute force
+* Credential stuffing
+* Enumeration
+* Spam
+* Bot traffic
+* Scraping
+* API abuse
+* Resource exhaustion
+* Rate limits
+* CAPTCHA
+* Device/IP reputation
+* Abuse detection
+* Abuse logging
+
+---
+
+# 68. Feature Flags
+
+* Boolean flags
+* Percentage rollout
+* User targeting
+* Tenant targeting
+* Kill switches
+* Dependencies
+* Default states
+* Failure behavior
+* Flag auditing
+* Cleanup
+* Rollback
+
+---
+
+# 69. Data Versioning
+
+* Record versions
+* Revision history
+* Optimistic versioning
+* Historical snapshots
+* Diff storage
+* Restore
+* Version conflicts
+* Immutable history
+
+---
+
+# 70. API / Event Schema Evolution
+
+* JSON evolution
+* Protobuf evolution
+* Optional fields
+* Required fields
+* Field removal
+* Field renaming
+* Enum changes
+* Unknown fields
+* Old consumers
+* New consumers
+* Compatibility testing
+
+---
+
+# 71. Backward Compatibility
+
+* API compatibility
+* Database compatibility
+* Events
+* Queues
+* SDKs
+* Long-lived clients
+* Mobile clients
+* Rolling deployments
+* Mixed-version clusters
+* Feature rollout compatibility
+
+---
+
+# 72. Data Synchronization
+
+* Incremental sync
+* Full sync
+* Change tokens
+* Cursors
+* Conflict resolution
+* Last-write-wins
+* Version-based merge
+* Offline writes
+* Sync retries
+* Tombstones
+* Deletion sync
+* Partial sync
+* Resumable sync
+
+---
+
+# 73. Change Data Capture
+
+* Transaction logs
+* CDC streams
+* Database change events
+* Consumers
+* Ordering
+* Schema changes
+* Backfills
+* Replay
+* Offset management
+* Duplicate events
+* Search synchronization
+
+---
+
+# 74. Data Import
+
+* CSV
+* JSON
+* Bulk imports
+* Validation
+* Mapping
+* Preview
+* Partial failures
+* Duplicate handling
+* Idempotent import
+* Async import
+* Progress
+* Retry
+* Rollback
+* Huge files
+
+---
+
+# 75. Data Export
+
+* CSV
+* JSON
+* Streaming exports
+* Large exports
+* Background generation
+* Temporary files
+* Expiring downloads
+* Permission checks
+* Sensitive-data filtering
+* Export consistency
+
+---
+
+# 76. Backup
+
+* Full backups
+* Incremental backups
+* Snapshots
+* PITR
+* Encryption
+* Retention
+* Backup verification
+* Backup failures
+* Cross-region copies
+* Restore testing
+
+---
+
+# 77. Restore
+
+* Full restore
+* Point-in-time restore
+* Partial restore
+* Tenant restore
+* Record-level recovery
+* Validation
+* Restore conflicts
+* Restore testing
+* Recovery drills
+
+---
+
+# 78. Disaster Recovery
+
+* RPO
+* RTO
+* Regional outages
+* Database failures
+* Data corruption
+* Provider outages
+* DNS failures
+* Failover
+* Failback
+* Recovery runbooks
+* Disaster drills
+
+---
+
+# 79. Connection Management
+
+* DB connection pools
+* HTTP connection pools
+* Keep-alive
+* Idle connections
+* Maximum connections
+* Minimum connections
+* Pool exhaustion
+* Connection leaks
+* Connection timeout
+* Reconnection
+* Pool sizing
+
+---
+
+# 80. Networking Basics for Backend
+
+* DNS
+* TCP
+* UDP
+* HTTP/1.1
+* HTTP/2
+* HTTP/3
+* QUIC
+* TLS
+* Proxies
+* Reverse proxies
+* NAT
+* Load balancers
+* Keep-alive
+* Connection reuse
+* Network partitions
+
+---
+
+# 81. Load Balancing
+
+* Round robin
+* Least connections
+* Consistent hashing
+* Health-aware routing
+* Sticky sessions
+* Layer 4
+* Layer 7
+* Regional routing
+* Failover
+* Connection draining
+
+---
+
+# 82. Service Discovery
+
+* DNS discovery
+* Registry discovery
+* Static discovery
+* Dynamic discovery
+* Health checks
+* Service registration
+* Deregistration
+* Stale endpoints
+
+---
+
+# 83. Service-to-Service Communication
+
+* REST
+* gRPC
+* Messaging
+* Authentication
+* Authorization
+* mTLS
+* Retries
+* Timeouts
+* Schema evolution
+* Contract compatibility
+* Service discovery
+* Load balancing
+* Observability
+
+---
+
+# 84. Modular Monolith Architecture
+
+* Module boundaries
+* Internal APIs
+* Dependency rules
+* Data ownership
+* Shared infrastructure
+* Cross-module communication
+* Domain events
+* Preventing coupling
+* Extraction readiness
+
+---
+
+# 85. Microservice Architecture
+
+* Service boundaries
+* Data ownership
+* API boundaries
+* Service discovery
+* Internal auth
+* Distributed transactions
+* Deployability
+* Versioning
+* Failure isolation
+* Observability
+* Operational complexity
+* Avoiding distributed monoliths
+
+---
+
+# 86. Dependency Boundaries
+
+* Layer boundaries
+* Module boundaries
+* Domain boundaries
+* Circular dependencies
+* Dependency inversion
+* Public interfaces
+* Internal interfaces
+* Shared libraries
+* Shared models
+* Dependency leakage
+
+---
+
+# 87. Code-Level Architecture
+
+* Controllers
+* Handlers
+* Services
+* Use cases
+* Domain models
+* Repositories
+* DTOs
+* Mappers
+* Validators
+* Middleware
+* Adapters
+* Ports
+* Factories
+* Composition roots
+* Dependency injection
+* Transaction boundaries
+* Error boundaries
+
+---
+
+# 88. Abstraction Design
+
+* Abstraction boundaries
+* Duplication vs abstraction
+* Interface size
+* Leaky abstractions
+* Premature abstraction
+* Generic repositories
+* Shared utilities
+* Framework wrappers
+* Abstraction ownership
+* Removing abstractions
+
+---
+
+# 89. Dependency Management
+
+* Direct dependencies
+* Transitive dependencies
+* Version pinning
+* Lock files
+* Updates
+* Vulnerabilities
+* Abandoned libraries
+* License concerns
+* Supply-chain risk
+* Dependency replacement
+* Minimal dependency strategy
+
+---
+
+# 90. Testing Foundations
+
+* Unit tests
+* Integration tests
+* API tests
+* Database tests
+* Contract tests
+* End-to-end tests
+* Property-based tests
+* Fuzz tests
+* Mutation tests
+* Performance tests
+* Security tests
+* Chaos tests
+
+---
+
+# 91. Test Data
+
+* Fixtures
+* Factories
+* Seeds
+* Synthetic data
+* Isolation
+* Cleanup
+* Deterministic tests
+* Random data
+* Time control
+* Production-like datasets
+* PII masking
+
+---
+
+# 92. Concurrency Testing
+
+* Race-condition tests
+* Duplicate request tests
+* Simultaneous updates
+* Simultaneous deletes
+* Lock contention
+* Deadlocks
+* Idempotency races
+* Transaction conflicts
+
+---
+
+# 93. Failure Testing
+
+* Database unavailable
+* Redis unavailable
+* Queue unavailable
+* Provider timeout
+* Provider 500
+* Network partition
+* Disk full
+* Slow dependency
+* Worker crash
+* Partial writes
+* Duplicate delivery
+* Out-of-order delivery
+
+---
+
+# 94. Load & Performance Testing
+
+* Load tests
+* Stress tests
+* Spike tests
+* Soak tests
+* Capacity tests
+* Throughput
+* Latency
+* Tail latency
+* Resource saturation
+* Bottleneck discovery
+
+---
+
+# 95. Performance Engineering
+
+* CPU
+* Memory
+* Allocations
+* Garbage collection
+* Database queries
+* Network calls
+* Serialization
+* Compression
+* Batching
+* Caching
+* Connection pooling
+* Async processing
+* Profiling
+* Flame graphs
+
+---
+
+# 96. Scalability
+
+* Vertical scaling
+* Horizontal scaling
+* Stateless services
+* Partitioning
+* Sharding
+* Replication
+* Read scaling
+* Write scaling
+* Autoscaling
+* Hot partitions
+* Hot keys
+* Fanout
+* Capacity planning
+
+---
+
+# 97. High Availability
+
+* Redundancy
+* Active/passive
+* Active/active
+* Multi-zone
+* Multi-region
+* Automated failover
+* Health checks
+* Failback
+* Dependency redundancy
+* Data replication
+
+---
+
+# 98. Distributed Systems Fundamentals
+
+* Partial failure
+* Network partitions
+* Message delays
+* Clock skew
+* Consistency
+* Availability
+* Quorums
+* Replication
+* Leader election
+* Split brain
+* Coordination
+* Consensus
+* Failure detection
+
+---
+
+# 99. Consistency Models
+
+* Strong consistency
+* Eventual consistency
+* Causal consistency
+* Read-your-writes
+* Monotonic reads
+* Linearizability
+* Sequential consistency
+* Stale reads
+* Consistency trade-offs
+
+---
+
+# 100. Replication
+
+* Leader/follower
+* Multi-leader
+* Leaderless
+* Synchronous replication
+* Asynchronous replication
+* Replica lag
+* Conflict resolution
+* Failover
+* Replication topology
+
+---
+
+# 101. Partitioning / Sharding
+
+* Hash partitioning
+* Range partitioning
+* Tenant partitioning
+* Directory-based partitioning
+* Resharding
+* Rebalancing
+* Hot shards
+* Cross-shard queries
+* Cross-shard transactions
+* Shard routing
+
+---
+
+# 102. Distributed Consensus
+
+* Leader election
+* Quorums
+* Raft
+* Paxos concepts
+* Replicated logs
+* Membership changes
+* Split brain
+* Linearizability
+* Consensus limitations
+
+---
+
+# 103. Distributed Locks
+
+* Redis locks
+* Database locks
+* Coordination services
+* Lease locks
+* Lock renewal
+* Expiration
+* Fencing tokens
+* Split-brain safety
+* Lock ownership
+* Failure recovery
+
+---
+
+# 104. Backpressure
+
+* Queue backpressure
+* HTTP backpressure
+* Stream backpressure
+* Worker saturation
+* Producer throttling
+* Bounded queues
+* Load shedding
+* Retry interactions
+* Memory protection
+
+---
+
+# 105. Graceful Shutdown
+
+* Stop accepting traffic
+* Connection draining
+* Active request completion
+* Worker shutdown
+* Queue acknowledgments
+* Transaction completion
+* Resource cleanup
+* Shutdown timeout
+* Kubernetes termination behavior
+
+---
+
+# 106. Deployment Safety
+
+* Rolling deployment
+* Blue/green
+* Canary
+* Progressive rollout
+* Rollback
+* Feature flags
+* Database compatibility
+* Mixed-version compatibility
+* Health gating
+* Deployment validation
+
+---
+
+# 107. CI/CD
+
+* Builds
+* Tests
+* Linting
+* Type checking
+* Security scanning
+* Dependency scanning
+* Artifact creation
+* Environment promotion
+* Deployment
+* Rollback
+* Migration execution
+* Quality gates
+
+---
+
+# 108. Infrastructure Configuration
+
+* Containers
+* Runtime limits
+* CPU limits
+* Memory limits
+* Environment injection
+* Networking
+* Persistent storage
+* Health probes
+* Autoscaling
+* Deployment configuration
+
+---
+
+# 109. Resource Management
+
+* CPU
+* Memory
+* Disk
+* Network
+* File descriptors
+* Connections
+* Thread pools
+* Worker pools
+* Goroutines/coroutines
+* Queue sizes
+* Resource leaks
+* Resource limits
+
+---
+
+# 110. SDK / Client Design
+
+* Authentication
+* Configuration
+* Base URL
+* Timeouts
+* Retries
+* Pagination
+* Errors
+* Idempotency
+* Versioning
+* Streaming
+* Backward compatibility
+* Telemetry
+* User-agent metadata
+
+---
+
+# 111. CLI Backend Interaction
+
+* Authentication
+* Credentials
+* Config files
+* Environment selection
+* API calls
+* Retries
+* Pagination
+* Error messages
+* Exit codes
+* Machine-readable output
+* Interactive behavior
+
+---
+
+# 112. Internal Admin Operations
+
+Technical concerns only:
+
+* Elevated permissions
+* Admin actions
+* Impersonation
+* Audit trails
+* Sensitive actions
+* Confirmation gates
+* Bulk actions
+* Rate limits
+* Admin session security
+
+---
+
+# 113. Machine-to-Machine Authentication
+
+* API keys
+* Service accounts
+* Client credentials
+* Signed requests
+* mTLS
+* Key rotation
+* Key scopes
+* Expiration
+* Revocation
+* Secret storage
+* Workload identity
+
+---
+
+# 114. API Keys
+
+* Generation
+* Entropy
+* Prefixes
+* Hash-at-rest
+* Display-once behavior
+* Scopes
+* Expiration
+* Rotation
+* Revocation
+* Usage tracking
+* Last-used timestamps
+* Multiple keys
+* Leakage detection
+
+---
+
+# 115. Web Security Headers
+
+* HSTS
+* CSP
+* X-Content-Type-Options
+* Referrer-Policy
+* Permissions-Policy
+* Frame protections
+* Cache-control for sensitive pages
+* Cookie security
+
+---
+
+# 116. Data Serialization
+
+* JSON
+* Protobuf
+* MessagePack
+* Binary formats
+* Null semantics
+* Numeric precision
+* Date representation
+* Enum evolution
+* Unknown fields
+* Backward compatibility
+* Payload size
+
+---
+
+# 117. Compression
+
+* HTTP compression
+* Gzip
+* Brotli
+* Payload compression
+* Storage compression
+* CPU trade-offs
+* Compression bombs
+* Minimum payload thresholds
+
+---
+
+# 118. Batch Processing
+
+* Batch sizes
+* Pagination
+* Chunking
+* Progress tracking
+* Retries
+* Partial failures
+* Idempotency
+* Resource limits
+* Resume support
+* Parallelism
+* Ordering
+
+---
+
+# 119. Bulk Operations
+
+* Bulk create
+* Bulk update
+* Bulk delete
+* Partial success
+* Atomic vs non-atomic
+* Validation
+* Per-item errors
+* Concurrency
+* Transaction limits
+* Rate limiting
+
+---
+
+# 120. Deduplication
+
+* Duplicate requests
+* Duplicate rows
+* Duplicate messages
+* Duplicate jobs
+* Duplicate webhooks
+* Natural keys
+* Unique constraints
+* Fingerprints
+* Time-window dedupe
+* Cleanup
+
+---
+
+# 121. Ordering Guarantees
+
+* Database ordering
+* Message ordering
+* Event ordering
+* Per-key ordering
+* Global ordering
+* Sequence numbers
+* Out-of-order handling
+* Reordering buffers
+* Ordering vs scalability
+
+---
+
+# 122. Data Provenance
+
+* Source of data
+* Creator
+* Import source
+* External provider
+* Transformation history
+* Derived data
+* Source timestamps
+* Confidence
+* Auditability
+
+---
+
+# 123. Source of Truth
+
+* Canonical data ownership
+* Primary source
+* Replicas
+* Derived copies
+* Search indexes
+* Caches
+* Synchronization
+* Conflict resolution
+* Ownership boundaries
+
+---
+
+# 124. Data Reconciliation
+
+* Detecting divergence
+* Source comparison
+* Missing records
+* Duplicate records
+* Incorrect balances/counts
+* Repair
+* Periodic reconciliation
+* Automated repair
+* Manual review
+
+---
+
+# 125. Cleanup Jobs
+
+* Expired sessions
+* Expired tokens
+* Orphan files
+* Old logs
+* Soft-deleted data
+* Stale locks
+* Dead jobs
+* Temporary records
+* Old idempotency keys
+* Retention enforcement
+
+---
+
+# 126. Temporary Data
+
+* Temporary tokens
+* Upload sessions
+* OTPs
+* Verification codes
+* Locks
+* Draft states
+* Expiration
+* Cleanup
+* Replay prevention
+* Storage choice
+
+---
+
+# 127. Randomness & Token Generation
+
+* Cryptographic randomness
+* Token entropy
+* Collision probability
+* Guessability
+* Secure random APIs
+* Token length
+* Encoding
+* Storage
+* Expiration
+* Hashing tokens at rest
+
+---
+
+# 128. Email Delivery Infrastructure
+
+Technical only:
+
+* Transactional delivery
+* Queuing
+* Templates
+* Provider failures
+* Retries
+* Bounce handling
+* Complaint handling
+* Suppression lists
+* SPF
+* DKIM
+* DMARC
+* Idempotent sending
+* Duplicate-email prevention
+
+---
+
+# 129. Notification Infrastructure
+
+* Multi-channel delivery
+* Dispatching
+* Preferences
+* Templates
+* Queueing
+* Retries
+* Deduplication
+* Delivery states
+* Priority
+* Quiet hours
+* Provider failover
+* Fanout
+
+---
+
+# 130. Search Index Synchronization
+
+* Synchronous indexing
+* Async indexing
+* CDC
+* Outbox
+* Failed indexing
+* Reindex
+* Deleted-record handling
+* Version conflicts
+* Eventual consistency
+* Reconciliation
+
+---
+
+# 131. Distributed Cache Coordination
+
+* Invalidation messages
+* Cache versions
+* Generational keys
+* Distributed refresh
+* Stale-while-revalidate
+* Stampede protection
+* Multi-region cache behavior
+
+---
+
+# 132. Multi-Region Systems
+
+* Region selection
+* Geo routing
+* Active/active
+* Active/passive
+* Cross-region replication
+* Regional data ownership
+* Failover
+* Data residency
+* Conflict resolution
+* Latency
+* Regional outages
+
+---
+
+# 133. Data Residency
+
+* Region-specific storage
+* Tenant residency
+* Replication restrictions
+* Backup residency
+* Logging residency
+* Search-index residency
+* Migration between regions
+
+---
+
+# 134. Zero-Downtime Changes
+
+* API changes
+* Database changes
+* Queue schema changes
+* Event changes
+* Cache changes
+* Dual-read
+* Dual-write
+* Expand-contract
+* Progressive migration
+* Rollback
+
+---
+
+# 135. Feature Migration
+
+* Old implementation
+* New implementation
+* Shadow traffic
+* Dual writes
+* Dual reads
+* Comparison
+* Gradual migration
+* Rollback
+* Cleanup
+* Compatibility
+
+---
+
+# 136. Legacy-System Integration
+
+* Anti-corruption layers
+* Adapters
+* Translation layers
+* Data synchronization
+* Legacy identifiers
+* Partial migration
+* Strangler pattern
+* Compatibility
+
+---
+
+# 137. Observability for Async Systems
+
+* Job IDs
+* Event IDs
+* Message correlation
+* Queue latency
+* Consumer lag
+* Retry count
+* Dead-letter metrics
+* End-to-end traces
+* Failure attribution
+
+---
+
+# 138. Operational Runbooks
+
+* Common failure scenarios
+* Detection
+* Diagnosis
+* Mitigation
+* Rollback
+* Recovery
+* Escalation
+* Verification
+* Post-recovery validation
+
+---
+
+# 139. Incident Readiness
+
+* Alerting
+* Dashboards
+* Runbooks
+* Logs
+* Traceability
+* Feature kill switches
+* Rollback
+* Audit history
+* On-call usability
+* Postmortems
+
+---
+
+# 140. AI/LLM Backend Fundamentals
+
+Keep as technical infrastructure, not AI product examples.
+
+* Model providers
+* Model routing
+* Provider fallback
+* Streaming
+* Token accounting
+* Context limits
+* Prompt versioning
+* Structured output
+* Tool calling
+* Retries
+* Timeouts
+* Rate limits
+* Cost controls
+* Safety boundaries
+* Observability
+
+---
+
+# 141. Agent Execution
+
+* Agent state
+* Tool permissions
+* Execution loops
+* Maximum iterations
+* Termination
+* Retries
+* Tool failures
+* Human approval
+* Sandboxing
+* Cost budgets
+* Time budgets
+* Context limits
+* State persistence
+* Idempotency
+
+---
+
+# 142. AI Memory
+
+* Short-term memory
+* Long-term memory
+* User memory
+* Session memory
+* Retrieval
+* Memory ranking
+* Expiration
+* Provenance
+* Conflict resolution
+* Permission-aware memory
+* Deletion
+* Privacy
+
+---
+
+# 143. RAG Infrastructure
+
+* Ingestion
+* Parsing
+* Chunking
+* Embeddings
+* Vector storage
+* Metadata
+* Access control
+* Retrieval
+* Reranking
+* Hybrid search
+* Citation mapping
+* Reindexing
+* Document deletion
+* Version synchronization
+
+---
+
+# 144. Untrusted Code Execution
+
+* Process isolation
+* Containers
+* Sandboxing
+* Network isolation
+* Filesystem isolation
+* CPU limits
+* Memory limits
+* Disk limits
+* Timeouts
+* Syscall restrictions
+* Secret isolation
+* Cleanup
+
+---
+
+# 145. Plugin / Extension Architecture
+
+* Plugin contracts
+* Discovery
+* Loading
+* Permissions
+* Isolation
+* Versioning
+* Compatibility
+* Failure containment
+* Sandboxing
+* Plugin configuration
+* Lifecycle
+
+---
+
+# 146. Cross-Cutting Implementation Checklist
+
+Every feature paper should force the AI to consider:
+
+* Authentication
+* Authorization
+* Validation
+* Tenant isolation
+* Data ownership
+* Constraints
+* Transactions
+* Race conditions
+* Concurrency
+* Idempotency
+* Duplicate requests
+* Retries
+* Timeouts
+* External failures
+* Partial failures
+* State transitions
+* Data consistency
+* Caching
+* Indexing
+* Pagination
+* Large datasets
+* Rate limiting
+* Abuse prevention
+* Security
+* Privacy
+* Logging
+* Metrics
+* Tracing
+* Audit logs
+* Error behavior
+* Backward compatibility
+* Database migration
+* Data migration
+* Cleanup
+* Retention
+* Failure recovery
+* Testing
+* Deployment
+* Rollback
+* Scalability
+* Performance
+* Operational cost
+
+---
+
+## The important structural change
+
+Your knowledge base should probably have **three layers**:
+
+```text
+backend-knowledge/
+├── primitives/
+│   ├── time/
+│   ├── identifiers/
+│   ├── decimal/
+│   ├── validation/
+│   ├── errors/
+│   └── state-machines/
+│
+├── systems/
+│   ├── authentication/
+│   ├── authorization/
+│   ├── database/
+│   ├── caching/
+│   ├── queues/
+│   ├── webhooks/
+│   ├── files/
+│   ├── search/
+│   └── realtime/
+│
+└── cross-cutting/
+    ├── security/
+    ├── concurrency/
+    ├── idempotency/
+    ├── reliability/
+    ├── observability/
+    ├── performance/
+    ├── scalability/
+    ├── migrations/
+    └── testing/
+```
+
+The key idea is that **“authentication” is a system**, while things such as **idempotency, concurrency, time, identifiers, consistency, retries, and validation are reusable reasoning primitives** that may affect dozens of systems.
+
+That distinction will make this database much stronger for coding agents than simply organizing everything as feature names.

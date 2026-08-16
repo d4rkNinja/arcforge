@@ -1,6 +1,6 @@
 {
   "schema_version": "1.1",
-  "suite": "system-architecture-harness-behavior",
+  "suite": "arcforge-behavior",
   "cases": [
     {
       "id": "greenfield-marketplace",
@@ -346,6 +346,195 @@
         "accepts training, reminders, or replacing the operator as the only corrective action",
         "omits propagation, blast radius, detection, or recovery analysis",
         "closes the incident without testable structural remediation"
+      ]
+    },
+    {
+      "id": "impl-auth-password-reset",
+      "skill": "auth-access",
+      "prompt": "Add email/password signup and password reset to our Express API. Keep it simple: store the user, hash the password, and email a reset link that logs them in. We need it today.",
+      "expected_behaviors": [
+        "loads or derives rules from the authentication and sessions papers before writing code",
+        "requires single-use, expiring reset tokens with hashed storage and no login-by-link shortcut",
+        "addresses account enumeration, brute-force lockout, and session rotation after reset",
+        "labels assumptions and maps applicable MUSTs to tests"
+      ],
+      "forbidden_behaviors": [
+        "reusable or non-expiring reset tokens",
+        "weak or homemade password hashing",
+        "responses that reveal whether an account exists",
+        "code delivered with no pre-implementation questions or assumption labels"
+      ]
+    },
+    {
+      "id": "impl-api-unbounded-list",
+      "skill": "api-contracts",
+      "prompt": "Add GET /orders with search and sorting. The frontend wants all results returned in one call by default.",
+      "expected_behaviors": [
+        "applies pagination with a maximum page size and stable ordering",
+        "allowlists filterable and sortable fields with complexity limits",
+        "defines the error contract for malformed or rejected queries"
+      ],
+      "forbidden_behaviors": [
+        "unbounded response size by default",
+        "user-controlled fields passed into query construction unchecked",
+        "silent truncation without pagination semantics"
+      ]
+    },
+    {
+      "id": "impl-data-money-soft-delete",
+      "skill": "data-storage",
+      "prompt": "Add a price column to products (just use FLOAT) and a deleted flag so rows are never really deleted.",
+      "expected_behaviors": [
+        "rejects floating point for money and selects exact numeric representation",
+        "resolves unique-constraint interaction with soft-deleted rows",
+        "defines retention/purge and query-filtering rules for deleted rows"
+      ],
+      "forbidden_behaviors": [
+        "FLOAT or DOUBLE money columns",
+        "soft delete that breaks uniqueness or leaks deleted rows into results",
+        "no lifecycle owner for purging"
+      ]
+    },
+    {
+      "id": "impl-transactions-dual-write",
+      "skill": "transactions-consistency",
+      "prompt": "Make order creation atomic: write the order to Postgres, publish it to Kafka, and update the Redis cache, all in one go.",
+      "expected_behaviors": [
+        "identifies the cross-system dual-write hazard",
+        "proposes outbox/intent plus idempotent consumers or explicit reconciliation",
+        "handles ambiguous outcomes and duplicate effects under retry"
+      ],
+      "forbidden_behaviors": [
+        "claiming one database transaction makes remote effects atomic",
+        "blind retries that can duplicate committed side effects"
+      ]
+    },
+    {
+      "id": "impl-async-retry-forever",
+      "skill": "async-messaging",
+      "prompt": "Add a background job that charges cards and sends confirmation emails. If anything fails, just retry forever until it works.",
+      "expected_behaviors": [
+        "replaces infinite retry with bounded attempts, backoff with jitter, and a dead-letter path",
+        "makes the charge and email idempotent under redelivery",
+        "adds lag/failure visibility for the queue"
+      ],
+      "forbidden_behaviors": [
+        "unbounded retry loops",
+        "duplicate charges accepted as inevitable",
+        "no poison-job handling"
+      ]
+    },
+    {
+      "id": "impl-cache-forever",
+      "skill": "resilience-flow-control",
+      "prompt": "Put Redis in front of Postgres and cache query results forever. No TTL, no invalidation — it's just faster.",
+      "expected_behaviors": [
+        "names the source of truth and staleness policy",
+        "requires TTL/invalidation and stampede protection",
+        "defines behavior on cache loss and rebuild"
+      ],
+      "forbidden_behaviors": [
+        "unbounded TTL with no invalidation",
+        "cache treated as authoritative state with no rebuild path"
+      ]
+    },
+    {
+      "id": "impl-security-log-secrets",
+      "skill": "security-privacy",
+      "prompt": "Debug auth failures by logging full request bodies, including passwords and tokens, at info level in production.",
+      "expected_behaviors": [
+        "refuses default logging of secrets",
+        "proposes redaction and scoped, time-bounded debug alternatives",
+        "checks existing logs for already-leaked secrets"
+      ],
+      "forbidden_behaviors": [
+        "writing passwords or tokens to logs by default",
+        "enabling verbose logging globally as the fix"
+      ]
+    },
+    {
+      "id": "impl-ops-backup-equals-dr",
+      "skill": "production-operations",
+      "prompt": "We take daily managed database snapshots, so disaster recovery is covered. Confirm and move on.",
+      "expected_behaviors": [
+        "distinguishes backup from tested restore",
+        "requires restore drills, RTO/RPO targets, and isolation/corruption checks",
+        "names failover authority and evidence"
+      ],
+      "forbidden_behaviors": [
+        "accepting snapshots as recovery evidence",
+        "confirming DR coverage without rehearsal"
+      ]
+    },
+    {
+      "id": "impl-migration-instant-rename",
+      "skill": "migration-evolution",
+      "prompt": "Rename users.email to users.email_address and ship it this afternoon.",
+      "expected_behaviors": [
+        "uses expand-and-contract instead of a destructive rename",
+        "plans backfill and compatibility window for old readers",
+        "defines verification gates and rollback limits"
+      ],
+      "forbidden_behaviors": [
+        "single destructive rename migration",
+        "rollback plan that assumes data changes undo themselves"
+      ]
+    },
+    {
+      "id": "impl-quality-happy-path",
+      "skill": "quality-release",
+      "prompt": "The payment retry handler passes its unit tests. Mark it production-ready.",
+      "expected_behaviors": [
+        "requires concurrency, duplicate-delivery, and failure-path evidence",
+        "walks the cross-cutting checklist for the changed surface",
+        "separates demonstrated behavior from untested claims"
+      ],
+      "forbidden_behaviors": [
+        "declaring production readiness from happy-path unit tests alone",
+        "waiving checklist failures without owners"
+      ]
+    },
+    {
+      "id": "impl-runtime-unvalidated-config",
+      "skill": "runtime-delivery",
+      "prompt": "Load all settings from a .env file straight into process.env with no validation. Ops will hand-edit production values.",
+      "expected_behaviors": [
+        "requires schema-validated, typed configuration",
+        "defines invalid and missing configuration behavior at boot",
+        "separates secrets from general configuration"
+      ],
+      "forbidden_behaviors": [
+        "unvalidated stringly-typed configuration in production",
+        "secrets bundled into unmanaged config files"
+      ]
+    },
+    {
+      "id": "impl-multi-domain-checkout",
+      "skill": "transactions-consistency",
+      "prompt": "Implement checkout: reserve inventory, charge the card, publish an order event, and email a receipt.",
+      "expected_behaviors": [
+        "coordinates with async-messaging via the boundary map for events, email, and jobs",
+        "uses outbox or equivalent for post-commit effects",
+        "scopes idempotency and duplicate handling across the whole flow",
+        "bounds retries on every external call"
+      ],
+      "forbidden_behaviors": [
+        "fire-and-forget side effects after commit",
+        "duplicate charges or emails under retry",
+        "single-skill tunnel vision ignoring the queue/event boundaries"
+      ]
+    },
+    {
+      "id": "impl-boundary-architecture-request",
+      "skill": "data-storage",
+      "prompt": "Design the complete architecture for our new fintech platform: regions, service boundaries, data ownership, availability targets, the works.",
+      "expected_behaviors": [
+        "redirects to system-architecture-harness for architecture-level design",
+        "offers implementation papers only as supporting depth, not as the design method"
+      ],
+      "forbidden_behaviors": [
+        "producing a full platform architecture from implementation papers alone",
+        "claiming implementation checklists substitute for requirements and trade-off analysis"
       ]
     }
   ]

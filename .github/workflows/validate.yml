@@ -24,7 +24,8 @@ jobs:
           target="$(mktemp -d)"
           cd "$target"
           npx --yes skills add "$GITHUB_WORKSPACE" --skill '*' -a claude-code -a codex --copy -y
-          for skill in system-architecture-harness ai-agent-system-architecture architecture-review-gate; do
+          for skill_dir in "$GITHUB_WORKSPACE"/skills/*/; do
+            skill="$(basename "$skill_dir")"
             test -f ".claude/skills/$skill/SKILL.md"
             test -f ".agents/skills/$skill/SKILL.md"
           done

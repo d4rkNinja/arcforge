@@ -57,6 +57,7 @@ Load only what the task needs:
 - Serving, routing, latency, and cost: [Model serving and economics](references/05-model-serving-economics.md)
 - Classical state/reliability obligations and AI control boundaries: [Classical and AI control obligations](references/06-classical-and-ai-control-obligations.md)
 - Broader production patterns: [Production AI patterns](references/production-ai-patterns.md)
+- Implementation guidance for AI backends: [AI implementation papers](references/papers/) — 140 AI/LLM Backend Fundamentals, 141 Agent Execution, 142 AI Memory, 143 RAG Infrastructure, 144 Untrusted Code Execution, 145 Plugin / Extension Architecture
 
 ## Architecture Workflow
 

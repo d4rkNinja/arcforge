@@ -10,6 +10,23 @@
         "ai-agent-system-architecture",
         "architecture-review-gate"
       ]
+    },
+    {
+      "title": "Backend Implementation Intelligence",
+      "description": "Production implementation papers for coding agents: MUST/SHOULD rules, failure modes, security boundaries, and verification checklists per backend domain, loaded before code is written.",
+      "skills": [
+        "auth-access",
+        "api-contracts",
+        "data-storage",
+        "transactions-consistency",
+        "async-messaging",
+        "resilience-flow-control",
+        "security-privacy",
+        "production-operations",
+        "migration-evolution",
+        "quality-release",
+        "runtime-delivery"
+      ]
     }
   ]
 }

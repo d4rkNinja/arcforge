@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Observability & Operations"
+  short_description: "Production rules for logging, metrics, tracing, runbooks, backup, and DR"
+  default_prompt: "Use $production-operations before implementing logging, metrics, tracing, health checks, audit trails, runbooks, backup/restore, or disaster recovery."

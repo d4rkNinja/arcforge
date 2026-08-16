@@ -77,6 +77,7 @@ Read only the references needed for the task. The workflow and gates are always 
 | Module/code boundaries, language/runtime, concurrency, OS/network semantics, or assurance depth | `references/16-code-runtime-and-assurance.md` |
 | Browser/mobile/desktop, rendering, offline/local-first, real-time, or search | `references/17-client-platform-architecture.md` |
 | Developer platform, repository/build topology, governance, technical debt, rewrite, migration, or metrics | `references/18-platform-governance-and-evolution.md` |
+| Concrete implementation guidance for modular monoliths, microservices, dependency boundaries, code-level architecture, abstraction design, or dependency management | `references/papers/` (084–089) |
 
 ## Research Mode
 
@@ -456,3 +457,6 @@ Before calling the architecture complete:
 - Code, runtime, and assurance: `references/16-code-runtime-and-assurance.md`
 - Client and platform architecture: `references/17-client-platform-architecture.md`
 - Platform, governance, economics, and evolution: `references/18-platform-governance-and-evolution.md`
+- Implementation papers (084 Modular Monolith, 085 Microservice, 086 Dependency Boundaries, 087 Code-Level Architecture, 088 Abstraction Design, 089 Dependency Management): `references/papers/`
+
+When a decision moves from architecture into implementation, switch to the matching implementation skill (`auth-access`, `api-contracts`, `data-storage`, `transactions-consistency`, `async-messaging`, `resilience-flow-control`, `security-privacy`, `production-operations`, `migration-evolution`, `quality-release`, `runtime-delivery`) and read its papers before code is written.

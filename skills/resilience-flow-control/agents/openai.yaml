@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Resilience & Flow Control"
+  short_description: "Production rules for caching, rate limiting, retries, timeouts, and breakers"
+  default_prompt: "Use $resilience-flow-control before adding caching, rate limits, quotas, retries, timeouts, circuit breakers, or backpressure."
