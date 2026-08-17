@@ -1,6 +1,15 @@
-# Implement Data & Storage (`data-storage`)
+# Think Through Data & Storage (`data-storage`)
 
 Production expertise for data that outlives code. Every column, identifier, file, and derived index is a durable decision with invariants and a lifecycle — not a convenient shape for today's feature.
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -20,9 +29,11 @@ Production expertise for data that outlives code. Every column, identifier, file
 
 ## When to use
 
-Modeling new entities, adding columns (especially money or timestamps), designing indexes, implementing files or search, or defining what happens to data over its lifetime.
+Modeling new entities, adding columns (especially money or timestamps), designing indexes, changing files or search, or defining what happens to data over its lifetime.
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 Data models with invariants backed by constraints, indexes matched to real queries, lifecycle owners for retention and purge, and rebuild paths for anything derived. The skill stops work on floating-point money, soft delete that breaks uniqueness, or derived stores with no reconciliation.
 

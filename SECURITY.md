@@ -16,4 +16,19 @@ Security-sensitive surfaces include:
 
 Review skill source before installation, pin trusted commits for production use, treat model-generated reviews as advisory evidence, keep provider credentials in secret bindings, and apply least privilege to every agent runtime.
 
+The README installation commands pin the Skills CLI version, not the ArcForge
+repository revision. For a production installation, clone an exact reviewed tag
+or commit, verify the repository manifest, and install from the local checkout:
+
+```bash
+git clone --branch v0.3.2 --depth 1 https://github.com/d4rkNinja/arcforge.git arcforge-0.3.2
+cd arcforge-0.3.2
+shasum -a 256 -c MANIFEST.sha256
+npx --yes skills@1.5.22 add . --skill '*' -a claude-code -a codex --copy -y
+```
+
+Review a new release before changing the pinned tag. Do not execute skill output
+with broader filesystem, network, shell, database, cloud, or deployment authority
+than the requested task requires.
+
 Skills are instructions and reference material, not a security certification. Agent behavior, tool permissions, data access, and approval policies remain the responsibility of the consuming runtime and its operators.

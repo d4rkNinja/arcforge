@@ -1,4 +1,4 @@
 interface:
-  display_name: "Design AI & Agent Systems"
-  short_description: "Bounded, evaluated architecture for AI and agent systems"
-  default_prompt: "Use $ai-agent-system-architecture to design a governed AI system with bounded authority, evaluation, and rollout gates."
+  display_name: "Think Through AI & Agent Systems"
+  short_description: "Governed decisions for AI and agent systems"
+  default_prompt: "Use $ai-agent-system-architecture in Think, Review, Change, or Verify mode for governed AI and agent-system work."

@@ -1,4 +1,4 @@
 interface:
-  display_name: "Implement Transactions & Consistency"
-  short_description: "Production rules for isolation, locking, idempotency, and distribution"
-  default_prompt: "Use $transactions-consistency before writing transactional or concurrent code: isolation, locking, state machines, idempotency, sagas, sharding, or distributed locks."
+  display_name: "Think Through Transactions & Consistency"
+  short_description: "Transaction, concurrency, and consistency decisions"
+  default_prompt: "Use $transactions-consistency in Think, Review, Change, or Verify mode for transactional and concurrent behavior."

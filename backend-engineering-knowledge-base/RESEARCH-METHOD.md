@@ -6,6 +6,13 @@
 
 The numbered titles, editorial notes, and bullet subtopics in `original/Pasted text.txt` are authoritative for scope. The generator/curation process does not silently remove a canonical subtopic. The manifest preserves every title and subtopic for machine validation.
 
+Canonical papers remain authoritative for engineering explanation, trade-offs,
+and contextual guidance. The structured registry under `rules/` owns stable
+machine-traceable records only for selected critical obligations. A structured
+record must point to matching paper text; migration does not authorize deleting
+the existing obligation until semantic review proves the replacement is
+equivalent or stronger.
+
 ## Evidence hierarchy
 
 1. Normative standards and specifications: IETF/RFC Editor, W3C, OpenID Foundation, NIST, ISO-adjacent public specifications, CNCF/OpenTelemetry, OpenAPI, GraphQL, AsyncAPI, and protocol standards.

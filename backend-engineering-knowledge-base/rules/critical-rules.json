@@ -1,0 +1,261 @@
+{
+  "$schema": "critical-rules.schema.json",
+  "schema_version": "1.0.0",
+  "rules": [
+    {
+      "id": "ARC-CRIT-001",
+      "title": "Do not claim unsafe dual writes are atomic",
+      "statement": "Durable outbox/intent plus reconciliation; never assume dual writes are atomic.",
+      "normative_level": "NEVER",
+      "severity": "critical",
+      "category": "transactions",
+      "owner": {
+        "paper": 47,
+        "section": "Distributed failure, retries, timeouts, and recovery",
+        "skill": "async-messaging"
+      },
+      "applicability": {
+        "when": "One logical operation writes authoritative state and also invokes a broker, provider, cache, or separately owned store.",
+        "excludes": []
+      },
+      "exception_policy": {"mode": "prohibited", "conditions": []},
+      "required_evidence": [
+        {
+          "id": "EVID-DUAL-WRITE-FAILURE",
+          "description": "Failure injection before and after each commit or publication boundary converges through durable intent and reconciliation.",
+          "validation_method": "Crash/failure integration test with duplicate delivery and ambiguous outcome checks."
+        }
+      ],
+      "source_ids": ["S043", "S061", "S140"],
+      "related_evaluation_criteria": ["ARC-EVAL-UNSAFE-DUAL-WRITE"],
+      "migration": {"status": "seeded", "supersedes": [], "superseded_by": null}
+    },
+    {
+      "id": "ARC-CRIT-002",
+      "title": "Use exact representations for money",
+      "statement": "Never store monetary/precision-sensitive values in binary floating point without an explicit, validated reason.",
+      "normative_level": "NEVER",
+      "severity": "critical",
+      "category": "data_model",
+      "owner": {
+        "paper": 20,
+        "section": "Normative requirements",
+        "skill": "data-storage"
+      },
+      "applicability": {
+        "when": "A value represents money, a precision-sensitive quantity, a rate, or an accumulated total whose rounding affects invariants.",
+        "excludes": []
+      },
+      "exception_policy": {
+        "mode": "structured",
+        "conditions": ["The domain error bound, rounding contract, storage behavior, and cross-language serialization have explicit validation evidence."]
+      },
+      "required_evidence": [
+        {
+          "id": "EVID-MONEY-ROUNDTRIP",
+          "description": "Boundary, rounding, overflow, serialization, and accumulation cases preserve the declared exact numeric contract.",
+          "validation_method": "Property and integration tests across API, storage, jobs, and migrations."
+        }
+      ],
+      "source_ids": ["S038", "S039", "S040"],
+      "related_evaluation_criteria": ["ARC-EVAL-FLOATING-POINT-MONEY"],
+      "migration": {"status": "seeded", "supersedes": [], "superseded_by": null}
+    },
+    {
+      "id": "ARC-CRIT-003",
+      "title": "Bound retries, queues, and timeouts",
+      "statement": "Never use infinite timeouts or unbounded retries/queues.",
+      "normative_level": "NEVER",
+      "severity": "critical",
+      "category": "resilience",
+      "owner": {
+        "paper": 55,
+        "section": "Normative requirements",
+        "skill": "resilience-flow-control"
+      },
+      "applicability": {
+        "when": "Work waits on a dependency, retries an operation, buffers demand, or admits concurrent resource use.",
+        "excludes": []
+      },
+      "exception_policy": {"mode": "prohibited", "conditions": []},
+      "required_evidence": [
+        {
+          "id": "EVID-RESOURCE-BOUNDS",
+          "description": "Attempts, elapsed time, queue depth, concurrency, payload size, and degraded behavior have explicit finite limits.",
+          "validation_method": "Overload and dependency-failure test proving admission control, backpressure, and bounded recovery."
+        }
+      ],
+      "source_ids": ["S053", "S054", "S055"],
+      "related_evaluation_criteria": ["ARC-EVAL-UNBOUNDED-RESOURCES"],
+      "migration": {"status": "seeded", "supersedes": [], "superseded_by": null}
+    },
+    {
+      "id": "ARC-CRIT-004",
+      "title": "Treat internal and derived inputs as untrusted",
+      "statement": "Treat every external, model-generated, cached, imported, or administrator-supplied value as untrusted at its use context.",
+      "normative_level": "MUST",
+      "severity": "critical",
+      "category": "security",
+      "owner": {
+        "paper": 83,
+        "section": "Security, authorization, privacy, and abuse resistance",
+        "skill": "runtime-delivery"
+      },
+      "applicability": {
+        "when": "Data or an instruction crosses a process, service, cache, administrative, import, model, or provider boundary.",
+        "excludes": []
+      },
+      "exception_policy": {"mode": "prohibited", "conditions": []},
+      "required_evidence": [
+        {
+          "id": "EVID-TRUST-BOUNDARY",
+          "description": "Every boundary identifies the principal, data provenance, validation, authorization, and secure failure behavior.",
+          "validation_method": "Threat-model review plus negative tests at the owning service and data boundary."
+        }
+      ],
+      "source_ids": ["S077", "S094", "S100"],
+      "related_evaluation_criteria": ["ARC-EVAL-IMPLICIT-INTERNAL-TRUST"],
+      "migration": {"status": "seeded", "supersedes": [], "superseded_by": null}
+    },
+    {
+      "id": "ARC-CRIT-005",
+      "title": "Enforce authorization at the owning boundary",
+      "statement": "Enforce least privilege in the component that owns the resource; edge filtering, WAFs, and gateways are supplementary.",
+      "normative_level": "MUST",
+      "severity": "critical",
+      "category": "authorization",
+      "owner": {
+        "paper": 8,
+        "section": "Security, authorization, privacy, and abuse resistance",
+        "skill": "auth-access"
+      },
+      "applicability": {
+        "when": "A protected action or resource can be reached through an API, job, event, admin path, bulk operation, cache, or recovery mechanism.",
+        "excludes": []
+      },
+      "exception_policy": {"mode": "prohibited", "conditions": []},
+      "required_evidence": [
+        {
+          "id": "EVID-AUTHZ-OWNER",
+          "description": "Actor, action, resource, tenant, field, and state checks execute at the owning service or authoritative data boundary.",
+          "validation_method": "Direct negative requests bypassing frontend and gateway controls, including cross-tenant object access."
+        }
+      ],
+      "source_ids": ["S023", "S100", "S112"],
+      "related_evaluation_criteria": ["ARC-EVAL-GATEWAY-ONLY-AUTHORIZATION"],
+      "migration": {"status": "seeded", "supersedes": [], "superseded_by": null}
+    },
+    {
+      "id": "ARC-CRIT-006",
+      "title": "Prove backups through restore",
+      "statement": "Never call data protected until a restore has been executed and validated.",
+      "normative_level": "NEVER",
+      "severity": "critical",
+      "category": "backup_dr",
+      "owner": {
+        "paper": 76,
+        "section": "Normative requirements",
+        "skill": "production-operations"
+      },
+      "applicability": {
+        "when": "A backup, snapshot, replica, archive, or recovery claim is used as evidence of recoverability.",
+        "excludes": []
+      },
+      "exception_policy": {"mode": "prohibited", "conditions": []},
+      "required_evidence": [
+        {
+          "id": "EVID-RESTORE-DRILL",
+          "description": "An isolated restore reconstructs dependent data, keys, objects, indexes, identities, and event positions within measured RPO/RTO.",
+          "validation_method": "Recorded restore rehearsal with application-level invariant and business validation."
+        }
+      ],
+      "source_ids": ["S040", "S053", "S084"],
+      "related_evaluation_criteria": ["ARC-EVAL-BACKUP-WITHOUT-RESTORE"],
+      "migration": {"status": "seeded", "supersedes": [], "superseded_by": null}
+    },
+    {
+      "id": "ARC-CRIT-007",
+      "title": "Define multi-region write and conflict semantics",
+      "statement": "Specify write acknowledgment, read consistency, lag bounds, failover fencing, conflict handling, and behavior during partitions. Do not equate replication with backup.",
+      "normative_level": "MUST",
+      "severity": "critical",
+      "category": "backup_dr",
+      "owner": {
+        "paper": 132,
+        "section": "Normative requirements",
+        "skill": "production-operations"
+      },
+      "applicability": {
+        "when": "More than one region can accept authoritative writes or take write authority during failover/failback.",
+        "excludes": []
+      },
+      "exception_policy": {"mode": "prohibited", "conditions": []},
+      "required_evidence": [
+        {
+          "id": "EVID-MULTI-REGION-WRITES",
+          "description": "Partition, split-brain, failover, old-writer return, conflict, and failback scenarios preserve documented data semantics.",
+          "validation_method": "Topology-level failure tests with fencing and reconciliation evidence."
+        }
+      ],
+      "source_ids": ["S050", "S084", "S131"],
+      "related_evaluation_criteria": ["ARC-EVAL-ACTIVE-ACTIVE-AMBIGUITY"],
+      "migration": {"status": "seeded", "supersedes": [], "superseded_by": null}
+    },
+    {
+      "id": "ARC-CRIT-008",
+      "title": "Keep model proposals outside deterministic authority",
+      "statement": "The deterministic application owns permissions, budgets, validation, side effects, and durable state; the model proposes text or actions.",
+      "normative_level": "MUST",
+      "severity": "critical",
+      "category": "ai",
+      "owner": {
+        "paper": 140,
+        "section": "Executive engineering summary",
+        "skill": "ai-agent-system-architecture"
+      },
+      "applicability": {
+        "when": "A model proposes, selects, or invokes an action that can read protected data, spend resources, mutate durable state, or affect people or systems.",
+        "excludes": []
+      },
+      "exception_policy": {"mode": "prohibited", "conditions": []},
+      "required_evidence": [
+        {
+          "id": "EVID-AI-AUTHORITY",
+          "description": "Tool execution independently validates schema, policy, permission, budget, idempotency, and approval requirements.",
+          "validation_method": "Adversarial prompt/tool tests proving model output cannot bypass deterministic controls."
+        }
+      ],
+      "source_ids": ["S103", "S104", "S105"],
+      "related_evaluation_criteria": ["ARC-EVAL-MODEL-POLICY-SEPARATION"],
+      "migration": {"status": "seeded", "supersedes": [], "superseded_by": null}
+    },
+    {
+      "id": "ARC-CRIT-009",
+      "title": "Do not let scores waive critical blockers",
+      "statement": "Never allow checklist completion to substitute for executable controls and tests.",
+      "normative_level": "NEVER",
+      "severity": "critical",
+      "category": "checklist",
+      "owner": {
+        "paper": 146,
+        "section": "Normative requirements",
+        "skill": "quality-release"
+      },
+      "applicability": {
+        "when": "A checklist, rubric, AI-generated contextual score, weighted summary, or model review is used to assess readiness, risk, or approval.",
+        "excludes": []
+      },
+      "exception_policy": {"mode": "prohibited", "conditions": []},
+      "required_evidence": [
+        {
+          "id": "EVID-CRITICAL-BLOCKER-GATE",
+          "description": "Each critical blocker retains an independent pass/fail gate tied to executable controls and tests, regardless of aggregate or contextual scores.",
+          "validation_method": "Mutation review that raises unrelated scores while leaving a critical control absent and verifies approval remains blocked."
+        }
+      ],
+      "source_ids": ["S021", "S077", "S103"],
+      "related_evaluation_criteria": ["ARC-EVAL-SCORE-CANNOT-WAIVE-BLOCKER"],
+      "migration": {"status": "seeded", "supersedes": [], "superseded_by": null}
+    }
+  ]
+}

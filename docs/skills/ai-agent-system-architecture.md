@@ -1,6 +1,15 @@
-# Design AI & Agent Systems (`ai-agent-system-architecture`)
+# Think Through AI & Agent Systems (`ai-agent-system-architecture`)
 
 Designs AI products as governed software systems rather than prompts wrapped in an API. The core rule: **the model proposes; the harness constrains, verifies, records, and decides what may happen next.**
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -23,9 +32,11 @@ Designs AI products as governed software systems rather than prompts wrapped in 
 - AI actions that touch customers, money, permissions, or infrastructure;
 - AI quality, safety, cost, or production-readiness reviews.
 
-Use `system-architecture-harness` for the surrounding non-AI architecture and `architecture-review-gate` to review an AI design.
+Use `system-architecture-harness` for the surrounding non-AI architecture and `architecture-review-gate` for an independent approval review of an AI design.
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 A governed AI-system specification: task contract and risk class, measurable quality targets, control-plane architecture with trust boundaries, retrieval and memory design, model routes and fallback policy, tool contracts with permissions and approval, bounded orchestration, threat model, evaluation plan, reliability and observability design, rollout/rollback plan, and the smallest validation slice.
 
@@ -35,7 +46,7 @@ Ten phases with gates — a model never owns permissions or durable truth; retri
 
 ## Works well with
 
-- implementation skills for the surrounding backend (`api-contracts`, `async-messaging`, `security-privacy`, `production-operations`);
+- domain skills for the surrounding backend (`api-contracts`, `async-messaging`, `security-privacy`, `production-operations`);
 - `system-architecture-harness` when the AI subsystem is part of a larger production system;
 - `architecture-review-gate` for independent review.
 

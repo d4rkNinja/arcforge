@@ -1,6 +1,15 @@
-# Implement Observability & Operations (`production-operations`)
+# Think Through Production Operations (`production-operations`)
 
 Production expertise for running systems: what separates operable systems from hopeful ones — logs without correlation IDs, alerts with no owners, audit trails that can be edited, and backups that have never been restored.
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -22,6 +31,8 @@ Production expertise for running systems: what separates operable systems from h
 Adding telemetry or alerting, writing runbooks, setting up backups or DR, changing regions — and whenever someone says "we take snapshots, so DR is covered" (it is not, and this skill shows what is).
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 A journey-to-signal map (each user journey → SLI, alert, owner, runbook), restore and failover evidence with observed numbers, and honest blockers where a claim has no drill behind it. The skill stops work on unowned alerts, replication-as-backup claims, or unaudited privileged actions.
 

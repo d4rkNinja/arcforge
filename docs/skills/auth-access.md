@@ -1,6 +1,15 @@
-# Implement Auth & Access Control (`auth-access`)
+# Think Through Identity & Access (`auth-access`)
 
 Production expertise for anything that decides *who you are* and *what you may do*: login flows, credentials, sessions, permissions, and tenant isolation — the features where a first draft quietly becomes a breach.
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -21,6 +30,8 @@ Production expertise for anything that decides *who you are* and *what you may d
 Any time the agent is about to write or change code for login, tokens, permissions, user accounts, or tenancy — including "quick" versions. Reset flows, session handling, and permission checks are exactly where shortcut implementations hurt.
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 Before code: the token/session/permission rules that apply (lifetime, storage, rotation, revocation), the enumeration and lockout defenses, and the tests that prove each rule. The skill stops the work if a must-rule has no enforcement point — e.g., reset tokens that are reusable, or authorization checked only in the controller.
 

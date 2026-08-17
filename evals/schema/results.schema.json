@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/d4rkNinja/arcforge/evals/schema/results.schema.json",
+  "title": "ArcForge behavioral evaluation result",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "case_id",
+    "repository_revision",
+    "runtime",
+    "trial",
+    "status",
+    "started_at",
+    "completed_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+(?:\\.[0-9]+){1,2}$"
+    },
+    "case_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "repository_revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,64}$"
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "name",
+        "model",
+        "identity_source"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identity_source": {
+          "enum": [
+            "runtime-reported",
+            "operator-configured",
+            "unknown"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "trial": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail",
+        "inconclusive",
+        "unrun"
+      ]
+    },
+    "raw_output": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^evals/results/raw/[A-Za-z0-9][A-Za-z0-9._/-]*$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "criterion_outcomes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "criterion_id",
+          "outcome"
+        ],
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "outcome": {
+            "enum": [
+              "pass",
+              "fail",
+              "unclear",
+              "not-reviewed"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "rule_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^ARC-CRIT-[0-9]{3,}$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "review": {
+      "type": "object",
+      "required": [
+        "reviewer",
+        "method",
+        "disagreements"
+      ],
+      "properties": {
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "method": {
+          "enum": [
+            "human",
+            "model",
+            "human-and-model"
+          ]
+        },
+        "disagreements": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "unrun_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "unrun"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "unrun_reason"
+        ]
+      },
+      "else": {
+        "required": [
+          "raw_output",
+          "criterion_outcomes",
+          "review"
+        ]
+      }
+    }
+  ]
+}

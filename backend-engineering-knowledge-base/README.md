@@ -19,10 +19,13 @@ backend-engineering-knowledge-base/
 ├── manifest.json
 ├── knowledge-graph.json
 ├── checksums.sha256
+├── rules/
+│   ├── critical-rules.schema.json
+│   ├── critical-rules.json
+│   ├── exceptions.schema.json
+│   └── exceptions.json
 ├── original/
 │   └── Pasted text.txt
-├── tools/
-│   └── validate_corpus.py
 └── papers/
     ├── primitives/
     ├── systems/
@@ -218,14 +221,12 @@ Security, reliability, observability, performance, deployment, testing, operatio
 
 ## Distribution into portable skills
 
-The canonical corpus stays in this directory and is validated here. Portable copies are distributed into the repository's skills so an installed skill is self-contained:
-
-```bash
-python tools/validate_corpus.py   # canonical coverage and integrity
-python tools/package_papers.py    # regenerate skills/*/references/papers/
-```
-
-The packager assigns each paper to its owning skill (identity/auth to `auth-access`, transactions to `transactions-consistency`, and so on; papers 084–089 enrich `system-architecture-harness` and 140–145 enrich `ai-agent-system-architecture`) and restructures each copy for agent consumption:
+The canonical corpus stays in this directory. Portable, self-contained copies
+are committed under each owning skill's `references/papers/` directory. The root
+`../arcforge.catalog.yaml` records ownership (identity/auth maps to
+`auth-access`, transactions to `transactions-consistency`, papers 084–089 enrich
+`system-architecture-harness`, and 140–145 enrich
+`ai-agent-system-architecture`). The portable copies:
 
 - strips corpus bookkeeping (frontmatter, the canonical scope map, the scope note, the metadata footer);
 - removes the template boilerplate the generator repeated across the invariants, subtopic, normative, bugs, questions, testing, and codebase-check sections, keeping the first occurrence of every distinct statement;
@@ -233,17 +234,32 @@ The packager assigns each paper to its owning skill (identity/auth to `auth-acce
 - moves "Questions that must be answered before implementation" and "Existing-codebase checks" directly after the executive summary so a linear read reaches them first;
 - renumbers sections, keeps same-skill links relative, and converts cross-skill links into explicit skill pointers.
 
-The result is roughly 30% smaller per paper with every domain-specific rule, failure mode, question, and source preserved. Do not hand-edit the copies under `skills/`; edit the canonical paper and re-run the packager.
+The copies are roughly 30% smaller per paper while preserving domain-specific
+rules, failure modes, questions, and sources. When a canonical paper changes,
+update every owning portable copy in the same review and compare their meaning,
+links, headings, and source coverage manually.
 
-## Validation
+## Structured critical rules
 
-Run:
+`rules/critical-rules.json` is the machine-checkable registry for the small set
+of obligations that require stable traceability. The papers remain canonical
+for explanation, trade-offs, examples, and contextual guidance. Each structured
+rule must remain anchored to its owner paper and declares applicability,
+exception policy, evidence, source IDs, and evaluation criterion IDs.
 
-```bash
-python tools/validate_corpus.py
-```
+`rules/exceptions.json` is the exception ledger. Exceptions are allowed only
+where the rule declares `structured` handling and must carry scope, owner,
+evidence, compensating controls, non-model approval, expiry, and review state.
+The seed ledger is intentionally empty. See [rules/README.md](rules/README.md)
+for field ownership and migration rules.
 
-The validator checks paper count, manifest paths, SHA-256 hashes, canonical topic titles/subtopics, relationship targets, source identifiers, and accidental empty files.
+## Manual integrity review
+
+Review paper count, manifest paths and aggregate counts, SHA-256 entries,
+canonical topic titles and subtopics, knowledge-graph targets, source IDs,
+structured critical-rule anchors, evaluation criteria, local links, and empty
+files. `checksums.sha256` intentionally covers an explicit reviewed set; update
+or remove an entry only with the corresponding source change.
 
 ## Source policy
 

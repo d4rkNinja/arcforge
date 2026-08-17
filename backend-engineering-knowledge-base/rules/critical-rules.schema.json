@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arcforge.dev/schemas/critical-rules.schema.json",
+  "title": "ArcForge structured critical-rule registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "rules"],
+  "properties": {
+    "$schema": {"const": "critical-rules.schema.json"},
+    "schema_version": {"const": "1.0.0"},
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/rule"}
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["paper", "section", "skill"],
+      "properties": {
+        "paper": {"type": "integer", "minimum": 1, "maximum": 146},
+        "section": {"$ref": "#/$defs/nonEmptyString"},
+        "skill": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "applicability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["when", "excludes"],
+      "properties": {
+        "when": {"$ref": "#/$defs/nonEmptyString"},
+        "excludes": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        }
+      }
+    },
+    "exceptionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "conditions"],
+      "properties": {
+        "mode": {"enum": ["prohibited", "structured"]},
+        "conditions": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description", "validation_method"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^EVID-[A-Z0-9-]+$"},
+        "description": {"$ref": "#/$defs/nonEmptyString"},
+        "validation_method": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "supersedes", "superseded_by"],
+      "properties": {
+        "status": {"enum": ["seeded", "migrating", "canonical", "retired"]},
+        "supersedes": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^ARC-CRIT-[0-9]{3}$"},
+          "uniqueItems": true
+        },
+        "superseded_by": {
+          "type": ["string", "null"],
+          "pattern": "^ARC-CRIT-[0-9]{3}$"
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "statement",
+        "normative_level",
+        "severity",
+        "category",
+        "owner",
+        "applicability",
+        "exception_policy",
+        "required_evidence",
+        "source_ids",
+        "related_evaluation_criteria",
+        "migration"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^ARC-CRIT-[0-9]{3}$"},
+        "title": {"$ref": "#/$defs/nonEmptyString"},
+        "statement": {"$ref": "#/$defs/nonEmptyString"},
+        "normative_level": {"enum": ["MUST", "NEVER"]},
+        "severity": {"enum": ["critical", "high"]},
+        "category": {"$ref": "#/$defs/nonEmptyString"},
+        "owner": {"$ref": "#/$defs/owner"},
+        "applicability": {"$ref": "#/$defs/applicability"},
+        "exception_policy": {"$ref": "#/$defs/exceptionPolicy"},
+        "required_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/evidence"}
+        },
+        "source_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "pattern": "^S[0-9]{3}$"},
+          "uniqueItems": true
+        },
+        "related_evaluation_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "pattern": "^ARC-EVAL-[A-Z0-9-]+$"},
+          "uniqueItems": true
+        },
+        "migration": {"$ref": "#/$defs/migration"}
+      }
+    }
+  }
+}

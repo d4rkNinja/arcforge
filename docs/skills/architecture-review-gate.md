@@ -2,6 +2,15 @@
 
 An independent, adversarial review of a design that already exists. It reconstructs the system from evidence, challenges the riskiest decisions, and blocks approval when something critical is missing — without rewriting the architecture for you.
 
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
+
 ## What it covers
 
 - RFC, ADR, diagram, migration plan, and production-readiness reviews;
@@ -19,9 +28,11 @@ An independent, adversarial review of a design that already exists. It reconstru
 - due diligence on a system you inherited or are buying into;
 - after an incident, to find the structural cause rather than the nearest operator.
 
-Review mode is independent: it does not rewrite the design or implement fixes unless you explicitly ask for that next step.
+Review mode is independent: it does not rewrite the design or make fixes unless you explicitly ask for that next step. Think frames the review contract; Change is an explicitly authorized remediation handoff; Verify reassesses fresh evidence.
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 A review report: frozen review frame and evidence gates, critical and high/medium findings, evidence gaps with what would close them, incident causality (when applicable), confidence and model disclosure, a clear verdict, blockers, and explicit approval conditions. Optional numeric summaries exist but can never waive a blocker.
 
@@ -32,7 +43,7 @@ The reviewer reads evidence before conclusions, reconstructs critical flows inde
 ## Works well with
 
 - `system-architecture-harness` and `ai-agent-system-architecture` — designs produced by those skills can be reviewed here;
-- `quality-release` — the code-level sibling for verifying an implementation rather than a design.
+- `quality-release` — the code-level sibling for verifying a repository change rather than a design.
 
 ## Try it
 

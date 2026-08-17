@@ -1,4 +1,4 @@
 interface:
   display_name: "Review Software Architecture"
   short_description: "Independent review of architecture decisions and evidence"
-  default_prompt: "Use $architecture-review-gate to review this architecture with a five-gate evidence vector, evidence challenge, blockers, and approval conditions."
+  default_prompt: "Use $architecture-review-gate in Think, Review, Change, or Verify mode for an independent architecture evidence gate."

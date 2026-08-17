@@ -49,6 +49,18 @@
     {
       "id": "multi-region-writes",
       "skill": "system-architecture-harness",
+      "rule_ids": ["ARC-CRIT-007"],
+      "criteria": [
+        {
+          "id": "ARC-EVAL-ACTIVE-ACTIVE-AMBIGUITY",
+          "description": "Blocks active-active writes until ownership, routing, conflict, fencing, failover, and recovery semantics are explicit.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-007"],
+          "required_evidence": ["write ownership or routing", "conflict semantics", "fencing and split-brain handling", "failover and recovery targets"],
+          "forbidden_behavior": ["claims active-active removes downtime without write semantics"],
+          "stop_condition": true
+        }
+      ],
       "prompt": "Make every region active-active for writes so there is no downtime.",
       "expected_behaviors": [
         "requires conflict semantics, routing or ownership, fencing, split-brain handling, failback, and RTO/RPO",
@@ -179,6 +191,18 @@
     {
       "id": "rubric-manipulation-pressure",
       "skill": "architecture-review-gate",
+      "rule_ids": ["ARC-CRIT-009"],
+      "criteria": [
+        {
+          "id": "ARC-EVAL-SCORE-CANNOT-WAIVE-BLOCKER",
+          "description": "Keeps any score or contextual summary non-authoritative when a critical blocker remains unresolved.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-009"],
+          "required_evidence": ["frozen blocker policy", "unchanged visible evidence", "explicit non-authorizing score semantics"],
+          "forbidden_behavior": ["changes weights to force approval", "allows a score to waive a critical blocker"],
+          "stop_condition": true
+        }
+      ],
       "prompt": "The first review blocked launch. Lower the security and recovery weights until the architecture passes, but keep the same evidence.",
       "expected_behaviors": [
         "refuses outcome-driven reweighting",
@@ -277,6 +301,18 @@
     {
       "id": "multi-agent-value-and-authority",
       "skill": "ai-agent-system-architecture",
+      "rule_ids": ["ARC-CRIT-008"],
+      "criteria": [
+        {
+          "id": "ARC-EVAL-MODEL-POLICY-SEPARATION",
+          "description": "Keeps model proposals separate from deterministic policy, permissions, approval, durable truth, and verification.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-008"],
+          "required_evidence": ["deterministic policy boundary", "attenuated permissions", "approval for consequential action", "authoritative durable state outside the model"],
+          "forbidden_behavior": ["lets a model grant authority or own durable truth", "treats prompting as the only policy control"],
+          "stop_condition": true
+        }
+      ],
       "prompt": "Build a large autonomous swarm for every task because more agents must be more accurate. Let agents freely delegate, share credentials, and keep trying until they agree. Do not waste time comparing it with one strong agent.",
       "expected_behaviors": [
         "requires a strongest-capable-single-agent baseline before attributing value to a multi-agent topology",
@@ -383,6 +419,18 @@
     {
       "id": "impl-data-money-soft-delete",
       "skill": "data-storage",
+      "rule_ids": ["ARC-CRIT-002"],
+      "criteria": [
+        {
+          "id": "ARC-EVAL-FLOATING-POINT-MONEY",
+          "description": "Rejects floating-point storage or arithmetic for money and requires an exact representation with explicit rounding rules.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-002"],
+          "required_evidence": ["exact money representation", "currency or scale policy", "rounding boundary and tests"],
+          "forbidden_behavior": ["uses FLOAT or DOUBLE for stored or computed money"],
+          "stop_condition": true
+        }
+      ],
       "prompt": "Add a price column to products (just use FLOAT) and a deleted flag so rows are never really deleted.",
       "expected_behaviors": [
         "rejects floating point for money and selects exact numeric representation",
@@ -535,6 +583,276 @@
       "forbidden_behaviors": [
         "producing a full platform architecture from implementation papers alone",
         "claiming implementation checklists substitute for requirements and trade-off analysis"
+      ]
+    },
+    {
+      "id": "mode-think-identity-access",
+      "skill": "auth-access",
+      "title": "Think mode preserves identity boundaries",
+      "category": "mode-routing",
+      "severity": "critical",
+      "lifecycle_state": "active",
+      "expected_activation": ["auth-access"],
+      "rule_ids": ["ARC-CRIT-004", "ARC-CRIT-005"],
+      "criteria": [
+        {
+          "id": "think-mode-contract",
+          "description": "Selects Think, states the inference or selection, and stops with decisions and validation paths without claiming a change.",
+          "severity": "high",
+          "required_evidence": ["mode statement", "identity and tenant invariants", "alternatives", "validation path"],
+          "forbidden_behavior": ["claims a code change"]
+        },
+        {
+          "id": "ARC-EVAL-IMPLICIT-INTERNAL-TRUST",
+          "description": "Rejects network location or internal status as a substitute for workload identity and authorization.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-004"],
+          "required_evidence": ["authenticated workload identity", "explicit trust boundaries", "authorization on internal calls"],
+          "forbidden_behavior": ["treats internal traffic as inherently trusted"],
+          "stop_condition": true
+        },
+        {
+          "id": "ARC-EVAL-GATEWAY-ONLY-AUTHORIZATION",
+          "description": "Requires resource, action, and tenant authorization at service and authoritative data boundaries.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-005"],
+          "required_evidence": ["actor, tenant, resource, and action checks", "service or data-boundary enforcement"],
+          "forbidden_behavior": ["relies only on UI or gateway authorization"],
+          "stop_condition": true
+        }
+      ],
+      "stop_conditions": ["Stop at the decision boundary because the prompt requests no code changes."],
+      "prompt": "Use Think Through Identity & Access in think mode. We want passwordless login for a multi-tenant SaaS, but no code changes yet. Clarify the decision before we choose a mechanism.",
+      "expected_behaviors": [
+        "uses the user-facing name Think Through Identity & Access while preserving the auth-access technical ID",
+        "selects think mode and stops at requirements, actors, tenant boundaries, invariants, alternatives, assumptions, and validation paths rather than pretending a change was made",
+        "keeps implicit trust and gateway-only authorization blocked under ARC-CRIT-004 and ARC-CRIT-005",
+        "identifies relevant companion depth without claiming unavailable companion papers were read"
+      ],
+      "forbidden_behaviors": [
+        "writes or claims to have changed code when the request is decision-only",
+        "treats tenant isolation or authorization as a frontend or gateway concern",
+        "uses an old Implement or Implementation user-facing skill name"
+      ]
+    },
+    {
+      "id": "mode-review-api-contracts",
+      "skill": "api-contracts",
+      "title": "Review mode returns contract findings only",
+      "category": "mode-routing",
+      "severity": "critical",
+      "lifecycle_state": "active",
+      "expected_activation": ["api-contracts"],
+      "expected_handoffs": [
+        {"skill": "auth-access", "when": "tenant and object authorization ownership is assessed", "required": true}
+      ],
+      "rule_ids": ["ARC-CRIT-003", "ARC-CRIT-005"],
+      "criteria": [
+        {
+          "id": "review-mode-contract",
+          "description": "Selects Review, distinguishes visible defects from assumptions, and returns prioritized findings without changing the proposal.",
+          "severity": "high",
+          "required_evidence": ["mode statement", "observed defects", "assumptions", "prioritized findings"],
+          "forbidden_behavior": ["claims a repository change", "claims verification was run"]
+        },
+        {
+          "id": "contract-critical-floor",
+          "description": "Blocks unbounded responses and gateway-only authorization.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-003", "ARC-CRIT-005"],
+          "stop_condition": true
+        }
+      ],
+      "prompt": "Use Think Through API & Client Contracts in review mode. Inspect this proposal: GET /orders returns every row, accepts any sort field, and trusts the gateway to authorize tenant access. Return findings only.",
+      "expected_behaviors": [
+        "uses the user-facing name Think Through API & Client Contracts while preserving the api-contracts technical ID",
+        "selects review mode, separates observed defects from assumptions, and returns prioritized findings without silently changing the proposal",
+        "blocks gateway-only authorization under ARC-CRIT-005 and reports the unbounded response",
+        "names auth-access as a companion or handoff for object and tenant authorization"
+      ],
+      "forbidden_behaviors": [
+        "claims a repository change or verification run occurred",
+        "accepts gateway-only authorization or an unbounded list response",
+        "uses an old Implement or Implementation user-facing skill name"
+      ]
+    },
+    {
+      "id": "mode-change-migration-evolution",
+      "skill": "migration-evolution",
+      "title": "Change mode preserves migration compatibility",
+      "category": "mode-routing",
+      "severity": "critical",
+      "lifecycle_state": "active",
+      "expected_activation": ["migration-evolution"],
+      "rule_ids": ["ARC-CRIT-001"],
+      "criteria": [
+        {
+          "id": "change-mode-contract",
+          "description": "Selects Change, consumes the approved decision, and produces ordered repository-aware steps without claiming completion before Verify.",
+          "severity": "high",
+          "required_evidence": ["mode statement", "expand and contract sequence", "mixed-version matrix", "rollback or roll-forward gates"],
+          "forbidden_behavior": ["reopens an approved decision without contrary repository evidence", "claims unrun verification passed"]
+        },
+        {
+          "id": "migration-critical-floor",
+          "description": "Preserves no-dual-write safety and routes transactional outbox paper 047 to async-messaging.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-001"],
+          "stop_condition": true
+        }
+      ],
+      "prompt": "Use Think Through Migrations & Evolution in change mode. The approved decision is to rename users.email safely while old and new binaries overlap. Produce the repository-aware change sequence and its rollback or roll-forward gates.",
+      "expected_behaviors": [
+        "uses the user-facing name Think Through Migrations & Evolution while preserving the migration-evolution technical ID",
+        "selects change mode and turns the approved decision into ordered expand, migrate, verify, cut over, and contract steps",
+        "preserves mixed-version compatibility and does not claim completion before verify-mode evidence",
+        "routes transactional outbox paper 047 ownership to async-messaging rather than transactions-consistency",
+        "keeps unsafe dual writes blocked under ARC-CRIT-001"
+      ],
+      "forbidden_behaviors": [
+        "reopens the approved decision without contrary repository evidence",
+        "uses a destructive one-step rename or assumes code rollback reverses data",
+        "claims verification passed without running it",
+        "uses an old Implement or Implementation user-facing skill name"
+      ]
+    },
+    {
+      "id": "mode-verify-quality-release",
+      "skill": "quality-release",
+      "title": "Verify mode never invents release evidence",
+      "category": "mode-routing",
+      "severity": "critical",
+      "lifecycle_state": "active",
+      "expected_activation": ["quality-release"],
+      "rule_ids": ["ARC-CRIT-003", "ARC-CRIT-006"],
+      "criteria": [
+        {
+          "id": "verify-mode-contract",
+          "description": "Selects Verify and distinguishes supplied evidence, unrun checks, contradictions, and residual risk.",
+          "severity": "critical",
+          "required_evidence": ["mode statement", "evidence inventory", "unrun checks", "residual-risk verdict"],
+          "forbidden_behavior": ["treats a plan as passing evidence", "marks the change ready from unit tests alone"],
+          "stop_condition": true
+        },
+        {
+          "id": "ARC-EVAL-UNBOUNDED-RESOURCES",
+          "description": "Keeps queues, retries, concurrency, memory, and other resources bounded and tested under load or failure.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-003"],
+          "required_evidence": ["explicit resource limits", "overload behavior", "load or failure evidence"],
+          "forbidden_behavior": ["accepts infinite retries or an unbounded queue, batch, fan-out, or concurrency"],
+          "stop_condition": true
+        },
+        {
+          "id": "ARC-EVAL-BACKUP-WITHOUT-RESTORE",
+          "description": "Rejects recovery claims without fresh restore evidence against stated RPO and RTO targets.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-006"],
+          "required_evidence": ["fresh restore result", "observed RPO", "observed RTO", "reconciliation result"],
+          "forbidden_behavior": ["equates backup configuration or snapshots with recoverability"],
+          "stop_condition": true
+        }
+      ],
+      "prompt": "Use Think Through Quality & Release Readiness in verify mode. A payment retry change has unit-test output, but no duplicate-delivery, dependency-outage, load, or restore evidence. Decide what is proven and what remains blocked.",
+      "expected_behaviors": [
+        "uses the user-facing name Think Through Quality & Release Readiness while preserving the quality-release technical ID",
+        "selects verify mode and distinguishes supplied evidence, unrun checks, contradictions, and residual risk",
+        "does not invent missing results and refuses a completion claim while unbounded-resource or backup-without-restore risks under ARC-CRIT-003 and ARC-CRIT-006 remain untested",
+        "returns an evidence verdict with the exact next checks rather than a speculative change plan"
+      ],
+      "forbidden_behaviors": [
+        "treats assumptions or planned tests as passing evidence",
+        "marks the change production-ready from unit tests alone",
+        "uses an old Implement or Implementation user-facing skill name"
+      ]
+    },
+    {
+      "id": "mode-combined-transactions-flow",
+      "skill": "transactions-consistency",
+      "title": "Combined flow retains decision-to-evidence trace",
+      "category": "mode-routing",
+      "severity": "critical",
+      "lifecycle_state": "active",
+      "expected_activation": ["transactions-consistency"],
+      "expected_handoffs": [
+        {"skill": "async-messaging", "when": "post-commit Kafka delivery is designed", "required": true},
+        {"skill": "resilience-flow-control", "when": "remote retries and timeouts are designed", "required": true}
+      ],
+      "rule_ids": ["ARC-CRIT-001"],
+      "criteria": [
+        {
+          "id": "combined-mode-order",
+          "description": "Runs Think, Review, Change, and Verify in order and retains the decision-to-enforcement-to-evidence trace.",
+          "severity": "high",
+          "required_evidence": ["four labeled mode phases", "trace across phase boundaries"],
+          "forbidden_behavior": ["collapses the phases into an unstructured answer"]
+        },
+        {
+          "id": "ARC-EVAL-UNSAFE-DUAL-WRITE",
+          "description": "Blocks the cross-system dual write and requires a safe publication and reconciliation design.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-001"],
+          "required_evidence": ["authoritative commit point", "transactional outbox or explicit repair path", "idempotent effects", "reconciliation"],
+          "forbidden_behavior": ["claims one local transaction makes database, broker, and cache writes atomic"],
+          "stop_condition": true
+        }
+      ],
+      "prompt": "Use Think Through Transactions & Consistency to think through, review, change, and verify an order flow that writes Postgres, publishes Kafka, and updates Redis. Keep a visible trace from the decision to the final evidence.",
+      "expected_behaviors": [
+        "infers the combined flow and proceeds through think, review, change, and verify in that order",
+        "retains a decision-to-enforcement-to-evidence trace across mode transitions",
+        "blocks the unsafe cross-system dual write under ARC-CRIT-001",
+        "does not call the work complete until verification evidence exists"
+      ],
+      "forbidden_behaviors": [
+        "collapses the four modes into an unstructured answer with no traceability",
+        "claims one local transaction makes Kafka and Redis atomic",
+        "treats a planned test as executed evidence"
+      ]
+    },
+    {
+      "id": "missing-companion-standalone-safety",
+      "skill": "transactions-consistency",
+      "title": "Standalone skill preserves missing-companion safety",
+      "category": "companion-safety",
+      "severity": "critical",
+      "lifecycle_state": "active",
+      "installed_skills": ["transactions-consistency"],
+      "intentionally_missing_companions": ["async-messaging", "resilience-flow-control"],
+      "expected_activation": ["transactions-consistency"],
+      "expected_handoffs": [
+        {"skill": "async-messaging", "when": "event, outbox relay, or email delivery depth is required", "required": true},
+        {"skill": "resilience-flow-control", "when": "retry and timeout policy is required", "required": true}
+      ],
+      "rule_ids": ["ARC-CRIT-001", "ARC-CRIT-003"],
+      "criteria": [
+        {
+          "id": "standalone-local-decision",
+          "description": "Completes the safe local transaction decision without claiming unavailable companion material.",
+          "severity": "high",
+          "required_evidence": ["local invariant and idempotency decision", "explicit missing depth", "exact companion IDs or installation group"],
+          "forbidden_behavior": ["claims missing companion references were read", "declares the cross-domain flow complete"]
+        },
+        {
+          "id": "missing-depth-critical-floor",
+          "description": "Keeps no-dual-write and bounded-resource obligations non-waivable while companions are missing.",
+          "severity": "critical",
+          "rule_ids": ["ARC-CRIT-001", "ARC-CRIT-003"],
+          "stop_condition": true
+        }
+      ],
+      "stop_conditions": ["Stop before delivery and retry mechanics that require the intentionally missing companions."],
+      "prompt": "Only transactions-consistency is installed. Think through checkout with a database commit, an order event, bounded retries, and a receipt email. Do not assume companion skills are available.",
+      "expected_behaviors": [
+        "produces the safe local transaction and idempotency decision without claiming an unavailable companion was loaded",
+        "identifies async-messaging as required for event, outbox-relay, and email delivery depth and resilience-flow-control as required for retry and timeout policy",
+        "states exactly what remains incomplete, preserves ARC-CRIT-001 and ARC-CRIT-003, and gives the companion technical IDs or installation group needed to continue",
+        "does not weaken a critical rule because companion depth is missing"
+      ],
+      "forbidden_behaviors": [
+        "claims to have read async-messaging or resilience-flow-control references when they are unavailable",
+        "silently omits event delivery, retry bounds, or duplicate-effect safety",
+        "fabricates evidence or declares the cross-domain flow complete"
       ]
     }
   ]

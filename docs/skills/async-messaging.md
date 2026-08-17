@@ -1,6 +1,15 @@
-# Implement Async Jobs & Messaging (`async-messaging`)
+# Think Through Async Work & Messaging (`async-messaging`)
 
 Production expertise for asynchronous work — what breaks after deployment: poison jobs that loop forever, unacknowledged redeliveries, missed cron runs, and consumers that cannot tolerate duplicates.
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -21,6 +30,8 @@ Production expertise for asynchronous work — what breaks after deployment: poi
 Adding or changing anything that happens "later" or "in the background": jobs, queues, events, scheduled work, emails, notifications — and especially requests like "just retry forever until it works."
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 A semantics table for every queue, job, and event (delivery guarantee, ordering scope, idempotency, retry bound, retention, dead-letter policy), idempotent effects under redelivery, and lag visibility. The skill stops work on infinite retries, "exactly once" claims from broker settings, or side effects fired inside transactions.
 

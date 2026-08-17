@@ -32,3 +32,7 @@
 ## Review standard
 
 A contribution is not complete merely because one model gives a favorable answer. Review activation paths, frontmatter, compatibility, documentation, critical architecture blockers, repeated-run variance, and whether the changed behavioral case detects the intended failure.
+
+Manual structure checks and model trials provide different evidence. Review
+frontmatter, links, corpus/reference parity, release metadata, complete outputs,
+runtime/model identity, trial count, disagreements, and every unrun check.

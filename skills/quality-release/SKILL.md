@@ -1,17 +1,17 @@
 ---
 name: quality-release
-description: "Use when planning or reviewing verification and release readiness for a backend feature: test strategy and pyramid, test data management, concurrency testing with forced interleavings, failure and chaos testing, load and performance testing with realistic targets, performance engineering, scalability validation, resource-management and leak checks, compression trade-offs, and the cross-cutting pre-release implementation checklist. Loads production implementation papers with MUST/SHOULD/AVOID/NEVER rules, failure modes, and verification checklists to apply before claiming done. For architecture-level acceptance gates and review use architecture-review-gate; for SLO definition use system-architecture-harness; for runbooks and incident readiness use production-operations."
+description: "Use when thinking through, reviewing, changing, or verifying quality and release readiness: test strategy, test data, concurrency and failure testing, load and performance evidence, scalability, resource management, compression, or cross-cutting release checks. For independent architecture approval use architecture-review-gate; for SLO design use system-architecture-harness; for runbooks use production-operations."
 ---
 
-# Quality & Release Readiness Implementation
+# Think Through Quality & Release Readiness
 
 ## Overview
 
-Implementation intelligence for verification. Each reference paper captures the gap between "tests pass" and "production-safe": races that only appear under real isolation, failures that only appear when dependencies die, load targets with no workload model, and releases that never walked the cross-cutting checklist.
+Production guidance for verification. Each reference paper captures the gap between "tests pass" and "production-safe": races that only appear under real isolation, failures that only appear when dependencies die, load targets with no workload model, and releases that never walked the cross-cutting checklist.
 
 **Core principle:** Evidence, not assertion. Every quality or performance claim needs a test, measurement, or drill that would have failed if the claim were false — including the failure paths users and operators will actually hit.
 
-## Implementation Law
+## Domain Law
 
 ```text
 NO 'DONE' CLAIM WITHOUT:
@@ -35,7 +35,7 @@ Use this skill when:
 - validating scaling behavior and limit assumptions;
 - checking resource management: pools, file descriptors, memory, cleanup;
 - evaluating compression trade-offs for payloads and storage;
-- walking the cross-cutting implementation checklist before release;
+- walking the cross-cutting pre-release checklist;
 - reviewing whether a change is actually production-ready.
 
 ## When Not to Use
@@ -44,6 +44,17 @@ Use this skill when:
 - SLO/error-budget definition and SLI selection: use `system-architecture-harness` / `production-operations` (057).
 - Runbooks and incident process: use `production-operations` (138, 139).
 - Architecture-level capacity modeling: use `system-architecture-harness`.
+
+## Select the Operating Mode
+
+| Mode | Use when | Required result |
+|---|---|---|
+| **Think** | The safe decision is not settled | requirements, constraints, invariants, risks, alternatives, decision, and validation path |
+| **Review** | An artifact, repository, diff, or operating state already exists | evidence separated from assumptions, prioritized findings, and blockers |
+| **Change** | Decisions are approved and repository changes are requested | the smallest safe change, compatibility notes, and verification still required |
+| **Verify** | A claim needs proof | tests or measurements run, observed evidence, and residual risks |
+
+If the user names a mode, use it. Otherwise infer the mode from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and preserve the trace between phases. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify. Verify must never turn a planned or unavailable check into evidence.
 
 ## Required Context Loading
 
@@ -62,26 +73,37 @@ Use this skill when:
 
 ## Workflow
 
+Use the domain workflow as shared gates, then branch by the selected mode:
+
+- **Think:** answer the questions and stop with a reasoned decision and validation path; do not edit by default.
+- **Review:** inspect the available artifact or repository and stop with evidence-backed findings; do not claim changes.
+- **Change:** apply only approved decisions, then continue to Verify before claiming completion.
+- **Verify:** run the relevant checks, report observed results, and label every unavailable or unrun check.
+
 1. Identify what must be demonstrated before release: correctness, concurrency safety, failure behavior, performance, or scale.
 2. Select and read the primary papers; for any release, paper 146 is mandatory as the final gate.
 3. Answer the paper's pre-implementation questions; write the workload/failure model the tests will use.
 4. Review existing tests with the existing-codebase checks: what interleaving, outage, or load shape is currently never exercised?
 5. Convert each MUST/SHOULD/AVOID/NEVER into concrete tests, measurements, or drills with pass/fail criteria tied to the claim being made.
-6. Run or specify the suite; where the environment cannot exercise something (provider outage, region loss), state it as an untested claim with a plan.
+6. Apply the active mode: stop at a verification strategy in Think; stop at evidence gaps in Review; add approved tests or gates in Change; run the suite in Verify and state unavailable checks as untested claims.
 7. Before claiming completion, walk paper 146 for the changed surface and stop if any applicable item lacks evidence or a documented exception.
 
-## Boundary Map
+## Companion Skills and Standalone Safety
 
-| If the task also involves | Also use |
-|---|---|
-| The invariant being concurrency-tested | `transactions-consistency` (023–025, 036) |
-| Queue/job failure drills | `async-messaging` (043, 045) |
-| Outage/degradation expectations | `resilience-flow-control` (051–055) |
-| Restore/recovery drills | `production-operations` (077, 078) |
-| Compatibility of old/new versions | `migration-evolution` (070, 071, 134) |
-| Release approval decision | `architecture-review-gate` |
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Required** | Concurrency invariants, duplicate effects, or ambiguous outcomes are tested | `transactions-consistency` | Preserve the invariant and require forced interleavings; do not invent expected semantics. |
+| **Recommended** | Queue or worker failure drills are in scope | `async-messaging` | State the required delivery scenarios and label domain depth missing. |
+| **Recommended** | Outage, degradation, or overload claims are in scope | `resilience-flow-control` | Require measured bounds and label control depth missing. |
+| **Handoff** | An independent architecture approval is requested | `architecture-review-gate` | Report verification evidence without self-approving the architecture. |
+
+If a companion is unavailable, complete only the safe local quality decision, name the missing domain depth, and recommend the exact technical ID or relevant installation group. Never claim unavailable material or an unrun test was used, and never weaken a blocker because coverage is missing.
 
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns a verification strategy; Review returns evidence gaps and findings; Change returns test or release-gate changes plus pending proof; Verify returns only observed results and explicitly labels every unrun check. A combined flow preserves all four phases.
 
 1. **Papers consulted** — numbers and the sections relied on.
 2. **Claims and evidence map** — each quality/performance claim → test, drill, or measurement that proves it, or an explicit untested label.

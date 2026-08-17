@@ -1,13 +1,13 @@
 ---
 name: system-architecture-harness
-description: "Use when creating or changing a production software architecture: greenfield design, system decomposition, migration, scaling, or reliability/security planning. Trigger for requirements, workload, data ownership, APIs, distributed workflows, operations, cost, architecture research, source corpora, complexity, language/runtime choice, formal assurance, browser/mobile/desktop clients, offline/local-first sync, platform engineering, governance, technical debt, or rewrites. For AI-first architecture use ai-agent-system-architecture; for an independent review of an existing proposal use architecture-review-gate."
+description: "Use when thinking through or changing a production software architecture, or when reviewing or verifying architecture work inside the same design flow: greenfield systems, decomposition, migration, scale, reliability, security, data ownership, distributed workflows, clients, platform governance, or rewrites. Use architecture-review-gate for an independent approval gate and ai-agent-system-architecture when model, data, tool, or approval boundaries are central."
 ---
 
-# System Architecture Harness
+# Think Through Production Systems
 
 ## Overview
 
-Turn an idea, requirement set, existing codebase, incident pattern, or migration goal into an evidence-backed architecture that can be implemented, operated, reviewed, and evolved.
+Turn an idea, requirement set, existing codebase, incident pattern, or migration goal into an evidence-backed architecture that can be built, operated, reviewed, and evolved.
 
 **Core principle:** Architecture is a chain of explicit decisions under constraints—not a diagram, a technology list, or a collection of fashionable patterns.
 
@@ -35,7 +35,7 @@ Use this skill for:
 - cloud, on-premises, hybrid, multi-region, edge, or offline-first deployments;
 - migrations, decompositions, re-platforming, and legacy modernization;
 - production readiness, threat modeling, disaster recovery, and operational design;
-- architecture specifications, RFCs, ADRs, contextual AI reviews, and implementation handoff.
+- architecture specifications, RFCs, ADRs, contextual AI reviews, and change handoff.
 
 Do not use it as a substitute for product discovery, legal advice, formal safety certification, penetration testing, or domain-expert approval. It should expose when those are required.
 
@@ -43,15 +43,12 @@ Do not use it as a substitute for product discovery, legal advice, formal safety
 
 | Mode | Trigger | Primary output |
 |---|---|---|
-| **Explore** | Requirements are incomplete or several concepts are plausible | assumptions, questions, options, recommendation |
-| **Research** | A paper, source corpus, incident set, architecture claim, or conflicting technical guidance may change a design decision | atomic claims, evidence map, dimensional comparison, complexity ledger, validation path |
-| **Design** | Building a new system or major capability | complete architecture specification |
-| **Review** | An architecture or codebase already exists | evidence-based findings, contextual rubric, risks, prioritized remediation |
-| **Scale** | Current system works but misses load, latency, availability, or cost goals | bottleneck model, target design, staged changes |
-| **Migrate** | Moving data, traffic, runtime, ownership, or architecture style | current/target states, transition states, cutover and rollback |
-| **Incident-driven** | Repeated incidents reveal structural faults | failure analysis, violated assumptions, resilience changes |
+| **Think** | The architecture decision is not settled; includes exploration, research, design, scale, migration, and incident framing | requirements, constraints, invariants, risks, alternatives, decisions, and validation paths |
+| **Review** | An architecture artifact, repository, or operating state exists inside the active design flow | evidence separated from assumptions, prioritized findings, and blockers |
+| **Change** | Decisions are approved and repository or migration changes are requested | bounded change slices, compatibility and rollback, and verification still required |
+| **Verify** | An architecture or change claim needs proof | tests, measurements, operational evidence, and residual risks |
 
-If the user does not select a mode, infer it and state the inference in one sentence.
+If the user names a mode, use it. Otherwise infer it from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and retain the decision-to-evidence trace. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify, and Verify must never convert planned or unavailable checks into evidence. This skill's Review mode is contextual within the same design flow; route an independent approval verdict to `architecture-review-gate`.
 
 ## Required Context Loading
 
@@ -77,11 +74,11 @@ Read only the references needed for the task. The workflow and gates are always 
 | Module/code boundaries, language/runtime, concurrency, OS/network semantics, or assurance depth | `references/16-code-runtime-and-assurance.md` |
 | Browser/mobile/desktop, rendering, offline/local-first, real-time, or search | `references/17-client-platform-architecture.md` |
 | Developer platform, repository/build topology, governance, technical debt, rewrite, migration, or metrics | `references/18-platform-governance-and-evolution.md` |
-| Concrete implementation guidance for modular monoliths, microservices, dependency boundaries, code-level architecture, abstraction design, or dependency management | `references/papers/` (084–089) |
+| Concrete code guidance for modular monoliths, microservices, dependency boundaries, code-level architecture, abstraction design, or dependency management | `references/papers/` (084–089) |
 
-## Research Mode
+## Think-Mode Research Depth
 
-Research mode supplements the normal architecture workflow; it does not replace its phases,
+Research depth supplements Think mode; it does not replace the normal architecture workflow phases,
 gates, or hard blockers. When the input may change a design decision:
 
 1. Load [`15-evidence-complexity-and-research.md`](references/15-evidence-complexity-and-research.md)
@@ -104,6 +101,8 @@ gates, or hard blockers. When the input may change a design decision:
 ## Architecture Workflow
 
 Do these phases in order. You may iterate backward when a later decision invalidates an earlier assumption, but never silently skip a phase.
+
+Apply the phases according to mode: Think ends with explicit decisions and validation paths; Review inspects available artifacts and ends with contextual findings; Change applies only approved slices and continues to Verify; Verify runs the available checks and distinguishes observed evidence from estimates, plans, and unavailable proof.
 
 ### Phase 0 — Establish Evidence and Scope
 
@@ -300,7 +299,21 @@ Provide:
 
 **Gate 11:** A design may pass only if no critical gate fails, regardless of strengths elsewhere or any optional numeric summary.
 
+## Companion Skills and Standalone Safety
+
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Handoff** | Model, retrieval, memory, tool, or approval boundaries are central | `ai-agent-system-architecture` | Bound the non-AI architecture and identify unresolved AI control obligations. |
+| **Handoff** | An independent approval verdict is requested | `architecture-review-gate` | Do not self-approve; report that independent review remains unavailable. |
+| **Recommended** | Architecture claims need release evidence | `quality-release` | Retain the validation plan and label every unrun check. |
+
+If a companion is unavailable, complete only the safe local architecture decision, name the missing depth, and recommend the exact technical ID or `production-system-thinking` installation group. Never claim unavailable material was read, self-approve in place of independent review, or weaken a critical gate.
+
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns the decision material needed for the question; Review returns contextual findings without an independent approval claim; Change returns approved slices and pending proof; Verify returns observed evidence and labels every unrun check. A combined flow preserves all four phases.
 
 Unless the user asks for a narrower deliverable, produce these sections in this order:
 
@@ -323,9 +336,9 @@ Unless the user asks for a narrower deliverable, produce these sections in this 
 17. **Alternatives and ADRs** — rejected options and reversal triggers.
 18. **Risks and open questions** — ranked with owners and next evidence.
 19. **Validation plan** — tests, experiments, load model, chaos/restore drills, exit criteria.
-20. **Implementation slices** — smallest safe vertical milestones; no speculative big-bang plan.
+20. **Change slices** — smallest safe vertical milestones; no speculative big-bang plan.
 
-For Research mode, include atomic claim records or an evidence map, source classification,
+For Think mode with research depth, include atomic claim records or an evidence map, source classification,
 limitations or counter-evidence, applicable and failure context, qualitative confidence with a
 rationale, a dimensional complexity ledger for every added mechanism, conditional alternatives,
 and a concrete next validation step. Do not emit a context-free or synthetic complexity score.
@@ -374,7 +387,7 @@ Apply this decision loop without requiring a diagram renderer or executable nota
 - **IF** async tasks, client sync, or background work is proposed, **THEN** bound tasks,
   queues, memory, connections, batches, retries, deadlines, cancellation, and backpressure.
 - **IF** formal verification is proposed, **THEN** state model properties and assumptions,
-  link them to implementation/runtime evidence, and never claim the model proves deployment.
+  link them to code/runtime evidence, and never claim the model proves deployment.
 - **IF** offline mutation or collaboration is required, **THEN** include client authority,
   durable local state, sync/version/gap semantics, product conflicts, schema migration,
   encryption, revocation, quotas, reconnect, catch-up, reconciliation, and degraded UX.
@@ -414,7 +427,7 @@ Apply this decision loop without requiring a diagram renderer or executable nota
 - rollout with no compatibility window, rollback, or data migration plan;
 - AI agent with broad tools, untrusted prompt context, or irreversible actions without approval;
 - contextual review score used to waive a critical correctness or security failure.
-- fashionable language/runtime choice or formal-model claim with no implementation,
+- fashionable language/runtime choice or formal-model claim with no code,
   environment, assumption, and runtime evidence;
 - offline/client design reduced to cached responses with no authority, durable operation,
   conflict, migration, revocation, quota, reconnect, or reconciliation semantics;
@@ -437,7 +450,7 @@ Before calling the architecture complete:
 10. Confirm every interface has authentication, authorization, validation, versioning, deadlines, errors, idempotency, and observability where applicable.
 11. Distinguish measured evidence from estimates and unresolved assumptions; state confidence, model identity/version when available, and evidence limitations.
 12. Confirm no critical gate or red flag remains open without an accountable, explicitly documented exception.
-13. End with the smallest implementation slice that can validate the riskiest assumptions.
+13. End with the smallest change slice that can validate the riskiest assumptions.
 
 ## Reusable Assets
 
@@ -457,6 +470,6 @@ Before calling the architecture complete:
 - Code, runtime, and assurance: `references/16-code-runtime-and-assurance.md`
 - Client and platform architecture: `references/17-client-platform-architecture.md`
 - Platform, governance, economics, and evolution: `references/18-platform-governance-and-evolution.md`
-- Implementation papers (084 Modular Monolith, 085 Microservice, 086 Dependency Boundaries, 087 Code-Level Architecture, 088 Abstraction Design, 089 Dependency Management): `references/papers/`
+- Code-level papers (084 Modular Monolith, 085 Microservice, 086 Dependency Boundaries, 087 Code-Level Architecture, 088 Abstraction Design, 089 Dependency Management): `references/papers/`
 
-When a decision moves from architecture into implementation, switch to the matching implementation skill (`auth-access`, `api-contracts`, `data-storage`, `transactions-consistency`, `async-messaging`, `resilience-flow-control`, `security-privacy`, `production-operations`, `migration-evolution`, `quality-release`, `runtime-delivery`) and read its papers before code is written.
+When a decision moves from architecture into code, switch to the matching domain skill (`auth-access`, `api-contracts`, `data-storage`, `transactions-consistency`, `async-messaging`, `resilience-flow-control`, `security-privacy`, `production-operations`, `migration-evolution`, `quality-release`, `runtime-delivery`) and read its papers before code is written.

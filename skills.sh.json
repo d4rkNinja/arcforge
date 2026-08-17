@@ -3,8 +3,8 @@
   "notGrouped": "bottom",
   "groupings": [
     {
-      "title": "ArcForge Portable Architecture Skills",
-      "description": "Portable, evidence-backed production architecture, AI-system architecture, and independent review skills.",
+      "title": "ArcForge System Thinking & Review",
+      "description": "Portable, evidence-backed skills for thinking through production systems and AI systems or reviewing architecture independently.",
       "skills": [
         "system-architecture-harness",
         "ai-agent-system-architecture",
@@ -12,8 +12,8 @@
       ]
     },
     {
-      "title": "Backend Implementation Intelligence",
-      "description": "Production implementation papers for coding agents: MUST/SHOULD rules, failure modes, security boundaries, and verification checklists per backend domain, loaded before code is written.",
+      "title": "ArcForge Backend Thinking & Verification",
+      "description": "Production domain guidance for thinking, reviewing, changing, and verifying backend systems with explicit rules, failure modes, security boundaries, and evidence checks.",
       "skills": [
         "auth-access",
         "api-contracts",

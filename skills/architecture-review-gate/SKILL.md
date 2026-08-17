@@ -1,9 +1,9 @@
 ---
 name: architecture-review-gate
-description: "Use when independently reviewing an architecture specification, RFC, ADR, diagram, migration plan, AI/agent design, production-readiness proposal, architecture metrics, or post-incident structural causes. Trigger for adversarial evidence checks, fitness gates, critical blockers, complexity obligations, incident causality, and release approval conditions. For designing a new system use system-architecture-harness or ai-agent-system-architecture."
+description: "Use when independently reviewing or verifying an architecture specification, RFC, ADR, diagram, migration plan, AI or agent design, production-readiness proposal, architecture metrics, or post-incident structural causes. May frame review criteria or recommend bounded remediation, but does not own greenfield design or repository changes."
 ---
 
-# Architecture Review Gate
+# Review Software Architecture
 
 ## Overview
 
@@ -35,7 +35,18 @@ Use this skill for:
 - architecture fitness-function and metric review;
 - comparison of current and target architecture.
 
-Review mode is independent. Do not rewrite the architecture or implement fixes unless the user explicitly changes the task.
+The review is independent. Do not rewrite the architecture or make repository changes unless the user explicitly changes the task.
+
+## Select the Operating Mode
+
+| Mode | Use when | Required result |
+|---|---|---|
+| **Think** | The independent review contract or rubric must be framed before assessment | decision being gated, frozen dimensions, evidence anchors, and blocker policy |
+| **Review** | An architecture artifact or repository is ready for the default independent assessment | evidence-separated findings, blockers, confidence, and approval conditions |
+| **Change** | The user explicitly requests remediation after the independent verdict | bounded recommendations or a handoff to the owning design/domain skill; no silent self-rewrite |
+| **Verify** | A finding or approval condition is claimed resolved | fresh evidence, reassessment, and residual risks |
+
+If the user names a mode, use it. Otherwise default to Review for an existing artifact and state the inference in one sentence. Combined work proceeds **Think → Review → Change → Verify**, but the independent verdict remains distinguishable from authoring and remediation. Think may stop with the review contract; Review may stop with findings. Change must not claim completion before Verify, and Verify must never convert missing evidence into a pass.
 
 ## Reviewer Independence
 
@@ -59,6 +70,8 @@ Review mode is independent. Do not rewrite the architecture or implement fixes u
 - Use [strong review input](examples/review-input-strong.md) and [critical review input](examples/review-input-critical.md) to calibrate the evidence expected before judging a proposal.
 
 ## Review Workflow
+
+Apply the phases according to mode: Think freezes the review contract before assessment; Review produces the independent verdict; Change occurs only after explicit user authorization and is recorded separately from the verdict; Verify re-runs the evidence gate and marks every unavailable check as missing evidence.
 
 ### Phase 0 — Establish Review Contract
 
@@ -230,7 +243,21 @@ Block approval when any applicable condition is unresolved:
 
 Prioritize by impact and exploitability/frequency, not count.
 
+## Companion Skills and Standalone Safety
+
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Handoff** | A general production architecture must be created or revised | `system-architecture-harness` | Finish the independent verdict without pretending the redesign was completed. |
+| **Handoff** | An AI subsystem must be created or revised | `ai-agent-system-architecture` | Finish the independent verdict and identify missing AI design depth. |
+| **Recommended** | Code-level release evidence must be assessed | `quality-release` | Classify the evidence gap and do not infer release readiness. |
+
+If a companion is unavailable, complete the independent verdict from visible evidence, name the missing design or verification depth, and recommend the exact technical ID or `independent-architecture-review` installation group. Never claim unavailable material was read, invent evidence, or lower a blocker to compensate for missing depth.
+
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns a frozen review contract; Review returns the independent verdict and findings; Change returns bounded remediation or an explicit owner-skill handoff; Verify returns fresh reassessment evidence. Keep those artifacts separate in a combined flow.
 
 Produce sections in this order:
 

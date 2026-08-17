@@ -1,4 +1,4 @@
 interface:
-  display_name: "Implement Runtime & Delivery"
-  short_description: "Production rules for config, pools, shutdown, deploy, and CI/CD"
-  default_prompt: "Use $runtime-delivery before changing project bootstrap, configuration, connection pools, graceful shutdown, deployment ordering, or CI/CD pipelines."
+  display_name: "Think Through Runtime & Delivery"
+  short_description: "Runtime, configuration, shutdown, and delivery decisions"
+  default_prompt: "Use $runtime-delivery in Think, Review, Change, or Verify mode for bootstrap, configuration, shutdown, deployment, and CI/CD work."

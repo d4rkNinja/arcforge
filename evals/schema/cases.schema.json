@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/d4rkNinja/arcforge/evals/schema/cases.schema.json",
+  "title": "ArcForge behavioral evaluation suite",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "suite",
+    "cases"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+(?:\\.[0-9]+){1,2}$"
+    },
+    "suite": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "uniqueStringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "uniqueItems": true
+    },
+    "skillIdArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/slug"
+      },
+      "uniqueItems": true
+    },
+    "ruleId": {
+      "type": "string",
+      "pattern": "^ARC-CRIT-[0-9]{3,}$"
+    },
+    "criterion": {
+      "type": "object",
+      "required": [
+        "id",
+        "description"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "severity": {
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "informational"
+          ]
+        },
+        "rule_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ruleId"
+          },
+          "uniqueItems": true
+        },
+        "required_evidence": {
+          "$ref": "#/$defs/uniqueStringArray"
+        },
+        "forbidden_behavior": {
+          "$ref": "#/$defs/uniqueStringArray"
+        },
+        "stop_condition": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "handoff": {
+      "type": "object",
+      "required": [
+        "skill"
+      ],
+      "properties": {
+        "skill": {
+          "$ref": "#/$defs/slug"
+        },
+        "when": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "case": {
+      "type": "object",
+      "required": [
+        "id",
+        "skill",
+        "prompt",
+        "expected_behaviors",
+        "forbidden_behaviors"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/slug"
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "category": {
+          "$ref": "#/$defs/slug"
+        },
+        "severity": {
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low",
+            "informational"
+          ]
+        },
+        "lifecycle_state": {
+          "enum": [
+            "draft",
+            "active",
+            "deprecated",
+            "retired"
+          ]
+        },
+        "skill": {
+          "$ref": "#/$defs/slug"
+        },
+        "installed_skills": {
+          "$ref": "#/$defs/skillIdArray"
+        },
+        "intentionally_missing_companions": {
+          "$ref": "#/$defs/skillIdArray"
+        },
+        "prompt": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "user_input": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "repository_context": {
+          "type": [
+            "object",
+            "string"
+          ]
+        },
+        "expected_behaviors": {
+          "$ref": "#/$defs/uniqueStringArray"
+        },
+        "forbidden_behaviors": {
+          "$ref": "#/$defs/uniqueStringArray"
+        },
+        "expected_activation": {
+          "$ref": "#/$defs/skillIdArray"
+        },
+        "expected_non_activation": {
+          "$ref": "#/$defs/skillIdArray"
+        },
+        "expected_handoffs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/handoff"
+          }
+        },
+        "rule_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ruleId"
+          },
+          "uniqueItems": true
+        },
+        "criteria": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/criterion"
+          }
+        },
+        "stop_conditions": {
+          "$ref": "#/$defs/uniqueStringArray"
+        },
+        "deterministic_assertions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "model_review_rubric": {
+          "type": "object"
+        },
+        "provenance": {
+          "type": "object"
+        },
+        "last_reviewed": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

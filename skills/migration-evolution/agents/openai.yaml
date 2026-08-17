@@ -1,4 +1,4 @@
 interface:
-  display_name: "Implement Migrations & Evolution"
-  short_description: "Production rules for schema change, backfills, compatibility, and cutover"
-  default_prompt: "Use $migration-evolution before changing schemas, running backfills, evolving API/event contracts, synchronizing systems, or cutting over features."
+  display_name: "Think Through Migrations & Evolution"
+  short_description: "Safe schema, data, contract, and cutover decisions"
+  default_prompt: "Use $migration-evolution in Think, Review, Change, or Verify mode for schema, data, contract, backfill, and cutover work."

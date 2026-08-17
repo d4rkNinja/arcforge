@@ -1,6 +1,15 @@
-# Verify Quality & Release Readiness (`quality-release`)
+# Think Through Quality & Release Readiness (`quality-release`)
 
 Production expertise for verification: the gap between "tests pass" and "production-safe" — races that only appear under real isolation, failures that only appear when dependencies die, and release claims with no evidence behind them.
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -20,6 +29,8 @@ Production expertise for verification: the gap between "tests pass" and "product
 Before calling any backend change done; when planning tests for a feature; when someone claims "unit tests pass, ship it"; and as the final gate before release.
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 A claims-to-evidence map: every quality or performance claim mapped to the test, drill, or measurement that proves it — or explicitly labeled untested with a follow-up plan — plus the walked release checklist with blockers and follow-ups separated. The skill stops work on readiness claims that have no evidence path.
 

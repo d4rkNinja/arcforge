@@ -1,6 +1,15 @@
-# Implement Migrations & Evolution (`migration-evolution`)
+# Think Through Migrations & Evolution (`migration-evolution`)
 
 Production expertise for changing running systems safely. A migration is a distributed system that runs while old and new versions are both live; every step must tolerate mixed versions, partial failure, and rollback — because code rollback never undoes committed data.
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -21,11 +30,14 @@ Renaming or retyping columns, running backfills, evolving API or event contracts
 
 ## What a run produces
 
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
+
 Current/target/intermediate states with version read/write matrices, ordered steps with verification gates between them, rollback or roll-forward defined per step, and coexistence tests. The skill stops work on destructive one-shot changes, backfills that overwrite newer writes, or rollback plans that assume data undoes itself.
 
 ## Works well with
 
-- `transactions-consistency` for dual-write avoidance and outbox atomicity;
+- `async-messaging` for transactional outbox/inbox and relay delivery (paper 047);
+- `transactions-consistency` for local transaction invariants and saga boundaries;
 - `runtime-delivery` for deployment mechanics and health gates;
 - `api-contracts` for the contracts being evolved;
 - `quality-release` for compatibility testing of old and new versions.

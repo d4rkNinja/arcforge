@@ -1,9 +1,9 @@
 ---
 name: ai-agent-system-architecture
-description: "Use when creating or changing an AI/LLM system architecture: RAG, model routing, memory, tool use, autonomous or multi-agent workflows, safety, evaluation, latency, cost, or rollout. Trigger when model, data, policy, tool, or approval boundaries are central. For non-AI architecture use system-architecture-harness; for an independent review use architecture-review-gate."
+description: "Use when thinking through, reviewing, changing, or verifying an AI or LLM system: RAG, model routing, memory, tool use, autonomous or multi-agent workflows, safety, evaluation, latency, cost, or rollout. Trigger when model, data, policy, tool, or approval boundaries are central. Use system-architecture-harness for surrounding non-AI architecture and architecture-review-gate for an independent approval gate."
 ---
 
-# AI and Agent System Architecture
+# Think Through AI & Agent Systems
 
 ## Overview
 
@@ -39,12 +39,12 @@ Do not use model generation where deterministic code, search, rules, or a normal
 
 | Mode | Trigger | Primary result |
 |---|---|---|
-| **Discover** | The business problem is unclear | task definition, baseline, risk class, build/no-build recommendation |
-| **Design** | A new AI capability is being planned | complete AI system and harness architecture |
-| **Review** | Prompts, RAG, tools, or agents already exist | evidence-backed risks, eval gaps, and remediation |
-| **Harden** | Prototype works but is unsafe or unreliable | permissions, verification, fallback, observability, and release gates |
-| **Optimize** | Quality, latency, or cost misses target | measured bottlenecks and controlled experiments |
-| **Migrate** | Model, vector store, framework, or provider changes | compatibility, replay, comparison, rollout, and rollback plan |
+| **Think** | The AI-system decision is not settled; includes discovery, design, optimization, and migration framing | task contract, baseline, risk class, alternatives, governed design, and validation path |
+| **Review** | Prompts, RAG, tools, agents, or operating evidence already exist | evidence-backed findings, eval gaps, and blockers |
+| **Change** | Decisions are approved and repository changes are requested | bounded control, prompt, retrieval, tool, or rollout changes plus pending proof |
+| **Verify** | Quality, safety, latency, cost, or authority claims need proof | observed evaluation and operational evidence with residual risks |
+
+If the user names a mode, use it. Otherwise infer it from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and preserve the task-contract-to-evidence trace. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify, and Verify must never turn a planned or unavailable trial into evidence. This skill's Review mode is contextual within the AI design flow; route an independent approval verdict to `architecture-review-gate`.
 
 ## Required Context Loading
 
@@ -57,11 +57,13 @@ Load only what the task needs:
 - Serving, routing, latency, and cost: [Model serving and economics](references/05-model-serving-economics.md)
 - Classical state/reliability obligations and AI control boundaries: [Classical and AI control obligations](references/06-classical-and-ai-control-obligations.md)
 - Broader production patterns: [Production AI patterns](references/production-ai-patterns.md)
-- Implementation guidance for AI backends: [AI implementation papers](references/papers/) — 140 AI/LLM Backend Fundamentals, 141 Agent Execution, 142 AI Memory, 143 RAG Infrastructure, 144 Untrusted Code Execution, 145 Plugin / Extension Architecture
+- Code guidance for AI backends: [AI backend papers](references/papers/) — 140 AI/LLM Backend Fundamentals, 141 Agent Execution, 142 AI Memory, 143 RAG Infrastructure, 144 Untrusted Code Execution, 145 Plugin / Extension Architecture
 
 ## Architecture Workflow
 
 Follow the phases in order. Return to an earlier phase when evidence invalidates an assumption.
+
+Apply the phases according to mode: Think ends with task, authority, and design decisions; Review inspects available prompts, retrieval, tools, code, traces, and evals and ends with contextual findings; Change applies only approved controls or code and continues to Verify; Verify runs the available trials and distinguishes observed evidence from estimates, plans, and unavailable proof.
 
 ### Phase 0 — Define the Task and Risk Class
 
@@ -284,7 +286,22 @@ Define:
 - **IF** user or tenant data enters training, fine-tuning, memory, logs, or evals, **THEN** record lawful basis, consent/contract, retention, deletion, and access controls.
 - **IF** the system cannot state why an action was allowed, **THEN** block the action.
 
+## Companion Skills and Standalone Safety
+
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Handoff** | Surrounding service, data, client, or regional architecture must be decided | `system-architecture-harness` | Bound the AI subsystem and identify unresolved surrounding architecture. |
+| **Handoff** | An independent approval verdict is requested | `architecture-review-gate` | Do not self-approve; report that independent review remains unavailable. |
+| **Required** | Tools, hostile input, secrets, or sensitive data cross the AI boundary | `security-privacy` | Preserve least privilege and privacy blockers and identify missing control depth. |
+| **Recommended** | Candidate behavior needs release evidence | `quality-release` | Retain the evaluation plan and label trials unrun. |
+
+If a companion is unavailable, complete only the safe local AI-system decision, name the missing depth, and recommend the exact technical ID or `ai-system-thinking` installation group. Never claim unavailable material was read or allow a model, score, or missing companion to waive policy, permission, durable-truth, verification, or approval boundaries.
+
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns task and governance decisions; Review returns contextual findings without an independent approval claim; Change returns approved controls plus pending proof; Verify returns observed evaluation and operational evidence with every unrun trial labeled. A combined flow preserves all four phases.
 
 Unless the user requests a narrower artifact, produce:
 

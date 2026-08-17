@@ -12,7 +12,8 @@ Architecture layer:
 - LLM, RAG, memory, tools, or agents -> `skills/ai-agent-system-architecture/SKILL.md`;
 - architecture review or approval -> `skills/architecture-review-gate/SKILL.md`.
 
-Implementation layer (read the routed papers before code is written):
+Domain thinking layer (select think, review, change, or verify and read the
+routed papers before making claims):
 
 - identity, authentication, sessions, permissions, tenancy -> `skills/auth-access/SKILL.md`;
 - APIs, validation, errors, pagination, versioning, webhooks, realtime, SDKs -> `skills/api-contracts/SKILL.md`;
@@ -26,6 +27,8 @@ Implementation layer (read the routed papers before code is written):
 - test strategy, concurrency/failure/load evidence, release checklist -> `skills/quality-release/SKILL.md`;
 - config, connection pools, graceful shutdown, deploy ordering, CI/CD -> `skills/runtime-delivery/SKILL.md`.
 
-Implementation papers live in each skill's `references/papers/`; they are generated from the canonical corpus — edit the corpus and re-run the packager, never the skill copies.
+Domain papers live in each skill's `references/papers/`; they are generated from
+the canonical corpus — edit the corpus and re-run the packager, never the skill
+copies.
 
 Use the Skills CLI for installation checks and restart Claude Code when a newly created top-level skill directory is not visible in the current session.

@@ -1,6 +1,6 @@
 # ArcForge Repository Hardening Design
 
-- **Status:** Approved direction; written specification awaiting maintainer review
+- **Status:** Approved with the instruction-only amendment below
 - **Date:** 2026-08-17
 - **Baseline:** `origin/main` at `77cb452ba6b02807b2aa16762961f82fcffff246`
 - **Working branch:** `codex/arcforge-hardening`
@@ -25,6 +25,16 @@ The hardening program is validator-first. It establishes canonical structured
 data and deterministic checks before migrating the corpus or changing generated
 artifacts. This makes every later change measurable and prevents a broad prose
 rewrite from silently weakening critical architectural obligations.
+
+## Instruction-Only Amendment
+
+The maintainer subsequently required the repository to remain purely portable
+instructions, references, examples, metadata, and manual behavioral cases. That
+later decision supersedes every section below that proposes committed scripts,
+test runners, package dependencies, generated caches, Make targets, or expanded
+automation. The naming, four-mode behavior, companion routing, catalog,
+structured reference data, manual evidence discipline, and release goals remain
+approved. No executable helper is part of the delivered `0.3.2` repository.
 
 ## Confirmed Baseline
 

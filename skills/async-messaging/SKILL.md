@@ -1,20 +1,20 @@
 ---
 name: async-messaging
-description: "Use when implementing or changing asynchronous processing: background jobs and workers, retries and dead-letter queues, scheduled/cron jobs, message queues and pub/sub, consumer groups and delivery guarantees, domain and integration events, transactional outbox/inbox, batch processing, bulk operations, deduplication, email delivery infrastructure, and notification systems. Loads production implementation papers with MUST/SHOULD/AVOID/NEVER rules, failure modes, and verification checklists to read before writing code. For transaction and idempotency internals use transactions-consistency; for retry/timeout pacing use resilience-flow-control; for event schema evolution use migration-evolution; for whole-system architecture use system-architecture-harness."
+description: "Use when thinking through, reviewing, changing, or verifying asynchronous work: jobs, workers, schedules, queues, events, outbox or inbox, batch processing, deduplication, email, or notifications. For transaction invariants use transactions-consistency; for retry and overload controls use resilience-flow-control; for event evolution use migration-evolution."
 ---
 
-# Async Jobs & Messaging Implementation
+# Think Through Async Work & Messaging
 
 ## Overview
 
-Implementation intelligence for asynchronous work. Each reference paper captures what breaks after deployment: poison jobs that loop forever, unacknowledged redeliveries, missed cron executions, event consumers that cannot tolerate duplicates or reordering, and email providers whose bounces and outages dominate the incident channel.
+Production guidance for asynchronous work. Each reference paper captures what breaks after deployment: poison jobs that loop forever, unacknowledged redeliveries, missed cron executions, event consumers that cannot tolerate duplicates or reordering, and email providers whose bounces and outages dominate the incident channel.
 
 **Core principle:** Async work is a correctness surface. Every queue, job, and event needs defined delivery, ordering, idempotency, retry, retention, replay, and backlog semantics — with bounds and lag visibility.
 
-## Implementation Law
+## Domain Law
 
 ```text
-NO ASYNC IMPLEMENTATION WITHOUT:
+NO ASYNC WORK OR MESSAGING CHANGE WITHOUT:
 1. the primary paper(s) for the mechanism read in full first;
 2. delivery, ordering, idempotency, retry, and replay semantics stated
    for every queue, job, and event;
@@ -25,7 +25,7 @@ NO ASYNC IMPLEMENTATION WITHOUT:
 
 ## When to Use
 
-Use this skill when implementing or changing:
+Use this skill when thinking through, reviewing, changing, or verifying:
 
 - background jobs, workers, progress reporting, and cancellation;
 - retry policies, backoff, poison-job handling, and dead-letter queues;
@@ -48,6 +48,17 @@ Use this skill when implementing or changing:
 - Event/schema evolution rollout: use `migration-evolution` (070, 071).
 - Whole-system architecture: use `system-architecture-harness`.
 
+## Select the Operating Mode
+
+| Mode | Use when | Required result |
+|---|---|---|
+| **Think** | The safe decision is not settled | requirements, constraints, invariants, risks, alternatives, decision, and validation path |
+| **Review** | An artifact, repository, diff, or operating state already exists | evidence separated from assumptions, prioritized findings, and blockers |
+| **Change** | Decisions are approved and repository changes are requested | the smallest safe change, compatibility notes, and verification still required |
+| **Verify** | A claim needs proof | tests or measurements run, observed evidence, and residual risks |
+
+If the user names a mode, use it. Otherwise infer the mode from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and preserve the trace between phases. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify. Verify must never turn a planned or unavailable check into evidence.
+
 ## Required Context Loading
 
 | Situation | Papers |
@@ -65,26 +76,37 @@ Use this skill when implementing or changing:
 
 ## Workflow
 
+Use the domain workflow as shared gates, then branch by the selected mode:
+
+- **Think:** answer the questions and stop with a reasoned decision and validation path; do not edit by default.
+- **Review:** inspect the available artifact or repository and stop with evidence-backed findings; do not claim changes.
+- **Change:** apply only approved decisions, then continue to Verify before claiming completion.
+- **Verify:** run the relevant checks, report observed results, and label every unavailable or unrun check.
+
 1. Identify each asynchronous unit of work and its failure semantics; select primary papers (an order-confirmation email touches 043 + 128 + 047).
 2. Read the primary papers fully, including delivery/retry matrices and common bugs.
 3. Answer the paper's pre-implementation questions; label autonomous assumptions and their impact.
 4. For existing workers, run the existing-codebase checks: find every consumer, the real acknowledgment mode, poison-path handling, and current lag visibility.
 5. Convert each MUST/SHOULD/AVOID/NEVER into bounded decisions: attempts, backoff with jitter, payload limits, concurrency, retention, DLQ policy, and lag alerts — each with a test.
-6. Implement the smallest safe slice; carry the paper's verification checklist (duplicate delivery, crash between steps, backlog drain, poison reruns) into the test plan.
+6. Apply the active mode: stop at a decision in Think; stop at findings in Review; make the smallest approved safe change in Change; run duplicate-delivery, crash, backlog-drain, and poison checks in Verify.
 7. Before completion, re-scan the normative lists and stop if any rule lacks a decision, test, or documented exception.
 
-## Boundary Map
+## Companion Skills and Standalone Safety
 
-| If the task also involves | Also use |
-|---|---|
-| The transaction that publishes the event | `transactions-consistency` (023, 036, 048) |
-| Retry/timeout budgets and backpressure | `resilience-flow-control` (052, 053, 104) |
-| Event schema changes and old consumers | `migration-evolution` (070, 071, 134) |
-| Webhook delivery surface | `api-contracts` (049) |
-| Job/queue observability and lag alerts | `production-operations` (137) |
-| Failure and load drills for workers | `quality-release` (093, 094) |
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Required** | Work or events derive from an authoritative commit | `transactions-consistency` | Preserve no-dual-write and idempotency requirements. |
+| **Required** | Retry, timeout, backpressure, or dependency-failure policy is in scope | `resilience-flow-control` | Require finite attempts and bounded load; label control depth missing. |
+| **Handoff** | Event schemas or consumers evolve | `migration-evolution` | Do not prescribe a breaking one-step rollout. |
+| **Recommended** | Lag, depth, poison, or provider failures need operational evidence | `production-operations` | State required signals and label operational proof missing. |
+
+If a companion is unavailable, complete only the safe local delivery decision, name the missing depth, and recommend the exact technical ID or `transactional-workflow` installation group. Never claim unavailable material was read or weaken atomic publication, idempotency, bounded retry, or backlog limits.
 
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns delivery decisions; Review returns findings; Change returns the repository-aware change plus pending proof; Verify returns observed duplicate, retry, lag, and recovery evidence with unrun checks labeled. A combined flow preserves all four phases.
 
 1. **Papers consulted** — numbers and the sections relied on.
 2. **Semantics table** — per queue/job/event: delivery guarantee, ordering scope, idempotency, retry bound, retention/replay, DLQ policy.

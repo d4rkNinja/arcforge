@@ -1,6 +1,15 @@
-# Implement Transactions & Consistency (`transactions-consistency`)
+# Think Through Transactions & Consistency (`transactions-consistency`)
 
 Production expertise for correctness under concurrency and distribution — the hazards that pass code review silently: dual writes, lost updates, unfenced locks, and retries that duplicate committed effects.
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -21,6 +30,8 @@ Production expertise for correctness under concurrency and distribution — the 
 Any transactional or concurrent code — checkouts, reservations, counters, state transitions, duplicate handling — and especially requests like "make writing to the database, queue, and cache atomic in one transaction" (that request is unsafe, and this skill explains why and what to do instead).
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 Named invariants with enforcement points, the narrowest safe control for each, interleaving tests that force real races, and defined outcomes for duplicates, conflicts, timeouts, and ambiguous results. The skill stops work on uncoordinated dual writes, unfenced locks, or "exactly once" claims without proof.
 

@@ -1,6 +1,15 @@
-# Implement Security & Privacy (`security-privacy`)
+# Think Through Security & Privacy (`security-privacy`)
 
 Production expertise for protective controls. Controls attach to data and actions, not layers: every secret, sensitive field, and privileged action has a lifecycle — generation, use, rotation, redaction, deletion — enforced somewhere concrete.
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -20,6 +29,8 @@ Production expertise for protective controls. Controls attach to data and action
 Handling secrets or sensitive fields, configuring TLS/crypto, adding redaction, defending against abuse, generating tokens or IDs — and especially requests like "log request bodies including passwords to debug this."
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 An asset/actor/boundary map, controls with enforcement points, and negative tests (secret absent, verification on, deletion reached). The skill stops work on secrets in logs or config by default, home-grown crypto, disabled certificate verification, or sensitive data with no deletion path.
 

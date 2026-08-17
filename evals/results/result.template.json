@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "case_id": "replace-with-case-id",
+  "repository_revision": "0000000000000000000000000000000000000000",
+  "runtime": {
+    "name": "replace-with-runtime",
+    "version": "replace-with-runtime-version",
+    "model": "replace-with-runtime-reported-model",
+    "identity_source": "runtime-reported"
+  },
+  "trial": 1,
+  "status": "inconclusive",
+  "raw_output": {
+    "path": "evals/results/raw/replace-with-output-file.txt",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "criterion_outcomes": [
+    {
+      "criterion_id": "replace-with-criterion-id",
+      "outcome": "not-reviewed",
+      "evidence": [],
+      "rule_ids": []
+    }
+  ],
+  "review": {
+    "reviewer": "replace-with-reviewer",
+    "method": "human",
+    "disagreements": []
+  },
+  "started_at": "2026-08-17T00:00:00Z",
+  "completed_at": "2026-08-17T00:00:00Z"
+}

@@ -1,6 +1,15 @@
-# Implement Resilience & Flow Control (`resilience-flow-control`)
+# Think Through Resilience & Flow Control (`resilience-flow-control`)
 
 Production expertise for surviving load and dependency failure: retry storms, synchronized expiry, thundering herds, timeouts that compose badly, and rate limits that fail open exactly when they matter.
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -19,6 +28,8 @@ Production expertise for surviving load and dependency failure: retry storms, sy
 Adding or changing caching, rate limiting, quotas, retries, timeouts, circuit breakers, or overload protection — and before accepting "cache forever, no TTL needed" or "autoscaling will handle spikes."
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 A defense map: each named failure → mechanism, bounds, and fallback; explicit fail-open/closed decisions; timeouts that compose into an end-to-end deadline; outage drills. The skill stops work on unbounded TTLs, caches treated as source of truth, retries without caps, or autoscaling presented as overload control.
 

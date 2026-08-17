@@ -1,17 +1,17 @@
 ---
 name: migration-evolution
-description: "Use when implementing or changing data or contract evolution: schema migrations and zero-downtime deploy ordering, expand-and-contract patterns, data migrations and backfills with chunking and resumability, API and event schema evolution, backward compatibility windows, data synchronization between systems, change data capture, search index synchronization during reindexing, feature migration and traffic cutover, and legacy-system integration/strangler migration. Loads production implementation papers with MUST/SHOULD/AVOID/NEVER rules, failure modes, and verification checklists to read before writing code. For transaction internals of dual-write avoidance use transactions-consistency; for deployment mechanics use runtime-delivery; for whole-system replatforming architecture use system-architecture-harness."
+description: "Use when thinking through, reviewing, changing, or verifying data and contract evolution: schema migrations, expand-and-contract, resumable backfills, API or event compatibility, synchronization, CDC, reindexing, traffic cutover, or legacy integration. For outbox and inbox delivery use async-messaging; for transaction invariants use transactions-consistency; for deployment mechanics use runtime-delivery."
 ---
 
-# Migrations & Evolution Implementation
+# Think Through Migrations & Evolution
 
 ## Overview
 
-Implementation intelligence for changing running systems safely. Each reference paper captures the sequences that prevent outages: expand-and-contract instead of in-place renames, resumable backfills that do not overwrite newer writes, compatibility windows for old clients, CDC pipelines with reconciliation, and cutover plans with genuine rollback.
+Production guidance for changing running systems safely. Each reference paper captures the sequences that prevent outages: expand-and-contract instead of in-place renames, resumable backfills that do not overwrite newer writes, compatibility windows for old clients, CDC pipelines with reconciliation, and cutover plans with genuine rollback.
 
 **Core principle:** A migration is a distributed system that runs while the old and new versions are both live. Every step must tolerate mixed versions, partial failure, and rollback — code rollback never undoes committed data.
 
-## Implementation Law
+## Domain Law
 
 ```text
 NO MIGRATION WITHOUT:
@@ -26,7 +26,7 @@ NO MIGRATION WITHOUT:
 
 ## When to Use
 
-Use this skill when implementing or changing:
+Use this skill when thinking through, reviewing, changing, or verifying:
 
 - database schema migrations, online/zero-downtime migrations, lock behavior;
 - additive vs destructive changes, column renames, type changes, nullability flips;
@@ -46,6 +46,17 @@ Use this skill when implementing or changing:
 - Whole-system replatforming or rewrite decisions: use `system-architecture-harness` (references 18).
 - Contract design for new APIs: use `api-contracts`.
 
+## Select the Operating Mode
+
+| Mode | Use when | Required result |
+|---|---|---|
+| **Think** | The safe decision is not settled | requirements, constraints, invariants, risks, alternatives, decision, and validation path |
+| **Review** | An artifact, repository, diff, or operating state already exists | evidence separated from assumptions, prioritized findings, and blockers |
+| **Change** | Decisions are approved and repository changes are requested | the smallest safe change, compatibility notes, and verification still required |
+| **Verify** | A claim needs proof | tests or measurements run, observed evidence, and residual risks |
+
+If the user names a mode, use it. Otherwise infer the mode from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and preserve the trace between phases. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify. Verify must never turn a planned or unavailable check into evidence.
+
 ## Required Context Loading
 
 | Situation | Papers |
@@ -64,26 +75,37 @@ Use this skill when implementing or changing:
 
 ## Workflow
 
+Use the domain workflow as shared gates, then branch by the selected mode:
+
+- **Think:** answer the questions and stop with a reasoned decision and validation path; do not edit by default.
+- **Review:** inspect the available artifact or repository and stop with evidence-backed findings; do not claim changes.
+- **Change:** apply only approved decisions, then continue to Verify before claiming completion.
+- **Verify:** run the relevant checks, report observed results, and label every unavailable or unrun check.
+
 1. Write the current state, target state, and each intermediate state, including which versions can read/write each representation.
 2. Select and read the primary papers for the change type fully.
 3. Answer the paper's pre-implementation questions; label autonomous assumptions and their impact.
 4. Run the existing-codebase checks: inventory deployed clients, consumers, workers, retained messages/jobs, and data that already violates the target shape.
 5. Convert each MUST/SHOULD/AVOID/NEVER into ordered migration steps with verification gates between them (counts match, behavior compared, usage at zero) and explicit rollback or roll-forward at each step.
-6. Implement the smallest safe slice; carry the paper's verification checklist (mixed-version coexistence, interrupted backfill resume, replayed events) into the test plan.
+6. Apply the active mode: stop at a sequence decision in Think; stop at findings in Review; make the smallest approved safe change in Change; run mixed-version, backfill-resume, replay, reconciliation, and rollback checks in Verify.
 7. Before completion, re-scan the normative lists and stop if any rule lacks a decision, test, or documented exception.
 
-## Boundary Map
+## Companion Skills and Standalone Safety
 
-| If the task also involves | Also use |
-|---|---|
-| Dual-write avoidance and outbox atomicity | `transactions-consistency` (047, 048) |
-| Deployment mechanics, health gates, CI/CD | `runtime-delivery` (106, 107) |
-| Compatibility testing of old/new clients | `quality-release` (090, 093) |
-| Reconciliation observability during migration | `production-operations` (124 paths, 057) |
-| Schema constraint/index design of the target | `data-storage` (021, 022) |
-| Rewrite/monolith-decomposition architecture | `system-architecture-harness` |
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Required** | Transactional outbox or inbox and relay delivery from paper 047 are in scope | `async-messaging` | Preserve atomic publication and mark relay or delivery depth incomplete; do not misroute paper 047. |
+| **Required** | Local transaction invariants, concurrency, or saga boundaries are in scope | `transactions-consistency` | Preserve authoritative enforcement and no-dual-write requirements. |
+| **Required** | Deployment mechanics, health gates, or CI/CD ordering are in scope | `runtime-delivery` | Stop before prescribing unverified deployment mechanics. |
+| **Recommended** | Compatibility, backfill, or cutover claims need proof | `quality-release` | State exact tests and label them unrun. |
+
+If a companion is unavailable, complete only the safe local migration sequence, name the missing depth, and recommend the exact technical ID or relevant installation group. Never claim unavailable material was read, route paper 047 to `transactions-consistency`, or weaken mixed-version, rollback, reconciliation, or no-dual-write requirements.
 
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns current, target, and transition decisions; Review returns findings; Change returns the approved migration sequence plus pending proof; Verify returns observed compatibility, reconciliation, cutover, and rollback evidence with unrun checks labeled. A combined flow preserves all four phases.
 
 1. **Papers consulted** — numbers and the sections relied on.
 2. **State plan** — current, target, and intermediate states with version read/write matrices.

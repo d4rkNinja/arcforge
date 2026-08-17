@@ -1,22 +1,22 @@
 ---
 name: api-contracts
-description: "Use when implementing or changing HTTP/RPC/GraphQL APIs, SDKs, or CLIs: endpoint design, request validation, error architecture and status mapping, pagination, filtering and sorting, bulk and batch APIs, API versioning and backward compatibility, data serialization, webhooks (signing, retries, replay protection), realtime channels (WebSockets, SSE), security headers, or client/SDK behavior. Loads production implementation papers with MUST/SHOULD/AVOID/NEVER rules, failure modes, and verification checklists to read before writing code. For whole-system architecture use system-architecture-harness; for auth and permissions use auth-access; for queue/event internals use async-messaging; for schema migration sequencing use migration-evolution."
+description: "Use when thinking through, reviewing, changing, or verifying APIs and client contracts: endpoint design, validation, errors, pagination, filtering, bulk behavior, versioning, serialization, webhooks, realtime channels, SDKs, or CLIs. For whole-system architecture use system-architecture-harness; for identity and permissions use auth-access; for event delivery use async-messaging; for compatibility rollout use migration-evolution."
 ---
 
-# API & Client Contracts Implementation
+# Think Through API & Client Contracts
 
 ## Overview
 
-Implementation intelligence for API surfaces and their clients. Each reference paper captures the contract work that first drafts skip: request lifecycle and deadlines, validation edge cases, error taxonomies that do not leak internals, stable pagination under concurrent writes, deprecation windows, webhook signature verification, and realtime reconnection semantics.
+Production guidance for API surfaces and their clients. Each reference paper captures the contract work that first drafts skip: request lifecycle and deadlines, validation edge cases, error taxonomies that do not leak internals, stable pagination under concurrent writes, deprecation windows, webhook signature verification, and realtime reconnection semantics.
 
 **Core principle:** An API is a compatibility promise. Every endpoint, error, cursor, and webhook is a contract with real clients — including old clients you no longer control.
 
-## Implementation Law
+## Domain Law
 
 ```text
-NO API IMPLEMENTATION WITHOUT:
+NO API OR CLIENT CONTRACT CHANGE WITHOUT:
 1. the primary paper(s) for the surface read in full first;
-2. the paper's "Questions that must be answered before implementation"
+2. the paper's pre-change questions
    answered, or each open point labeled as an assumption;
 3. "Existing-codebase checks" run when changing an existing API;
 4. every applicable MUST mapped to a decision, a test, or a documented
@@ -25,7 +25,7 @@ NO API IMPLEMENTATION WITHOUT:
 
 ## When to Use
 
-Use this skill when implementing or changing:
+Use this skill when thinking through, reviewing, changing, or verifying:
 
 - REST, RPC, gRPC, or GraphQL endpoints and resource/command design;
 - request parsing, body limits, content-type handling, and input validation;
@@ -47,6 +47,17 @@ Use this skill when implementing or changing:
 - Database schema evolution sequencing: use `migration-evolution` (070 overlaps at the contract level).
 - Rate limiting and quotas mechanics: use `resilience-flow-control` (038, 039).
 
+## Select the Operating Mode
+
+| Mode | Use when | Required result |
+|---|---|---|
+| **Think** | The safe decision is not settled | requirements, constraints, invariants, risks, alternatives, decision, and validation path |
+| **Review** | An artifact, repository, diff, or operating state already exists | evidence separated from assumptions, prioritized findings, and blockers |
+| **Change** | Decisions are approved and repository changes are requested | the smallest safe change, compatibility notes, and verification still required |
+| **Verify** | A claim needs proof | tests or measurements run, observed evidence, and residual risks |
+
+If the user names a mode, use it. Otherwise infer the mode from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and preserve the trace between phases. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify. Verify must never turn a planned or unavailable check into evidence.
+
 ## Required Context Loading
 
 | Situation | Papers |
@@ -67,26 +78,37 @@ Use this skill when implementing or changing:
 
 ## Workflow
 
+Use the domain workflow as shared gates, then branch by the selected mode:
+
+- **Think:** answer the questions and stop with a reasoned decision and validation path; do not edit by default.
+- **Review:** inspect the available artifact or repository and stop with evidence-backed findings; do not claim changes.
+- **Change:** apply only approved decisions, then continue to Verify before claiming completion.
+- **Verify:** run the relevant checks, report observed results, and label every unavailable or unrun check.
+
 1. Identify the surface being built or changed and select the primary paper; load neighbors for every contract edge you touch (a new list endpoint usually needs 014 + 016 + 017 + 012 + 013).
 2. Read the primary paper fully, including normative requirements and common bugs.
 3. Answer the paper's pre-implementation questions; label autonomous assumptions and their impact.
 4. For existing APIs, run the existing-codebase checks: inventory real clients, current schemas, and usage before renaming fields, tightening validation, or changing defaults.
 5. Convert each MUST/SHOULD/AVOID/NEVER into contract decisions: schemas, status codes, limits, versioning policy, and error model — each with a test.
-6. Implement the smallest safe slice; carry the paper's verification checklist (malformed inputs, cursor stability under writes, old-client compatibility) into the test plan.
+6. Apply the active mode: stop at a decision in Think; stop at findings in Review; make the smallest approved safe change in Change; run the paper's malformed-input, cursor-stability, and old-client checks in Verify.
 7. Before completion, re-scan the normative lists and stop if any rule lacks a decision, test, or documented exception.
 
-## Boundary Map
+## Companion Skills and Standalone Safety
 
-| If the task also involves | Also use |
-|---|---|
-| Authentication and object-level authorization | `auth-access` (008, 113, 114) |
-| Async side effects, event publication, webhooks at scale | `async-messaging` (045, 046, 047) |
-| Rate limits and quotas on the surface | `resilience-flow-control` (038, 039) |
-| Query/index implications of filters and sorting | `data-storage` (027, 028) |
-| Contract-breaking rollout sequencing | `migration-evolution` (070, 071, 134) |
-| Error/redaction and header security policy | `security-privacy` (062, 066) |
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Required** | Authentication or object, field, action, or tenant authorization is in scope | `auth-access` | Preserve authorization requirements and identify missing access-policy depth. |
+| **Recommended** | Filters, sorting, pagination, or serialization affect queries or precision | `data-storage` | Keep fields allowlisted and responses bounded; label storage depth missing. |
+| **Handoff** | Event delivery or webhook worker internals are in scope | `async-messaging` | Define the surface contract and identify delivery internals as incomplete. |
+| **Handoff** | Old clients or consumers must coexist with a contract change | `migration-evolution` | Do not prescribe a breaking one-step rollout. |
+
+If a companion is unavailable, complete only the safe local contract decision, name the missing depth, and recommend the exact technical ID or relevant installation group. Never claim unavailable material was read or weaken a compatibility, authorization, or boundedness requirement.
 
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns contract decisions; Review returns evidence-backed findings; Change returns the repository-aware change plus pending proof; Verify returns observed compatibility and failure evidence with unrun checks labeled. A combined flow preserves all four phases.
 
 1. **Papers consulted** — numbers and the sections relied on.
 2. **Assumptions and unanswered questions** — labeled, with their design impact.

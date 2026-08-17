@@ -1,10 +1,25 @@
 # Changelog
 
+## 0.3.2 — 2026-08-17
+
+- Renamed every user-facing skill to the approved Think Through or Review name
+  while preserving all fourteen stable technical IDs.
+- Added explicit Think, Review, Change, and Verify modes to every skill, with
+  mode-specific outputs, evidence boundaries, and combined-flow ordering.
+- Added typed companion relationships, safe standalone behavior, a canonical
+  catalog, and corrected transactional-outbox ownership and review routing.
+- Expanded the manual behavioral suite to 42 cases and linked nine critical
+  architecture rules to stable review criteria.
+- Removed repository Python utilities, executable test runners, dependency
+  files, and generated caches. ArcForge is again a portable instruction-only
+  repository containing skills, references, examples, metadata, and manual
+  behavioral review data.
+
 ## 0.3.1 — 2026-08-17
 
 - Added `docs/skills/` — a user-facing guide for every skill (index plus one page per skill: what it covers, when to use it, what a run produces, companion skills, a try-it prompt, and links into the skill), linked from the README.
 - Rewrote the README to be user-centric: what each skill does for the user, when to use it, install and invocation examples, and a pick-a-skill routing table — with the internal knowledge-base machinery removed from the document entirely.
-- Fixed stale repository documentation after the 0.3.0 expansion: `CLAUDE.md` now routes all fourteen skills (it previously said "the three skills" and omitted the eleven implementation skills), and the README architecture section disambiguated its phrasing before the full rewrite.
+- Fixed stale repository documentation after the 0.3.0 expansion: `CLAUDE.md` now routes all fourteen skills (it previously said "the three skills" and omitted the eleven production domain skills), and the README architecture section disambiguated its phrasing before the full rewrite.
 - Documented the implementation-suite cases (`impl-*`) in `evals/README.md`, including the co-activation and architecture-boundary cases.
 - Re-verified with deeper checks than 0.3.0: YAML parsing of every `SKILL.md` frontmatter and `agents/openai.yaml`, exhaustive markdown link scanning (including paths with spaces or parentheses), in-paper anchor resolution, `skills.sh.json` ↔ skill-directory consistency, README numeric claims, and knowledge-graph paths — all clean.
 
@@ -14,9 +29,9 @@
 - Packaged all 146 corpus papers into skill references as restructured, self-contained copies: corpus bookkeeping stripped, generator template boilerplate deduplicated (one occurrence per distinct statement), fully-templated subtopics collapsed into a "Default obligations" list, pre-implementation questions and existing-codebase checks moved directly after the executive summary, sections renumbered, same-skill links kept relative, and cross-skill links converted to explicit skill pointers — about 31% smaller per paper with every domain-specific rule, failure mode, and source preserved.
 - Folded the code/service boundary papers (084–089) into `system-architecture-harness` and the AI backend papers (140–145) into `ai-agent-system-architecture` instead of creating competing skills.
 - Added `backend-engineering-knowledge-base/tools/package_papers.py` as the audited pipeline from the canonical corpus to skill references; `validate_corpus.py` continues to prove canonical coverage and integrity.
-- Each implementation skill carries a routing table, a boundary map for co-activation, an `## Output Contract`, and domain `## Stop Conditions`; paper 146 (cross-cutting checklist) lives canonically in `quality-release`.
-- Expanded the behavioral suite from 23 to 36 cases: activation-and-rules cases for every implementation skill plus multi-domain co-activation and architecture-boundary redirect cases.
-- Added a worked calibration example to every implementation skill (`examples/`) showing the expected output shape: papers consulted, labeled assumptions, pre-implementation answers, rule-to-decision map, failure modes, verification evidence, and stop-condition check.
+- Each production domain skill carries a routing table, a boundary map for co-activation, an `## Output Contract`, and domain `## Stop Conditions`; paper 146 (cross-cutting checklist) lives canonically in `quality-release`.
+- Expanded the behavioral suite from 23 to 36 cases: activation-and-rules cases for every production domain skill plus multi-domain co-activation and architecture-boundary redirect cases.
+- Added a worked calibration example to every production domain skill (`examples/`) showing the expected output shape: papers consulted, labeled assumptions, initial decision questions, rule-to-decision map, failure modes, verification evidence, and stop-condition check.
 - Rewrote the README around the two-layer skill model with explicit display-name/stable-ID naming guidance, complete 14-skill tables, worked-example pointers, and an honest-limits section.
 - Updated `skills.sh.json` groupings, `AGENTS.md` ownership and pipeline rules, CI discovery to iterate all skill directories, and the repository README.
 
@@ -29,7 +44,7 @@
 - Added architecture-review calibration guidance, strong and critical review inputs, and a complete contextual review example.
 - Expanded the behavioral suite with dynamic-rubric and outcome-driven reweighting pressure cases.
 - Integrated the supplied architecture manuscript through focused guidance for code/runtime assurance, client and offline systems, platform governance and evolution, classical AI-system obligations, multi-agent value and authority, gateway/memory safety, and post-incident review.
-- Renamed the human-facing skills to Design Production Systems, Design AI & Agent Systems, and Review Software Architecture while preserving stable installable IDs.
+- Aligned the human-facing architecture skill names with Think Through Production Systems, Think Through AI & Agent Systems, and Review Software Architecture while preserving stable installable IDs.
 - Removed obsolete executable validators, scorecard resources, tests, and internal planning artifacts so the release remains a portable instruction-only skill package.
 - Enhanced the README with the 0.2.0 architecture, limitations, examples, research provenance, and repeated model-based verification workflow.
 

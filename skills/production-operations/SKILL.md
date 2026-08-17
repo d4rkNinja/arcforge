@@ -1,20 +1,20 @@
 ---
 name: production-operations
-description: "Use when implementing or changing operational code and practices: structured logging, metrics and cardinality control, distributed tracing and correlation IDs, health checks and readiness probes, audit logging, observability for async systems, operational runbooks, incident readiness and escalation, data import and export, backup, restore, disaster recovery, RTO/RPO targets, high availability, multi-region systems, and data residency. Loads production implementation papers with MUST/SHOULD/AVOID/NEVER rules, failure modes, and verification checklists to read before writing code. For deployment sequencing and zero-downtime changes use migration-evolution; for telemetry-driven architecture reviews use architecture-review-gate; for whole-system availability architecture use system-architecture-harness."
+description: "Use when thinking through, reviewing, changing, or verifying production operations: logs, metrics, tracing, health, audit, async observability, runbooks, incidents, import or export, backup, restore, disaster recovery, high availability, multi-region, or residency. For rollout sequencing use migration-evolution; for independent review use architecture-review-gate."
 ---
 
-# Observability & Operations Implementation
+# Think Through Production Operations
 
 ## Overview
 
-Implementation intelligence for running systems. Each reference paper captures what separates operable systems from hopeful ones: logs without correlation IDs, metrics with unbounded cardinality, health checks that pass while the system is down, audit trails that can be edited, and backups that have never been restored.
+Production guidance for running systems. Each reference paper captures what separates operable systems from hopeful ones: logs without correlation IDs, metrics with unbounded cardinality, health checks that pass while the system is down, audit trails that can be edited, and backups that have never been restored.
 
 **Core principle:** An operational claim is only as real as its evidence. If a journey cannot be observed, an alert has no owner, or a restore has never been rehearsed, the system does not actually have that capability.
 
-## Implementation Law
+## Domain Law
 
 ```text
-NO OPERATIONAL IMPLEMENTATION WITHOUT:
+NO PRODUCTION-OPERATIONS CHANGE WITHOUT:
 1. the primary paper(s) for the practice read in full first;
 2. the user journey or failure the signal protects named first;
 3. "Existing-codebase checks" run when changing existing telemetry;
@@ -24,7 +24,7 @@ NO OPERATIONAL IMPLEMENTATION WITHOUT:
 
 ## When to Use
 
-Use this skill when implementing or changing:
+Use this skill when thinking through, reviewing, changing, or verifying:
 
 - structured logging, log levels, redaction, and retention;
 - metrics, SLI selection, and cardinality limits;
@@ -47,6 +47,17 @@ Use this skill when implementing or changing:
 - Architecture-level SLO/SLA design and review: use `system-architecture-harness` / `architecture-review-gate`.
 - Security log redaction policy ownership: `security-privacy` (066) defines what is sensitive; this skill implements the emitters.
 - Cost modeling: use `system-architecture-harness` Phase 10.
+
+## Select the Operating Mode
+
+| Mode | Use when | Required result |
+|---|---|---|
+| **Think** | The safe decision is not settled | requirements, constraints, invariants, risks, alternatives, decision, and validation path |
+| **Review** | An artifact, repository, diff, or operating state already exists | evidence separated from assumptions, prioritized findings, and blockers |
+| **Change** | Decisions are approved and repository changes are requested | the smallest safe change, compatibility notes, and verification still required |
+| **Verify** | A claim needs proof | tests or measurements run, observed evidence, and residual risks |
+
+If the user names a mode, use it. Otherwise infer the mode from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and preserve the trace between phases. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify. Verify must never turn a planned or unavailable check into evidence.
 
 ## Required Context Loading
 
@@ -71,26 +82,37 @@ Use this skill when implementing or changing:
 
 ## Workflow
 
+Use the domain workflow as shared gates, then branch by the selected mode:
+
+- **Think:** answer the questions and stop with a reasoned decision and validation path; do not edit by default.
+- **Review:** inspect the available artifact or repository and stop with evidence-backed findings; do not claim changes.
+- **Change:** apply only approved decisions, then continue to Verify before claiming completion.
+- **Verify:** run the relevant checks, report observed results, and label every unavailable or unrun check.
+
 1. Name the user journey or failure mode the operational work protects; select primary papers (a new async feature touches 056 + 057 + 137; a DR plan touches 076 + 077 + 078).
 2. Read the primary papers fully, including failure modes and checklists.
 3. Answer the paper's pre-implementation questions; label autonomous assumptions and their impact.
 4. For existing systems, run the existing-codebase checks: inspect current emitters, cardinality, dashboards, and whether alerts have owners and runbooks.
 5. Convert each MUST/SHOULD/AVOID/NEVER into concrete artifacts: emitter schemas, alerts tied to user impact, runbook steps, and scheduled drills — each with evidence.
-6. Implement the smallest safe slice; carry the paper's verification checklist (alert fires, restore completes within target, runbook executes) into acceptance.
+6. Apply the active mode: stop at an operational decision in Think; stop at findings in Review; make the smallest approved safe change in Change; run alert, restore, failover, and runbook checks in Verify.
 7. Before completion, re-scan the normative lists and stop if any rule lacks a decision, test, or documented exception.
 
-## Boundary Map
+## Companion Skills and Standalone Safety
 
-| If the task also involves | Also use |
-|---|---|
-| Rollout ordering and rollback windows | `migration-evolution` (106 paths, 134) |
-| Queue/job failure semantics being observed | `async-messaging` (043, 045) |
-| What must be redacted before emission | `security-privacy` (066) |
-| Retention/lifecycle of the data itself | `data-storage` (033) |
-| Load/chaos drills proving the claims | `quality-release` (093, 094) |
-| SLO targets and error budgets | `system-architecture-harness` |
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Handoff** | Rollout order, compatibility, or data transition is central | `migration-evolution` | Do not prescribe unsafe rollout ordering. |
+| **Required** | Telemetry, export, audit, or recovery data contains sensitive material | `security-privacy` | Preserve redaction, access, and deletion obligations. |
+| **Recommended** | Load, failure, restore, or failover claims need proof | `quality-release` | State exact drills and label them unrun. |
+| **Handoff** | Availability or region choices change system topology | `system-architecture-harness` | Bound the operational decision and identify architecture depth missing. |
+
+If a companion is unavailable, complete only the safe local operations decision, name the missing depth, and recommend the exact technical ID or relevant installation group. Never claim unavailable material was read, equate a backup with recovery, or weaken redaction, ownership, restore, RTO, or RPO requirements.
 
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns operational decisions and evidence paths; Review returns findings; Change returns the repository-aware change plus pending proof; Verify returns observed signals, drills, restore, and failover evidence with unrun checks labeled. A combined flow preserves all four phases.
 
 1. **Papers consulted** — numbers and the sections relied on.
 2. **Journey-to-signal map** — each protected journey → SLI, alert, owner, and runbook.

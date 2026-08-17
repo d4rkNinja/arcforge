@@ -1,6 +1,15 @@
-# Implement Runtime & Delivery (`runtime-delivery`)
+# Think Through Runtime & Delivery (`runtime-delivery`)
 
 Production expertise for the layer every feature stands on: configs that validate nowhere and break at boot in production, pools that exhaust under bursts, shutdowns that drop in-flight work, and deploys that skip migration ordering.
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -20,6 +29,8 @@ Production expertise for the layer every feature stands on: configs that validat
 Changing configuration loading, bootstrap, pools, shutdown handling, deploy ordering, or pipelines — and before accepting ".env straight into process.env, ops will hand-edit production."
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 Runtime behavior defined across every failure window — boot, reload, burst, shutdown, deploy — with enforcement points (validated config schemas, bounded pools, drain deadlines, health gates) and drills for each. The skill stops work on unvalidated stringly config, secrets bundled into config files, or deploys without rollback windows.
 

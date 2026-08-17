@@ -1,24 +1,24 @@
 ---
 name: transactions-consistency
-description: "Use when implementing or changing transactional or concurrent code: ACID transactions, isolation levels, lost updates, write skew, check-then-act races, optimistic and pessimistic locking, compare-and-swap, state machines, idempotency keys and request deduplication, sagas and distributed transactions, consistency models, replication, partitioning and sharding, consensus, distributed locks and fencing, and ordering guarantees. Loads production implementation papers with MUST/SHOULD/AVOID/NEVER rules, failure modes, and verification checklists to read before writing code. For queues and outbox patterns use async-messaging; for retry/timeout mechanics use resilience-flow-control; for whole-system architecture use system-architecture-harness."
+description: "Use when thinking through, reviewing, changing, or verifying transactional or concurrent behavior: isolation, anomalies, locking, state machines, idempotency, sagas, consistency, replication, sharding, consensus, distributed locks, fencing, or ordering. For jobs, queues, and outbox delivery use async-messaging; for retries and timeouts use resilience-flow-control."
 ---
 
-# Transactions & Consistency Implementation
+# Think Through Transactions & Consistency
 
 ## Overview
 
-Implementation intelligence for correctness under concurrency and distribution. Each reference paper captures the hazards that pass code review silently: isolation levels that do not mean what their names claim, dual writes that corrupt state, idempotency keys without fingerprints, locks without fencing, and retries that duplicate committed effects.
+Production guidance for correctness under concurrency and distribution. Each reference paper captures the hazards that pass code review silently: isolation levels that do not mean what their names claim, dual writes that corrupt state, idempotency keys without fingerprints, locks without fencing, and retries that duplicate committed effects.
 
 **Core principle:** Every invariant needs an enforcement point at an authoritative boundary. A local transaction never makes a remote side effect atomic, and a timeout never proves a rollback.
 
-## Implementation Law
+## Domain Law
 
 ```text
-NO CONCURRENCY IMPLEMENTATION WITHOUT:
+NO CONCURRENCY OR CONSISTENCY CHANGE WITHOUT:
 1. the primary paper(s) for the mechanism read in full first;
 2. the invariant, its authoritative owner, and all concurrent writers
    named before choosing a control;
-3. the paper's "Questions that must be answered before implementation"
+3. the paper's pre-change questions
    answered, or each open point labeled as an assumption;
 4. every applicable MUST mapped to an enforcement point, a test that
    forces the interleaving, or a documented exception.
@@ -26,7 +26,7 @@ NO CONCURRENCY IMPLEMENTATION WITHOUT:
 
 ## When to Use
 
-Use this skill when implementing or changing:
+Use this skill when thinking through, reviewing, changing, or verifying:
 
 - transaction boundaries, isolation levels, deadlocks, and retry scopes;
 - optimistic locking, version columns, compare-and-swap, conditional updates;
@@ -48,6 +48,17 @@ Use this skill when implementing or changing:
 - Schema constraints and index design: use `data-storage` (022, 027).
 - Whole-system architecture and boundary decisions: use `system-architecture-harness`.
 
+## Select the Operating Mode
+
+| Mode | Use when | Required result |
+|---|---|---|
+| **Think** | The safe decision is not settled | requirements, constraints, invariants, risks, alternatives, decision, and validation path |
+| **Review** | An artifact, repository, diff, or operating state already exists | evidence separated from assumptions, prioritized findings, and blockers |
+| **Change** | Decisions are approved and repository changes are requested | the smallest safe change, compatibility notes, and verification still required |
+| **Verify** | A claim needs proof | tests or measurements run, observed evidence, and residual risks |
+
+If the user names a mode, use it. Otherwise infer the mode from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and preserve the trace between phases. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify. Verify must never turn a planned or unavailable check into evidence.
+
 ## Required Context Loading
 
 | Situation | Papers |
@@ -68,6 +79,13 @@ Use this skill when implementing or changing:
 
 ## Workflow
 
+Use the domain workflow as shared gates, then branch by the selected mode:
+
+- **Think:** answer the questions and stop with a reasoned decision and validation path; do not edit by default.
+- **Review:** inspect the available artifact or repository and stop with evidence-backed findings; do not claim changes.
+- **Change:** apply only approved decisions, then continue to Verify before claiming completion.
+- **Verify:** run the relevant checks, report observed results, and label every unavailable or unrun check.
+
 1. Write the invariant in business terms and name its authoritative owner and every concurrent writer (requests, jobs, webhooks, admins, retries, old binaries).
 2. Select the primary paper for the control mechanism and read it fully.
 3. Answer the paper's pre-implementation questions; label autonomous assumptions and their impact.
@@ -76,18 +94,22 @@ Use this skill when implementing or changing:
 6. Convert each MUST/SHOULD/AVOID/NEVER into an enforcement point plus a test that forces the interleaving with barriers, at real isolation.
 7. Before completion, re-scan the normative lists and stop if any rule lacks a decision, test, or documented exception.
 
-## Boundary Map
+## Companion Skills and Standalone Safety
 
-| If the task also involves | Also use |
-|---|---|
-| Publishing effects after commit (outbox) | `async-messaging` (047) |
-| Retry pacing, deadlines, circuit breaking | `resilience-flow-control` (052, 053, 054) |
-| Constraint and index backstops | `data-storage` (022, 026, 027) |
-| Sharding-driven schema/migration work | `migration-evolution` (030, 031) |
-| Multi-region failover and RPO/RTO | `production-operations` (132, 078) |
-| Race coverage in test suites | `quality-release` (092, 093) |
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Required** | Post-commit events, outbox or inbox, jobs, or email are in scope | `async-messaging` | Produce the safe local transaction decision and mark delivery depth incomplete. |
+| **Required** | Remote retries, timeouts, breakers, or overload are in scope | `resilience-flow-control` | Require bounded retries and deadlines without inventing control parameters. |
+| **Recommended** | Constraints or indexes backstop the invariant | `data-storage` | Identify the required authoritative backstop. |
+| **Recommended** | Race, duplicate, or ambiguous-outcome claims need proof | `quality-release` | State exact tests and label them unrun. |
+
+If a required companion is unavailable, stop at the safe local invariant and transaction decision, name the missing delivery or flow-control depth, and recommend `async-messaging`, `resilience-flow-control`, or the `transactional-workflow` installation group. Never claim papers 043, 047, 052, 053, or 054 were loaded when only this skill is installed, and never weaken ARC-CRIT-001.
 
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns invariant and consistency decisions; Review returns findings; Change returns the repository-aware change plus pending proof; Verify returns forced-interleaving evidence with every unrun test labeled. A combined flow preserves all four phases.
 
 1. **Papers consulted** — numbers and the sections relied on.
 2. **Invariants and owners** — each invariant, its enforcement point, and all concurrent writers.

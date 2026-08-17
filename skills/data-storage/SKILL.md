@@ -1,22 +1,22 @@
 ---
 name: data-storage
-description: "Use when implementing or changing data models and storage code: database schema design, identifiers (UUID/ULID/snowflake), time and date handling, money and numeric precision, constraints and referential integrity, indexing, query design and N+1 fixes, soft delete, data lifecycle and retention, immutable records and audit history, file upload/download handling, media processing, search, data versioning, provenance, source-of-truth boundaries, reconciliation, and cleanup jobs. Loads production implementation papers with MUST/SHOULD/AVOID/NEVER rules, failure modes, and verification checklists to read before writing code. For transactions, isolation, and idempotency use transactions-consistency; for schema migration sequencing use migration-evolution; for caching use resilience-flow-control; for whole-system architecture use system-architecture-harness."
+description: "Use when thinking through, reviewing, changing, or verifying data models and storage behavior: schemas, identifiers, time, money, constraints, indexes, queries, deletion, lifecycle, files, media, search, provenance, authority, reconciliation, or cleanup. For concurrency use transactions-consistency; for schema evolution use migration-evolution; for caching use resilience-flow-control."
 ---
 
-# Data & Storage Implementation
+# Think Through Data & Storage
 
 ## Overview
 
-Implementation intelligence for data modeling and storage. Each reference paper captures the correctness work that schema-first drafts miss: precision hazards, constraint-race conditions, index design from real predicates, soft-delete interactions with uniqueness, file-handling abuse, derived-store rebuilds, and retention obligations.
+Production guidance for data modeling and storage. Each reference paper captures the correctness work that schema-first drafts miss: precision hazards, constraint-race conditions, index design from real predicates, soft-delete interactions with uniqueness, file-handling abuse, derived-store rebuilds, and retention obligations.
 
 **Core principle:** Data outlives code. Every column, identifier, file, and derived index is a durable decision with invariants, an owner, and a lifecycle — not a convenient shape for today's feature.
 
-## Implementation Law
+## Domain Law
 
 ```text
-NO DATA IMPLEMENTATION WITHOUT:
+NO DATA OR STORAGE CHANGE WITHOUT:
 1. the primary paper(s) for the data being modeled read in full first;
-2. the paper's "Questions that must be answered before implementation"
+2. the paper's pre-change questions
    answered, or each open point labeled as an assumption;
 3. "Existing-codebase checks" run when changing an existing schema or store;
 4. every applicable MUST mapped to a decision (constraint, index, policy),
@@ -25,7 +25,7 @@ NO DATA IMPLEMENTATION WITHOUT:
 
 ## When to Use
 
-Use this skill when implementing or changing:
+Use this skill when thinking through, reviewing, changing, or verifying:
 
 - tables, documents, relationships, denormalization, and metadata modeling;
 - identifier generation, exposure, and migration (auto-increment, UUIDv4/v7, ULID, snowflake);
@@ -48,6 +48,17 @@ Use this skill when implementing or changing:
 - Cache semantics, invalidation, coordination: use `resilience-flow-control` (037, 131).
 - Replication/sharding topology decisions: `transactions-consistency` (100, 101).
 - Whole-system architecture: use `system-architecture-harness`.
+
+## Select the Operating Mode
+
+| Mode | Use when | Required result |
+|---|---|---|
+| **Think** | The safe decision is not settled | requirements, constraints, invariants, risks, alternatives, decision, and validation path |
+| **Review** | An artifact, repository, diff, or operating state already exists | evidence separated from assumptions, prioritized findings, and blockers |
+| **Change** | Decisions are approved and repository changes are requested | the smallest safe change, compatibility notes, and verification still required |
+| **Verify** | A claim needs proof | tests or measurements run, observed evidence, and residual risks |
+
+If the user names a mode, use it. Otherwise infer the mode from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and preserve the trace between phases. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify. Verify must never turn a planned or unavailable check into evidence.
 
 ## Required Context Loading
 
@@ -75,26 +86,37 @@ Use this skill when implementing or changing:
 
 ## Workflow
 
+Use the domain workflow as shared gates, then branch by the selected mode:
+
+- **Think:** answer the questions and stop with a reasoned decision and validation path; do not edit by default.
+- **Review:** inspect the available artifact or repository and stop with evidence-backed findings; do not claim changes.
+- **Change:** apply only approved decisions, then continue to Verify before claiming completion.
+- **Verify:** run the relevant checks, report observed results, and label every unavailable or unrun check.
+
 1. Identify the entities and stores involved; select primary papers (a money column touches 020 + 022 + 026; a file upload touches 040 + 033 + 026).
 2. Read the primary papers fully, including invariants and failure modes.
 3. Answer each paper's pre-implementation questions; label autonomous assumptions and their impact.
 4. For existing schemas, run the existing-codebase checks: inspect deployed constraints, indexes, isolation settings, and real query shapes rather than trusting repository names.
 5. Convert each MUST/SHOULD/AVOID/NEVER into schema and access decisions with enforcement points (constraints, indexes, policies) and tests.
-6. Implement the smallest safe slice; carry the paper's verification checklist (precision edges, constraint races, restore, purge) into the test plan.
+6. Apply the active mode: stop at a decision in Think; stop at findings in Review; make the smallest approved safe change in Change; run precision, constraint-race, restore, and purge checks in Verify.
 7. Before completion, re-scan the normative lists and stop if any rule lacks a decision, test, or documented exception.
 
-## Boundary Map
+## Companion Skills and Standalone Safety
 
-| If the task also involves | Also use |
-|---|---|
-| Transaction boundaries, isolation, concurrency control | `transactions-consistency` (023, 024, 025) |
-| Migration sequencing and backfills | `migration-evolution` (029, 030, 031) |
-| Caches and derived-store invalidation | `resilience-flow-control` (037, 131) |
-| Search index sync pipelines | `migration-evolution` (130) or `async-messaging` (043) |
-| Classification and deletion of sensitive fields | `security-privacy` (066) |
-| Backup/restore of the new stores | `production-operations` (076, 077) |
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Required** | Concurrent writers or transactional invariants cross the data boundary | `transactions-consistency` | Preserve atomic enforcement requirements and label concurrency depth missing. |
+| **Handoff** | Existing data or schema must change | `migration-evolution` | Do not prescribe destructive or one-shot evolution. |
+| **Recommended** | Sensitive fields, files, retention, or deletion are in scope | `security-privacy` | Preserve minimization and deletion obligations; label policy depth missing. |
+| **Recommended** | Backup, restore, or reconciliation evidence is required | `production-operations` | Do not equate replication or snapshots with recovery. |
+
+If a companion is unavailable, complete only the safe local data decision, name the missing depth, and recommend the exact technical ID or relevant installation group. Never claim unavailable material was read or weaken an integrity, precision, lifecycle, or recovery requirement.
 
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns data decisions; Review returns findings; Change returns the repository-aware change plus pending proof; Verify returns observed integrity and lifecycle evidence with unrun checks labeled. A combined flow preserves all four phases.
 
 1. **Papers consulted** — numbers and the sections relied on.
 2. **Assumptions and unanswered questions** — labeled, with their design impact.

@@ -1,4 +1,4 @@
 interface:
-  display_name: "Implement API & Client Contracts"
-  short_description: "Production rules for APIs, validation, errors, pagination, and webhooks"
-  default_prompt: "Use $api-contracts before implementing or changing endpoints, validation, error models, pagination, versioning, webhooks, or realtime channels."
+  display_name: "Think Through API & Client Contracts"
+  short_description: "API and client contract decisions with safe evolution"
+  default_prompt: "Use $api-contracts in Think, Review, Change, or Verify mode for APIs, webhooks, realtime channels, SDKs, and CLIs."

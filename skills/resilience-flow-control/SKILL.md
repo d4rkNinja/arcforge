@@ -1,20 +1,20 @@
 ---
 name: resilience-flow-control
-description: "Use when implementing or changing resilience and traffic-control code: caching and invalidation, cache stampede and hot keys, rate limiting (fixed/sliding window, token bucket, distributed), quotas and usage limits, distributed cache coordination, external API integrations and provider failure, retry engineering with backoff and jitter, timeout engineering, circuit breakers, bulkheads, graceful degradation, and backpressure/admission control. Loads production implementation papers with MUST/SHOULD/AVOID/NEVER rules, failure modes, and verification checklists to read before writing code. For queue and event delivery semantics use async-messaging; for transaction and locking internals use transactions-consistency; for whole-system overload architecture use system-architecture-harness."
+description: "Use when thinking through, reviewing, changing, or verifying resilience and flow controls: caches, invalidation, rate limits, quotas, external integrations, retries, timeouts, circuit breakers, bulkheads, degradation, backpressure, or admission control. For queue delivery use async-messaging; for transactional effects use transactions-consistency; for whole-system capacity use system-architecture-harness."
 ---
 
-# Resilience & Flow Control Implementation
+# Think Through Resilience & Flow Control
 
 ## Overview
 
-Implementation intelligence for surviving load and dependency failure. Each reference paper captures the mechanics that separate resilient systems from hopeful ones: retry storms, synchronized expiry, thundering herds, timeouts that compose incorrectly, circuit breakers without fallbacks, and rate limits that fail open exactly when they matter.
+Production guidance for surviving load and dependency failure. Each reference paper captures the mechanics that separate resilient systems from hopeful ones: retry storms, synchronized expiry, thundering herds, timeouts that compose incorrectly, circuit breakers without fallbacks, and rate limits that fail open exactly when they matter.
 
 **Core principle:** Every dependency fails, every cache goes stale, and every retry amplifies load. Controls must have explicit semantics (window, scope, fail-open/closed) and the system must stay bounded while capacity is unavailable.
 
-## Implementation Law
+## Domain Law
 
 ```text
-NO RESILIENCE IMPLEMENTATION WITHOUT:
+NO RESILIENCE OR FLOW-CONTROL CHANGE WITHOUT:
 1. the primary paper(s) for the control read in full first;
 2. the failure being defended against named (timeout, overload, staleness,
    provider outage) before choosing a mechanism;
@@ -25,7 +25,7 @@ NO RESILIENCE IMPLEMENTATION WITHOUT:
 
 ## When to Use
 
-Use this skill when implementing or changing:
+Use this skill when thinking through, reviewing, changing, or verifying:
 
 - caches: placement, TTL, eviction, invalidation, warming, negative caching, stampede protection;
 - distributed cache coordination and hot-key handling;
@@ -46,6 +46,17 @@ Use this skill when implementing or changing:
 - Auth throttling policy ownership: `auth-access` (004) defines the goal; this skill supplies the mechanism.
 - Whole-system overload and capacity architecture: use `system-architecture-harness`.
 
+## Select the Operating Mode
+
+| Mode | Use when | Required result |
+|---|---|---|
+| **Think** | The safe decision is not settled | requirements, constraints, invariants, risks, alternatives, decision, and validation path |
+| **Review** | An artifact, repository, diff, or operating state already exists | evidence separated from assumptions, prioritized findings, and blockers |
+| **Change** | Decisions are approved and repository changes are requested | the smallest safe change, compatibility notes, and verification still required |
+| **Verify** | A claim needs proof | tests or measurements run, observed evidence, and residual risks |
+
+If the user names a mode, use it. Otherwise infer the mode from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and preserve the trace between phases. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify. Verify must never turn a planned or unavailable check into evidence.
+
 ## Required Context Loading
 
 | Situation | Papers |
@@ -63,26 +74,37 @@ Use this skill when implementing or changing:
 
 ## Workflow
 
+Use the domain workflow as shared gates, then branch by the selected mode:
+
+- **Think:** answer the questions and stop with a reasoned decision and validation path; do not edit by default.
+- **Review:** inspect the available artifact or repository and stop with evidence-backed findings; do not claim changes.
+- **Change:** apply only approved decisions, then continue to Verify before claiming completion.
+- **Verify:** run the relevant checks, report observed results, and label every unavailable or unrun check.
+
 1. Name the failure being defended against and the user journey it protects; select primary papers (a third-party checkout call touches 051 + 053 + 052 + 054).
 2. Read the primary papers fully, including failure matrices and common bugs.
 3. Answer the paper's pre-implementation questions; label autonomous assumptions and their impact.
 4. For existing controls, run the existing-codebase checks: measure actual call patterns, current limits, and what happens today when the dependency is down.
 5. Convert each MUST/SHOULD/AVOID/NEVER into bounded decisions with explicit semantics (window, scope, thresholds, fail-open/closed) and failure-injection tests.
-6. Implement the smallest safe slice; carry the paper's verification checklist (outage simulation, stampede, synchronized expiry, retry storms) into the test plan.
+6. Apply the active mode: stop at a control decision in Think; stop at findings in Review; make the smallest approved safe change in Change; run outage, stampede, synchronized-expiry, and retry-storm checks in Verify.
 7. Before completion, re-scan the normative lists and stop if any rule lacks a decision, test, or documented exception.
 
-## Boundary Map
+## Companion Skills and Standalone Safety
 
-| If the task also involves | Also use |
-|---|---|
-| Idempotent effects under retry | `transactions-consistency` (036) |
-| Queue depth/lag and worker bounds | `async-messaging` (043, 104 paths) |
-| Capacity model and autoscaling limits | `system-architecture-harness` |
-| Dependency latency budgets | `quality-release` (094, 095) |
-| Rate-limit response codes and headers | `api-contracts` (013, 014) |
-| Dependency health signals and alerts | `production-operations` (059, 139) |
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Required** | Retries can duplicate or ambiguously complete state changes | `transactions-consistency` | Require idempotent effects and status or reconciliation paths. |
+| **Recommended** | Queue depth, worker concurrency, or backlog behavior is central | `async-messaging` | State required bounds and label delivery depth missing. |
+| **Recommended** | Outage, overload, latency, or stampede claims need proof | `quality-release` | Define exact drills and label them unrun. |
+| **Handoff** | Capacity or overload changes whole-system topology | `system-architecture-harness` | Limit the local control decision and identify architecture depth missing. |
+
+If a companion is unavailable, complete only the safe local flow-control decision, name the missing depth, and recommend the exact technical ID or relevant installation group. Never claim unavailable material was read or weaken resource bounds, deadlines, retry budgets, or idempotency requirements.
 
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns control semantics and bounds; Review returns findings; Change returns the repository-aware change plus pending proof; Verify returns observed failure and overload evidence with unrun checks labeled. A combined flow preserves all four phases.
 
 1. **Papers consulted** — numbers and the sections relied on.
 2. **Defense map** — each named failure → mechanism, bounds, and fallback behavior.

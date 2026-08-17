@@ -1,6 +1,15 @@
-# Implement API & Client Contracts (`api-contracts`)
+# Think Through API & Client Contracts (`api-contracts`)
 
 Production expertise for API surfaces and their clients. An API is a compatibility promise: every endpoint, error, cursor, and webhook is a contract with real clients — including old clients you no longer control.
+
+## Modes
+
+- **Think** clarifies requirements, invariants, risks, alternatives, decisions, and validation paths.
+- **Review** inspects an existing artifact, repository, diff, or operating state and returns evidence-backed findings.
+- **Change** applies approved decisions and keeps verification outstanding until proof is gathered.
+- **Verify** reports tests, measurements, operational evidence, and residual risks without inventing missing proof.
+
+If no mode is named, the skill infers one and states it. Combined work proceeds **Think → Review → Change → Verify**.
 
 ## What it covers
 
@@ -21,6 +30,8 @@ Production expertise for API surfaces and their clients. An API is a compatibili
 Adding or changing endpoints, error responses, pagination, versioning, webhooks, or realtime channels — and before any request that says "just return everything in one call."
 
 ## What a run produces
+
+The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
 Contract-complete implementations: bounded responses, allowlisted inputs, stable ordering, versioned changes with compatibility windows, and webhook/realtime semantics that survive duplicates and reconnects. The skill stops work on unbounded queries, leaky errors, or breaking changes without a migration path.
 

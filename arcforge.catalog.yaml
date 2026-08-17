@@ -1,0 +1,269 @@
+catalog_version: "1.0.0"
+technical_id_policy: "Stable installation and activation contract; never derive it from the display name."
+display_name_policy: "User-facing promise projected into primary headings, guides, and optional runtime metadata."
+
+modes:
+  think:
+    purpose: "Clarify requirements, constraints, invariants, risks, alternatives, decisions, and validation paths before a change."
+    completion: "May stop with a decision record and explicit unresolved questions."
+  review:
+    purpose: "Inspect an existing proposal, repository, diff, or operational state and separate evidence from assumptions."
+    completion: "May stop with prioritized findings and blockers; do not claim changes were made."
+  change:
+    purpose: "Turn approved decisions into a repository-aware change sequence while preserving contracts, safety, integrity, and rollback."
+    completion: "Do not claim completion without verify-mode evidence."
+  verify:
+    purpose: "Prove behavior with tests, measurements, operational evidence, and explicit residual-risk reporting."
+    completion: "Do not replace missing evidence with assumptions or planned checks."
+
+companion_types:
+  required: "The applicable requested outcome cannot be completed safely without this companion."
+  recommended: "Materially improves coverage while the current skill retains a safe local fallback."
+  handoff: "Owns a separate decision reached from the current domain."
+  optional-depth: "Adds focused depth when installed and relevant."
+
+standalone_policy:
+  available: "Complete the safe local decision from installed material."
+  missing_companion: "Name the missing depth, preserve every safety requirement, and provide the exact companion technical ID or installation group."
+  prohibited: "Never claim an unavailable companion or reference was loaded, never invent evidence, and never weaken a blocker because companion depth is missing."
+
+installation_groups:
+  production-system-thinking:
+    description: "Whole-system decisions with domain change and verification depth."
+    skills: [system-architecture-harness, auth-access, api-contracts, data-storage, transactions-consistency, async-messaging, resilience-flow-control, security-privacy, production-operations, migration-evolution, quality-release, runtime-delivery]
+  ai-system-thinking:
+    description: "Governed AI-system decisions with surrounding backend and verification depth."
+    skills: [ai-agent-system-architecture, system-architecture-harness, auth-access, api-contracts, data-storage, async-messaging, resilience-flow-control, security-privacy, production-operations, quality-release, runtime-delivery]
+  independent-architecture-review:
+    description: "Independent evidence gate for an existing architecture."
+    skills: [architecture-review-gate]
+  identity-boundary:
+    description: "Identity, request contracts, cryptography, abuse controls, audit, and migration."
+    skills: [auth-access, api-contracts, security-privacy, resilience-flow-control, production-operations, migration-evolution, quality-release]
+  transactional-workflow:
+    description: "Authoritative state, outbox and jobs, retry controls, migration, and release evidence."
+    skills: [transactions-consistency, async-messaging, resilience-flow-control, data-storage, migration-evolution, production-operations, quality-release]
+
+skills:
+  - technical_id: system-architecture-harness
+    display_name: "Think Through Production Systems"
+    domain: "general production-system architecture"
+    routing_description: "Use when thinking through or changing a production software architecture, or when reviewing or verifying architecture work inside the same design flow: greenfield systems, decomposition, migration, scale, reliability, security, data ownership, distributed workflows, clients, platform governance, or rewrites. Use architecture-review-gate for an independent approval gate and ai-agent-system-architecture when model, data, tool, or approval boundaries are central."
+    positive_triggers: [greenfield architecture, system decomposition, service boundaries, workload, invariants, multi-region, offline client, platform governance, rewrite]
+    negative_triggers: [independent approval gate, AI control plane]
+    owner_papers: [84, 85, 86, 87, 88, 89]
+    companions:
+      - {type: handoff, skill: ai-agent-system-architecture, when: "model, retrieval, memory, tool, or approval boundaries are central", transfers: "surrounding system constraints and AI subsystem requirements", missing: "bound the non-AI architecture and identify unresolved AI control obligations"}
+      - {type: handoff, skill: architecture-review-gate, when: "an independent approval verdict is requested", transfers: "the architecture artifact, decision record, and evidence", missing: "do not self-approve; report that independent review remains unavailable"}
+      - {type: recommended, skill: quality-release, when: "architecture claims need release evidence", transfers: "acceptance claims and validation plan", missing: "retain the validation plan and label every unrun check"}
+    install_groups: [ai-system-thinking, production-system-thinking]
+    paths: {skill: skills/system-architecture-harness/SKILL.md, metadata: skills/system-architecture-harness/agents/openai.yaml, guide: docs/skills/system-architecture-harness.md, assets: skills/system-architecture-harness/assets, examples: skills/system-architecture-harness/examples}
+    eval_cases: [greenfield-marketplace, queue-overload, financial-ledger, multi-region-writes, complexity-ledger-pressure, research-evidence-overreach, contextual-decision-matrix, code-runtime-assurance-pressure, offline-client-architecture]
+
+  - technical_id: ai-agent-system-architecture
+    display_name: "Think Through AI & Agent Systems"
+    domain: "AI, LLM, RAG, tool-using, and agent-system architecture"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying an AI or LLM system: RAG, model routing, memory, tool use, autonomous or multi-agent workflows, safety, evaluation, latency, cost, or rollout. Trigger when model, data, policy, tool, or approval boundaries are central. Use system-architecture-harness for surrounding non-AI architecture and architecture-review-gate for an independent approval gate."
+    positive_triggers: [LLM, RAG, model routing, memory, tool use, agent, multi-agent, evaluation, prompt injection, approval]
+    negative_triggers: [non-AI architecture only, independent approval verdict]
+    owner_papers: [140, 141, 142, 143, 144, 145]
+    companions:
+      - {type: handoff, skill: system-architecture-harness, when: "surrounding service, data, client, or regional architecture must be decided", transfers: "AI subsystem requirements and control boundaries", missing: "bound the AI subsystem and identify unresolved surrounding architecture"}
+      - {type: handoff, skill: architecture-review-gate, when: "an independent approval verdict is requested", transfers: "AI design, eval evidence, threat model, and rollout evidence", missing: "do not self-approve; report that independent review remains unavailable"}
+      - {type: required, skill: security-privacy, when: "tools, hostile input, secrets, or sensitive data cross the AI boundary", transfers: "assets, authority, data classes, and threat boundaries", missing: "preserve least privilege and privacy blockers and identify missing control depth"}
+      - {type: recommended, skill: quality-release, when: "candidate behavior needs release evidence", transfers: "task contract and eval claims", missing: "retain the evaluation plan and label trials unrun"}
+    install_groups: [ai-system-thinking]
+    paths: {skill: skills/ai-agent-system-architecture/SKILL.md, metadata: skills/ai-agent-system-architecture/agents/openai.yaml, guide: docs/skills/ai-agent-system-architecture.md, assets: skills/ai-agent-system-architecture/assets, examples: skills/ai-agent-system-architecture/examples}
+    eval_cases: [rag-tenant-isolation, agent-shell-access, agent-loop-budget, model-fallback, multi-agent-value-and-authority, memory-gateway-safety]
+
+  - technical_id: architecture-review-gate
+    display_name: "Review Software Architecture"
+    domain: "independent architecture evidence and approval review"
+    routing_description: "Use when independently reviewing or verifying an architecture specification, RFC, ADR, diagram, migration plan, AI or agent design, production-readiness proposal, architecture metrics, or post-incident structural causes. May frame review criteria or recommend bounded remediation, but does not own greenfield design or repository changes."
+    positive_triggers: [independent review, approval gate, RFC, ADR, due diligence, blocker, evidence challenge, post-incident review]
+    negative_triggers: [greenfield design ownership, direct repository change]
+    owner_papers: []
+    companions:
+      - {type: handoff, skill: system-architecture-harness, when: "a general architecture must be created or revised", transfers: "findings, blockers, and approval conditions", missing: "finish the independent verdict without pretending the redesign was completed"}
+      - {type: handoff, skill: ai-agent-system-architecture, when: "an AI subsystem must be created or revised", transfers: "AI findings, blockers, and approval conditions", missing: "finish the independent verdict and identify missing AI design depth"}
+      - {type: recommended, skill: quality-release, when: "code-level release evidence must be assessed", transfers: "claims and required proof", missing: "classify the evidence gap and do not infer change readiness"}
+    install_groups: [independent-architecture-review]
+    paths: {skill: skills/architecture-review-gate/SKILL.md, metadata: skills/architecture-review-gate/agents/openai.yaml, guide: docs/skills/architecture-review-gate.md, assets: skills/architecture-review-gate/assets, examples: skills/architecture-review-gate/examples}
+    eval_cases: [backup-claim, gateway-authorization, unsafe-dual-write, completion-pressure, dynamic-review-rubric, rubric-manipulation-pressure, architecture-metric-vector, post-incident-causal-review]
+
+  - technical_id: auth-access
+    display_name: "Think Through Identity & Access"
+    domain: "identity, authentication, authorization, and tenancy"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying identity and access behavior: login, signup, recovery, sessions, tokens, OAuth/OIDC, MFA, passkeys, API keys, service identity, permissions, account lifecycle, tenant isolation, or privileged administration. For whole-system architecture use system-architecture-harness; for API contracts use api-contracts; for secrets and cryptography use security-privacy."
+    positive_triggers: [login, password reset, session, token, OAuth, MFA, passkey, API key, RBAC, tenancy, impersonation]
+    negative_triggers: [general API contract, cryptographic primitive selection, whole-system architecture]
+    owner_papers: [3, 4, 5, 6, 7, 8, 9, 10, 112, 113, 114]
+    companions:
+      - {type: required, skill: security-privacy, when: "credential hashing, token randomness, secret storage, or cryptography is in scope", transfers: "credential and token lifecycle requirements", missing: "do not choose primitives; preserve entropy and secret-handling blockers"}
+      - {type: recommended, skill: api-contracts, when: "public request, validation, or error behavior changes", transfers: "actor, resource, action, and enumeration requirements", missing: "keep responses bounded and non-enumerating; label contract depth missing"}
+      - {type: recommended, skill: resilience-flow-control, when: "brute-force pacing, lockout, or abuse limits are required", transfers: "attack dimension and fail-open or fail-closed policy", missing: "state the required bounds without inventing limiter mechanics"}
+      - {type: optional-depth, skill: production-operations, when: "privileged audit, alerting, or incident evidence needs focused depth", transfers: "actor, action, target, outcome, and protected journey", missing: "state the required evidence without inventing operational proof"}
+      - {type: handoff, skill: migration-evolution, when: "credential, session, permission, or tenant data must evolve", transfers: "identity invariants and compatibility requirements", missing: "do not prescribe a destructive migration"}
+    install_groups: [identity-boundary, ai-system-thinking, production-system-thinking]
+    paths: {skill: skills/auth-access/SKILL.md, metadata: skills/auth-access/agents/openai.yaml, guide: docs/skills/auth-access.md, examples: skills/auth-access/examples}
+    eval_cases: [impl-auth-password-reset, mode-think-identity-access]
+
+  - technical_id: api-contracts
+    display_name: "Think Through API & Client Contracts"
+    domain: "HTTP, RPC, GraphQL, webhook, realtime, SDK, and CLI contracts"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying APIs and client contracts: endpoint design, validation, errors, pagination, filtering, bulk behavior, versioning, serialization, webhooks, realtime channels, SDKs, or CLIs. For whole-system architecture use system-architecture-harness; for identity and permissions use auth-access; for event delivery use async-messaging; for compatibility rollout use migration-evolution."
+    positive_triggers: [endpoint, request validation, error response, pagination, filtering, versioning, webhook, WebSocket, SSE, SDK, CLI]
+    negative_triggers: [queue internals, schema migration sequence, authentication policy ownership]
+    owner_papers: [11, 12, 13, 14, 15, 16, 17, 49, 50, 110, 111, 115, 116]
+    companions:
+      - {type: required, skill: auth-access, when: "authentication or object, field, action, or tenant authorization is in scope", transfers: "request surface and resource semantics", missing: "preserve authorization requirements and identify missing access-policy depth"}
+      - {type: recommended, skill: data-storage, when: "filters, sorting, pagination, or serialization affect query or precision behavior", transfers: "query shapes and contract bounds", missing: "keep fields allowlisted and responses bounded; label storage depth missing"}
+      - {type: handoff, skill: async-messaging, when: "event delivery or webhook worker internals are in scope", transfers: "external contract and delivery requirements", missing: "define the surface contract and identify delivery internals as incomplete"}
+      - {type: handoff, skill: migration-evolution, when: "old clients or consumers must coexist with a contract change", transfers: "compatibility matrix and deprecation requirements", missing: "do not prescribe a breaking one-step rollout"}
+    install_groups: [identity-boundary, ai-system-thinking, production-system-thinking]
+    paths: {skill: skills/api-contracts/SKILL.md, metadata: skills/api-contracts/agents/openai.yaml, guide: docs/skills/api-contracts.md, examples: skills/api-contracts/examples}
+    eval_cases: [impl-api-unbounded-list, mode-review-api-contracts]
+
+  - technical_id: data-storage
+    display_name: "Think Through Data & Storage"
+    domain: "data modeling, identifiers, precision, indexes, files, search, and lifecycle"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying data models and storage behavior: schemas, identifiers, time, money, constraints, indexes, queries, deletion, lifecycle, files, media, search, provenance, authority, reconciliation, or cleanup. For concurrency use transactions-consistency; for schema evolution use migration-evolution; for caching use resilience-flow-control."
+    positive_triggers: [schema, identifier, timestamp, money, constraint, index, query, soft delete, file, search, retention, reconciliation]
+    negative_triggers: [transaction isolation, migration sequencing, cache mechanics, whole-system architecture]
+    owner_papers: [18, 19, 20, 21, 22, 26, 27, 28, 32, 33, 34, 40, 41, 42, 69, 122, 123, 124, 125]
+    companions:
+      - {type: required, skill: transactions-consistency, when: "concurrent writers or transactional invariants cross the data boundary", transfers: "invariants, authority, writers, and storage constraints", missing: "preserve atomic enforcement requirements and label concurrency depth missing"}
+      - {type: handoff, skill: migration-evolution, when: "existing data or schema must change", transfers: "target schema, invariants, lifecycle, and query contracts", missing: "do not prescribe destructive or one-shot evolution"}
+      - {type: recommended, skill: security-privacy, when: "sensitive fields, files, retention, or deletion are in scope", transfers: "data classes and lifecycle", missing: "preserve minimization and deletion obligations and label policy depth missing"}
+      - {type: recommended, skill: production-operations, when: "backup, restore, or reconciliation evidence is required", transfers: "stores, ownership, and recovery claims", missing: "do not equate replication or snapshots with recovery"}
+    install_groups: [ai-system-thinking, production-system-thinking, transactional-workflow]
+    paths: {skill: skills/data-storage/SKILL.md, metadata: skills/data-storage/agents/openai.yaml, guide: docs/skills/data-storage.md, examples: skills/data-storage/examples}
+    eval_cases: [impl-data-money-soft-delete, impl-boundary-architecture-request]
+
+  - technical_id: transactions-consistency
+    display_name: "Think Through Transactions & Consistency"
+    domain: "transactions, concurrency, idempotency, distributed coordination, and ordering"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying transactional or concurrent behavior: isolation, anomalies, locking, state machines, idempotency, sagas, consistency, replication, sharding, consensus, distributed locks, fencing, or ordering. For jobs, queues, and outbox delivery use async-messaging; for retries and timeouts use resilience-flow-control."
+    positive_triggers: [transaction, lost update, write skew, lock, state machine, idempotency, saga, consistency, replication, sharding, fencing]
+    negative_triggers: [queue delivery mechanics, retry pacing, schema design, whole-system boundaries]
+    owner_papers: [23, 24, 25, 35, 36, 48, 98, 99, 100, 101, 102, 103, 121]
+    companions:
+      - {type: required, skill: async-messaging, when: "post-commit events, outbox or inbox, jobs, or email are in scope", transfers: "commit point, idempotency scope, and effect semantics", missing: "produce the safe local transaction decision and mark delivery depth incomplete"}
+      - {type: required, skill: resilience-flow-control, when: "remote retries, timeouts, breakers, or overload are in scope", transfers: "ambiguous outcomes and idempotency requirements", missing: "require bounded retries and deadlines without inventing control parameters"}
+      - {type: recommended, skill: data-storage, when: "constraints or indexes backstop the invariant", transfers: "invariant and conditional-write requirements", missing: "identify the required authoritative backstop"}
+      - {type: recommended, skill: quality-release, when: "race, duplicate, or ambiguous-outcome claims need proof", transfers: "interleavings and expected outcomes", missing: "state exact tests and label them unrun"}
+    install_groups: [transactional-workflow, production-system-thinking]
+    paths: {skill: skills/transactions-consistency/SKILL.md, metadata: skills/transactions-consistency/agents/openai.yaml, guide: docs/skills/transactions-consistency.md, examples: skills/transactions-consistency/examples}
+    eval_cases: [impl-transactions-dual-write, impl-multi-domain-checkout, mode-combined-transactions-flow, missing-companion-standalone-safety]
+
+  - technical_id: async-messaging
+    display_name: "Think Through Async Work & Messaging"
+    domain: "background work, queues, events, outbox, batch, email, and notifications"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying asynchronous work: jobs, workers, schedules, queues, events, outbox or inbox, batch processing, deduplication, email, or notifications. For transaction invariants use transactions-consistency; for retry and overload controls use resilience-flow-control; for event evolution use migration-evolution."
+    positive_triggers: [background job, worker, cron, queue, event, outbox, inbox, batch, deduplication, email, notification]
+    negative_triggers: [transaction isolation, retry pacing only, public webhook contract, whole-system architecture]
+    owner_papers: [43, 44, 45, 46, 47, 118, 119, 120, 128, 129]
+    companions:
+      - {type: required, skill: transactions-consistency, when: "work or events derive from an authoritative commit", transfers: "delivery effects, commit point, and deduplication scope", missing: "preserve no-dual-write and idempotency requirements"}
+      - {type: required, skill: resilience-flow-control, when: "retry, timeout, backpressure, or dependency failure policy is in scope", transfers: "delivery semantics and backlog model", missing: "require finite attempts and bounded load; label control depth missing"}
+      - {type: handoff, skill: migration-evolution, when: "event schemas or consumers evolve", transfers: "event contract, retention, replay, and consumer inventory", missing: "do not prescribe a breaking one-step rollout"}
+      - {type: recommended, skill: production-operations, when: "lag, depth, poison, or provider failures need operational evidence", transfers: "queue semantics and user journey", missing: "state required signals and label operational proof missing"}
+    install_groups: [transactional-workflow, ai-system-thinking, production-system-thinking]
+    paths: {skill: skills/async-messaging/SKILL.md, metadata: skills/async-messaging/agents/openai.yaml, guide: docs/skills/async-messaging.md, examples: skills/async-messaging/examples}
+    eval_cases: [impl-async-retry-forever]
+
+  - technical_id: resilience-flow-control
+    display_name: "Think Through Resilience & Flow Control"
+    domain: "caching, rate limits, quotas, retries, timeouts, breakers, and overload"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying resilience and flow controls: caches, invalidation, rate limits, quotas, external integrations, retries, timeouts, circuit breakers, bulkheads, degradation, backpressure, or admission control. For queue delivery use async-messaging; for transactional effects use transactions-consistency; for whole-system capacity use system-architecture-harness."
+    positive_triggers: [cache, invalidation, stampede, rate limit, quota, retry, timeout, circuit breaker, degradation, backpressure]
+    negative_triggers: [queue delivery semantics, transaction locking, whole-system capacity architecture]
+    owner_papers: [37, 38, 39, 51, 52, 53, 54, 55, 104, 131]
+    companions:
+      - {type: required, skill: transactions-consistency, when: "retries can duplicate or ambiguously complete state changes", transfers: "retry scope and remote outcome semantics", missing: "require idempotent effects and status or reconciliation paths"}
+      - {type: recommended, skill: async-messaging, when: "queue depth, worker concurrency, or backlog behavior is central", transfers: "bounds and overload policy", missing: "state required bounds and label delivery depth missing"}
+      - {type: recommended, skill: quality-release, when: "outage, overload, latency, or stampede claims need proof", transfers: "failure model and thresholds", missing: "define exact drills and label them unrun"}
+      - {type: handoff, skill: system-architecture-harness, when: "capacity or overload changes whole-system topology", transfers: "measured failure and bottleneck model", missing: "limit the local control decision and identify architecture depth missing"}
+    install_groups: [transactional-workflow, identity-boundary, ai-system-thinking, production-system-thinking]
+    paths: {skill: skills/resilience-flow-control/SKILL.md, metadata: skills/resilience-flow-control/agents/openai.yaml, guide: docs/skills/resilience-flow-control.md, examples: skills/resilience-flow-control/examples}
+    eval_cases: [impl-cache-forever]
+
+  - technical_id: security-privacy
+    display_name: "Think Through Security & Privacy"
+    domain: "secrets, cryptography, TLS, sensitive data, abuse, flags, and randomness"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying security and privacy controls: secrets, encryption, TLS or PKI, cryptography, hashing, sensitive-data lifecycle, redaction, abuse defense, feature flags, temporary data, or secure randomness. For identity flows use auth-access; for public contract attacks use api-contracts; for whole-system threats use system-architecture-harness."
+    positive_triggers: [secret, encryption, TLS, PKI, cryptography, hashing, sensitive data, redaction, abuse, feature flag, randomness]
+    negative_triggers: [login flow ownership, request contract ownership, whole-system threat model]
+    owner_papers: [61, 62, 63, 64, 65, 66, 67, 68, 126, 127]
+    companions:
+      - {type: handoff, skill: auth-access, when: "login, session, OAuth, MFA, API key, or permission flow is central", transfers: "control and data-lifecycle requirements", missing: "limit the answer to protective controls and identify flow ownership missing"}
+      - {type: recommended, skill: api-contracts, when: "validation, error leakage, or public security headers change", transfers: "attack and disclosure requirements", missing: "preserve validation and non-disclosure obligations"}
+      - {type: recommended, skill: resilience-flow-control, when: "abuse defense needs throttling mechanics", transfers: "attack dimensions and fail policy", missing: "state required multi-dimensional limits without inventing mechanics"}
+      - {type: recommended, skill: production-operations, when: "audit, alerting, rotation, or deletion evidence is required", transfers: "sensitive fields, actions, and control lifecycle", missing: "state required evidence and label operational depth missing"}
+    install_groups: [identity-boundary, ai-system-thinking, production-system-thinking]
+    paths: {skill: skills/security-privacy/SKILL.md, metadata: skills/security-privacy/agents/openai.yaml, guide: docs/skills/security-privacy.md, examples: skills/security-privacy/examples}
+    eval_cases: [impl-security-log-secrets]
+
+  - technical_id: production-operations
+    display_name: "Think Through Production Operations"
+    domain: "observability, runbooks, incidents, import/export, backup, restore, DR, and regions"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying production operations: logs, metrics, tracing, health, audit, async observability, runbooks, incidents, import or export, backup, restore, disaster recovery, high availability, multi-region, or residency. For rollout sequencing use migration-evolution; for independent review use architecture-review-gate."
+    positive_triggers: [logging, metrics, tracing, health check, audit, runbook, incident, backup, restore, disaster recovery, multi-region, residency]
+    negative_triggers: [deployment sequencing, sensitive-data policy ownership, whole-system topology decision]
+    owner_papers: [56, 57, 58, 59, 60, 74, 75, 76, 77, 78, 97, 132, 133, 137, 138, 139]
+    companions:
+      - {type: handoff, skill: migration-evolution, when: "rollout order, compatibility, or data transition is central", transfers: "signals, recovery targets, and operational gates", missing: "do not prescribe unsafe rollout ordering"}
+      - {type: required, skill: security-privacy, when: "telemetry, export, audit, or recovery data contains sensitive material", transfers: "emission and retention surfaces", missing: "preserve redaction, access, and deletion obligations"}
+      - {type: recommended, skill: quality-release, when: "load, failure, restore, or failover claims need proof", transfers: "operational claims and targets", missing: "state exact drills and label them unrun"}
+      - {type: handoff, skill: system-architecture-harness, when: "availability or region choices change system topology", transfers: "observed constraints, targets, and recovery evidence", missing: "bound the operational design and identify architecture depth missing"}
+    install_groups: [transactional-workflow, identity-boundary, ai-system-thinking, production-system-thinking]
+    paths: {skill: skills/production-operations/SKILL.md, metadata: skills/production-operations/agents/openai.yaml, guide: docs/skills/production-operations.md, examples: skills/production-operations/examples}
+    eval_cases: [impl-ops-backup-equals-dr]
+
+  - technical_id: migration-evolution
+    display_name: "Think Through Migrations & Evolution"
+    domain: "schema, data, contract, feature, search, and legacy evolution"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying data and contract evolution: schema migrations, expand-and-contract, resumable backfills, API or event compatibility, synchronization, CDC, reindexing, traffic cutover, or legacy integration. For outbox and inbox delivery use async-messaging; for transaction invariants use transactions-consistency; for deployment mechanics use runtime-delivery."
+    positive_triggers: [schema migration, expand and contract, backfill, compatibility, data synchronization, CDC, reindex, cutover, strangler]
+    negative_triggers: [new contract design, CI pipeline tooling, whole-system rewrite decision]
+    owner_papers: [29, 30, 31, 70, 71, 72, 73, 130, 134, 135, 136]
+    companions:
+      - {type: required, skill: transactions-consistency, when: "transition writes, precedence, or concurrent backfills affect authoritative invariants", transfers: "current, target, and intermediate write semantics", missing: "preserve atomicity and reconciliation requirements"}
+      - {type: required, skill: async-messaging, when: "transactional outbox or inbox paper 047, retained events, or relay migration is in scope", transfers: "commit point, event contract, replay, and consumer inventory", missing: "identify delivery depth as incomplete; do not misroute paper 047"}
+      - {type: recommended, skill: runtime-delivery, when: "deployment ordering, health gates, or pipeline mechanics are in scope", transfers: "version matrix and migration gates", missing: "state required order and label delivery tooling depth missing"}
+      - {type: recommended, skill: quality-release, when: "coexistence, resumability, or rollback claims need proof", transfers: "state plan and acceptance gates", missing: "state exact tests and label them unrun"}
+    install_groups: [transactional-workflow, identity-boundary, production-system-thinking]
+    paths: {skill: skills/migration-evolution/SKILL.md, metadata: skills/migration-evolution/agents/openai.yaml, guide: docs/skills/migration-evolution.md, examples: skills/migration-evolution/examples}
+    eval_cases: [impl-migration-instant-rename, mode-change-migration-evolution]
+
+  - technical_id: quality-release
+    display_name: "Think Through Quality & Release Readiness"
+    domain: "test strategy, failure and load evidence, performance, resources, and release readiness"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying quality and release readiness: test strategy, test data, concurrency and failure testing, load and performance evidence, scalability, resource management, compression, or cross-cutting release checks. For independent architecture approval use architecture-review-gate; for SLO design use system-architecture-harness; for runbooks use production-operations."
+    positive_triggers: [test strategy, test data, concurrency test, failure test, load test, performance, scalability, resource leak, release readiness]
+    negative_triggers: [independent architecture approval, SLO ownership, incident process]
+    owner_papers: [90, 91, 92, 93, 94, 95, 96, 109, 117, 146]
+    companions:
+      - {type: recommended, skill: transactions-consistency, when: "transaction or concurrency invariants must be forced", transfers: "invariant, writers, interleavings, and expected losers", missing: "state the required interleavings and label domain depth missing"}
+      - {type: recommended, skill: async-messaging, when: "queue, job, or event failure paths need proof", transfers: "delivery and replay semantics", missing: "state required crash and redelivery tests"}
+      - {type: recommended, skill: production-operations, when: "restore, failover, alert, or runbook claims need evidence", transfers: "targets and operational proof", missing: "mark operational evidence unrun"}
+      - {type: handoff, skill: architecture-review-gate, when: "an independent architecture approval verdict is requested", transfers: "verified and missing change evidence", missing: "return the readiness evidence without self-approving architecture"}
+    install_groups: [transactional-workflow, identity-boundary, ai-system-thinking, production-system-thinking]
+    paths: {skill: skills/quality-release/SKILL.md, metadata: skills/quality-release/agents/openai.yaml, guide: docs/skills/quality-release.md, examples: skills/quality-release/examples}
+    eval_cases: [impl-quality-happy-path, mode-verify-quality-release]
+
+  - technical_id: runtime-delivery
+    display_name: "Think Through Runtime & Delivery"
+    domain: "runtime foundations, configuration, connections, networking, shutdown, deployment, and CI/CD"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying runtime and delivery foundations: project structure, bootstrap, configuration, connection pools, networking, discovery, service communication, graceful startup or shutdown, deployment gates, CI/CD, migration ordering, or infrastructure configuration. For schema evolution use migration-evolution; for telemetry use production-operations."
+    positive_triggers: [bootstrap, configuration, connection pool, networking, load balancing, service discovery, graceful shutdown, deployment, CI/CD, infrastructure]
+    negative_triggers: [schema migration semantics, telemetry ownership, architecture style decision, retry policy ownership]
+    owner_papers: [1, 2, 79, 80, 81, 82, 83, 105, 106, 107, 108]
+    companions:
+      - {type: required, skill: migration-evolution, when: "deployment includes schema, data, or contract evolution", transfers: "artifact, version matrix, and deploy sequence", missing: "do not invent migration semantics or allow incompatible ordering"}
+      - {type: recommended, skill: production-operations, when: "health, readiness, deployment, or shutdown behavior needs signals", transfers: "failure windows and gates", missing: "state required signals and label operational depth missing"}
+      - {type: required, skill: security-privacy, when: "configuration carries secrets or service identity", transfers: "configuration and credential lifecycle", missing: "keep secrets outside general config and identify missing rotation depth"}
+      - {type: recommended, skill: quality-release, when: "boot, shutdown, rollback, or pipeline claims need proof", transfers: "failure windows and acceptance criteria", missing: "state exact drills and label them unrun"}
+    install_groups: [ai-system-thinking, production-system-thinking]
+    paths: {skill: skills/runtime-delivery/SKILL.md, metadata: skills/runtime-delivery/agents/openai.yaml, guide: docs/skills/runtime-delivery.md, examples: skills/runtime-delivery/examples}
+    eval_cases: [impl-runtime-unvalidated-config]

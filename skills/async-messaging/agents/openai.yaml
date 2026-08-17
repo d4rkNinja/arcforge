@@ -1,4 +1,4 @@
 interface:
-  display_name: "Implement Async Jobs & Messaging"
-  short_description: "Production rules for jobs, queues, events, outbox, and notifications"
-  default_prompt: "Use $async-messaging before implementing background jobs, scheduled work, queues, events, outbox/inbox, batch pipelines, email, or notifications."
+  display_name: "Think Through Async Work & Messaging"
+  short_description: "Bounded jobs, queues, events, email, and notifications"
+  default_prompt: "Use $async-messaging in Think, Review, Change, or Verify mode for jobs, queues, events, outbox or inbox, email, and notifications."

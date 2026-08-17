@@ -1,4 +1,4 @@
 interface:
-  display_name: "Implement Security & Privacy"
-  short_description: "Production rules for secrets, crypto, TLS, sensitive data, and abuse control"
-  default_prompt: "Use $security-privacy before handling secrets, encryption, TLS, sensitive-data classification and deletion, log redaction, abuse protection, or token randomness."
+  display_name: "Think Through Security & Privacy"
+  short_description: "Secrets, crypto, privacy, and abuse-control decisions"
+  default_prompt: "Use $security-privacy in Think, Review, Change, or Verify mode for secrets, cryptography, privacy, redaction, and abuse controls."

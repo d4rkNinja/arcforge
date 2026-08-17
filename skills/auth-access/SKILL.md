@@ -1,22 +1,22 @@
 ---
 name: auth-access
-description: "Use when implementing or changing identity, authentication, or authorization code: login, signup, password reset, sessions, cookies, JWT and opaque tokens, refresh-token rotation, OAuth/OIDC social login, MFA, passkeys, API keys, service-to-service auth, RBAC/ABAC/ReBAC permissions, account lifecycle, multi-tenant isolation, or internal admin operations. Loads production implementation papers with MUST/SHOULD/AVOID/NEVER rules, failure modes, and verification checklists to read before writing code. For whole-system architecture design use system-architecture-harness; for AI/agent systems use ai-agent-system-architecture; for API error and versioning contracts use api-contracts; for secrets, cryptography, and token randomness use security-privacy."
+description: "Use when thinking through, reviewing, changing, or verifying identity and access behavior: login, signup, recovery, sessions, tokens, OAuth/OIDC, MFA, passkeys, API keys, service identity, permissions, account lifecycle, tenant isolation, or privileged administration. For whole-system architecture use system-architecture-harness; for API contracts use api-contracts; for secrets and cryptography use security-privacy."
 ---
 
-# Auth & Access Implementation
+# Think Through Identity & Access
 
 ## Overview
 
-Implementation intelligence for identity, authentication, authorization, and tenancy. Each reference paper is a production checklist of the correctness, security, and lifecycle work that a first-draft implementation misses: token rotation and reuse detection, session fixation, account enumeration, OAuth linking edge cases, permission inheritance, tenant leakage, and admin audit paths.
+Production guidance for identity, authentication, authorization, and tenancy. Each reference paper captures the correctness, security, and lifecycle work that first drafts miss: token rotation and reuse detection, session fixation, account enumeration, OAuth linking edge cases, permission inheritance, tenant leakage, and admin audit paths.
 
 **Core principle:** Authentication and authorization are invariant-enforcement systems, not login forms. Every identity, credential, session, and permission decision must trace to an enforceable rule at the authoritative data boundary.
 
-## Implementation Law
+## Domain Law
 
 ```text
-NO AUTH IMPLEMENTATION WITHOUT:
+NO AUTH OR ACCESS CHANGE WITHOUT:
 1. the primary paper(s) for the feature read in full first;
-2. the paper's "Questions that must be answered before implementation"
+2. the paper's pre-change questions
    answered, or each open point labeled as an assumption;
 3. "Existing-codebase checks" run when changing an existing system;
 4. every applicable MUST mapped to a decision, a test, or a documented
@@ -25,7 +25,7 @@ NO AUTH IMPLEMENTATION WITHOUT:
 
 ## When to Use
 
-Use this skill when implementing or changing:
+Use this skill when thinking through, reviewing, changing, or verifying:
 
 - email/password, phone, passwordless, magic-link, or OTP login;
 - password reset, change, verification, lockout, and account recovery;
@@ -47,6 +47,17 @@ Use this skill when implementing or changing:
 - Secrets storage, cryptography primitives, TLS, token randomness: use `security-privacy` (papers 063, 064, 127).
 - Rate limiting and brute-force pacing mechanics: use `resilience-flow-control` (paper 038).
 
+## Select the Operating Mode
+
+| Mode | Use when | Required result |
+|---|---|---|
+| **Think** | The safe decision is not settled | requirements, constraints, invariants, risks, alternatives, decision, and validation path |
+| **Review** | An artifact, repository, diff, or operating state already exists | evidence separated from assumptions, prioritized findings, and blockers |
+| **Change** | Decisions are approved and repository changes are requested | the smallest safe change, compatibility notes, and verification still required |
+| **Verify** | A claim needs proof | tests or measurements run, observed evidence, and residual risks |
+
+If the user names a mode, use it. Otherwise infer the mode from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and preserve the trace between phases. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify. Verify must never turn a planned or unavailable check into evidence.
+
 ## Required Context Loading
 
 | Situation | Papers |
@@ -65,26 +76,38 @@ Use this skill when implementing or changing:
 
 ## Workflow
 
+Use the domain workflow as shared gates, then branch by the selected mode:
+
+- **Think:** answer the questions and stop with a reasoned decision and validation path; do not edit by default.
+- **Review:** inspect the available artifact or repository and stop with evidence-backed findings; do not claim changes.
+- **Change:** apply only approved decisions, then continue to Verify before claiming completion.
+- **Verify:** run the relevant checks, report observed results, and label every unavailable or unrun check.
+
 1. Identify the feature and select the primary paper from the table; load papers for every touched boundary (a login change usually touches 004 + 007 + 127 mechanics).
 2. Read the primary paper fully, including its normative requirements and failure modes.
-3. Answer the paper's "Questions that must be answered before implementation." When working autonomously, choose conservative assumptions, label them, and show how each answer changes the implementation.
+3. Answer the paper's "Questions that must be answered before implementation." When working autonomously, choose conservative assumptions, label them, and show how each answer changes the decision or code.
 4. For existing code, run the paper's "Existing-codebase checks": map every entry point (APIs, jobs, admin tools, tests), trace identity/tenant propagation, and find bypass paths before editing.
-5. Convert each MUST/SHOULD/AVOID/NEVER into an implementation decision with an enforcement point (constraint, middleware, policy check, or test), plus migration and rollout notes for existing users.
-6. Implement the smallest safe slice; carry the paper's "Testing and verification requirements" into the test plan.
+5. Convert each MUST/SHOULD/AVOID/NEVER into a domain decision with an enforcement point (constraint, middleware, policy check, or test), plus migration and rollout notes for existing users.
+6. Apply the active mode: stop at a decision in Think; stop at findings in Review; make the smallest approved safe change in Change; run the paper's testing and verification requirements in Verify.
 7. Before completion, re-scan the normative lists and stop if any rule lacks a decision, test, or documented exception.
 
-## Boundary Map
+## Companion Skills and Standalone Safety
 
-| If the task also involves | Also use |
-|---|---|
-| Request middleware, validation, error responses | `api-contracts` (011, 012, 013) |
-| Token/password hashing, secret storage, CSPRNG use | `security-privacy` (063, 064, 127) |
-| Brute-force pacing, lockout windows, rate limits | `resilience-flow-control` (038) |
-| Login audit trails and alerting | `production-operations` (060, 139) |
-| Session/cache storage semantics | `data-storage` (021) or `resilience-flow-control` (037) |
-| Password/credential schema migrations | `migration-evolution` (029, 030) |
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Required** | Credential hashing, token randomness, secret storage, or cryptography | `security-privacy` | Do not choose primitives; preserve entropy and secret-handling blockers. |
+| **Recommended** | Public request, validation, or error behavior changes | `api-contracts` | Keep responses bounded and non-enumerating; label contract depth missing. |
+| **Recommended** | Brute-force pacing, lockout, or abuse limits | `resilience-flow-control` | State the required bounds without inventing limiter mechanics. |
+| **Optional depth** | Privileged audit, alerting, or incident evidence needs focused depth | `production-operations` | State the required evidence without inventing operational proof. |
+| **Handoff** | Credential, session, permission, or tenant data must evolve | `migration-evolution` | Do not prescribe a destructive migration. |
+
+If a companion is unavailable, complete only the safe local identity decision, name the missing depth, and recommend the exact technical ID or `identity-boundary` installation group. Never claim that unavailable companion material was read or weaken a security blocker.
 
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change returns the applied or proposed change plus pending proof; Verify returns observed evidence and labels every unrun check. A combined flow preserves all four phases.
 
 1. **Papers consulted** — numbers and the sections relied on.
 2. **Assumptions and unanswered questions** — labeled, with their design impact.

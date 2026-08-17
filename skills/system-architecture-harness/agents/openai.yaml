@@ -1,4 +1,4 @@
 interface:
-  display_name: "Design Production Systems"
-  short_description: "Evidence-backed architecture for production systems"
-  default_prompt: "Use $system-architecture-harness to design or change a production system with explicit requirements, trade-offs, and validation."
+  display_name: "Think Through Production Systems"
+  short_description: "Evidence-backed decisions for production systems"
+  default_prompt: "Use $system-architecture-harness in Think, Review, Change, or Verify mode for production-system architecture work."

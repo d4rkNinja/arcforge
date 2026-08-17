@@ -1,4 +1,4 @@
 interface:
-  display_name: "Verify Quality & Release Readiness"
-  short_description: "Production rules for testing, load, failure drills, and the release checklist"
-  default_prompt: "Use $quality-release before claiming a backend change is done: test strategy, concurrency and failure tests, load targets, and the cross-cutting release checklist."
+  display_name: "Think Through Quality & Release Readiness"
+  short_description: "Evidence-based quality and release-readiness decisions"
+  default_prompt: "Use $quality-release in Think, Review, Change, or Verify mode for test strategy, failure and load evidence, and release readiness."

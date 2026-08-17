@@ -1,20 +1,20 @@
 ---
 name: security-privacy
-description: "Use when implementing or changing security and privacy controls: secrets management and rotation, encryption at rest and in transit, TLS/PKI configuration and certificate rotation, cryptography primitive selection, password/token hashing, sensitive-data classification and retention, PII minimization and deletion, log redaction, abuse and fraud protection, brute-force and enumeration defense, feature flag security, temporary/expiring data, and secure randomness for tokens and IDs. Loads production implementation papers with MUST/SHOULD/AVOID/NEVER rules, failure modes, and verification checklists to read before writing code. For authentication flows and permissions use auth-access; for API-surface attacks (injection, BOLA, mass assignment) use api-contracts; for whole-system threat modeling use system-architecture-harness."
+description: "Use when thinking through, reviewing, changing, or verifying security and privacy controls: secrets, encryption, TLS or PKI, cryptography, hashing, sensitive-data lifecycle, redaction, abuse defense, feature flags, temporary data, or secure randomness. For identity flows use auth-access; for public contract attacks use api-contracts; for whole-system threats use system-architecture-harness."
 ---
 
-# Security & Privacy Implementation
+# Think Through Security & Privacy
 
 ## Overview
 
-Implementation intelligence for protective controls. Each reference paper captures the failures that audits find late: secrets in config and logs, home-grown crypto, disabled certificate verification, PII without retention or deletion paths, and abuse protections that rate-limit the wrong dimension.
+Production guidance for protective controls. Each reference paper captures the failures that audits find late: secrets in config and logs, home-grown crypto, disabled certificate verification, PII without retention or deletion paths, and abuse protections that rate-limit the wrong dimension.
 
 **Core principle:** Controls attach to data and actions, not to layers. Every secret, sensitive field, and privileged action has a lifecycle — generation, use, rotation, redaction, deletion — that must be enforced somewhere concrete.
 
-## Implementation Law
+## Domain Law
 
 ```text
-NO SECURITY IMPLEMENTATION WITHOUT:
+NO SECURITY OR PRIVACY CHANGE WITHOUT:
 1. the primary paper(s) for the control read in full first;
 2. the asset, actor, and trust boundary named before choosing a control;
 3. "Existing-codebase checks" run when changing existing protections;
@@ -24,7 +24,7 @@ NO SECURITY IMPLEMENTATION WITHOUT:
 
 ## When to Use
 
-Use this skill when implementing or changing:
+Use this skill when thinking through, reviewing, changing, or verifying:
 
 - secrets: storage, injection, rotation, scoping, and audit;
 - encryption at rest/in transit and key management;
@@ -42,9 +42,20 @@ Use this skill when implementing or changing:
 
 - Login/session/OAuth/permission flows: use `auth-access`.
 - API-surface attack classes (injection, object-level authorization, mass assignment): use `api-contracts` (062 pairs here).
-- Rate-limit mechanism implementation: use `resilience-flow-control` (038).
+- Rate-limit mechanics: use `resilience-flow-control` (038).
 - Whole-system threat models and zero-trust architecture: use `system-architecture-harness`.
 - Untrusted code execution sandboxes for AI: use `ai-agent-system-architecture`.
+
+## Select the Operating Mode
+
+| Mode | Use when | Required result |
+|---|---|---|
+| **Think** | The safe decision is not settled | requirements, constraints, invariants, risks, alternatives, decision, and validation path |
+| **Review** | An artifact, repository, diff, or operating state already exists | evidence separated from assumptions, prioritized findings, and blockers |
+| **Change** | Decisions are approved and repository changes are requested | the smallest safe change, compatibility notes, and verification still required |
+| **Verify** | A claim needs proof | tests or measurements run, observed evidence, and residual risks |
+
+If the user names a mode, use it. Otherwise infer the mode from intent and state the inference in one sentence. For a combined request, run **Think → Review → Change → Verify** and preserve the trace between phases. Think may stop with a decision; Review may stop with findings. Change must not claim completion before Verify. Verify must never turn a planned or unavailable check into evidence.
 
 ## Required Context Loading
 
@@ -63,26 +74,37 @@ Use this skill when implementing or changing:
 
 ## Workflow
 
+Use the domain workflow as shared gates, then branch by the selected mode:
+
+- **Think:** answer the questions and stop with a reasoned decision and validation path; do not edit by default.
+- **Review:** inspect the available artifact or repository and stop with evidence-backed findings; do not claim changes.
+- **Change:** apply only approved decisions, then continue to Verify before claiming completion.
+- **Verify:** run the relevant checks, report observed results, and label every unavailable or unrun check.
+
 1. Name the asset, the actors, and the trust boundary; select primary papers (a password-reset flow touches 064 + 127 + 067 + 066).
 2. Read the primary papers fully, including attack patterns and common bugs.
 3. Answer the paper's pre-implementation questions; label autonomous assumptions and their impact.
 4. For existing systems, run the existing-codebase checks: grep for secrets in config/logs, verify verification is not disabled, and map every sensitive field's real retention.
 5. Convert each MUST/SHOULD/AVOID/NEVER into an enforcement point (validation, redaction middleware, rotation job, deletion propagation) with a test that proves the negative (secret absent, plaintext absent, verification on).
-6. Implement the smallest safe slice; carry the paper's verification checklist into the test plan and code review criteria.
+6. Apply the active mode: stop at a control decision in Think; stop at findings in Review; make the smallest approved safe change in Change; run the paper's negative and lifecycle checks in Verify.
 7. Before completion, re-scan the normative lists and stop if any rule lacks a decision, test, or documented exception.
 
-## Boundary Map
+## Companion Skills and Standalone Safety
 
-| If the task also involves | Also use |
-|---|---|
-| Login, sessions, permissions | `auth-access` (004, 007, 008) |
-| Request validation and error leakage | `api-contracts` (012, 013) |
-| Throttling mechanics for abuse defense | `resilience-flow-control` (038, 067 policy) |
-| Audit events for privileged actions | `production-operations` (060) |
-| Sensitive schema/retention design | `data-storage` (033) |
-| Compliance/residency architecture | `production-operations` (133) |
+| Type | When | Companion | Missing companion behavior |
+|---|---|---|---|
+| **Handoff** | Login, session, OAuth, MFA, API key, or permission flow is central | `auth-access` | Limit the answer to protective controls and identify flow ownership missing. |
+| **Recommended** | Validation, error leakage, or public security headers change | `api-contracts` | Preserve validation and non-disclosure obligations. |
+| **Recommended** | Abuse defense needs throttling mechanics | `resilience-flow-control` | State required multi-dimensional limits without inventing mechanics. |
+| **Recommended** | Audit, alerting, rotation, or deletion evidence is required | `production-operations` | State required evidence and label operational depth missing. |
+
+If a companion is unavailable, complete only the safe local control decision, name the missing depth, and recommend the exact technical ID or relevant installation group. Never claim unavailable material was read or weaken least privilege, cryptographic, privacy, or abuse blockers.
 
 ## Output Contract
+
+The selected mode is authoritative. Include only applicable fields below; a planned check is a validation path, not verification evidence.
+
+Scale the output to the active mode: Think returns control and lifecycle decisions; Review returns findings; Change returns the repository-aware change plus pending proof; Verify returns observed security and privacy evidence with unrun checks labeled. A combined flow preserves all four phases.
 
 1. **Papers consulted** — numbers and the sections relied on.
 2. **Asset/actor/boundary map** — what is protected, from whom, and where the control sits.
