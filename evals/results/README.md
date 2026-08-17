@@ -1,9 +1,9 @@
 # Evaluation Results
 
-Behavioral trials are evidence records, not executable tests. Copy
-`result.template.json` for each trial, preserve the complete raw output at the
-referenced path, compute its SHA-256 digest, and record the runtime/model identity
-exactly as reported by the runtime.
+Behavioral trials are evidence records. Copy `result.template.json` for each
+trial, preserve the complete raw output at the referenced path, compute its
+SHA-256 digest, and record the runtime/model identity exactly as reported by the
+runtime.
 
 Use `status: "unrun"` with a concrete `unrun_reason` when the required runtime,
 model, credentials, or reviewer is unavailable. Never convert an unavailable

@@ -58,7 +58,10 @@ For each approved target agent and model:
 7. Report activation rate, instruction-adherence rate, blocker recall, false-positive rate, output completeness, latency, cost, model identity, and trial count.
 8. Convert repeated failures into focused skill edits and rerun the same cases.
 
-These cases are prompts and review expectations, not executable tests. They establish behavioral evidence only when they are run in a named target agent/model, repeated across fresh contexts, independently reviewed, and retained. A favorable result from one run or one evaluator is not proof of general behavior.
+These cases establish behavioral evidence when they are run in a named target
+agent and model, repeated across fresh contexts, independently reviewed, and
+retained. A favorable result from one run or one evaluator is not proof of
+general behavior.
 
 ## Result Records
 
@@ -69,7 +72,7 @@ outcomes, reviewer, and disagreements. A completed trial without its complete
 output is invalid. An unavailable runtime or model is recorded with
 `status: "unrun"` and an exact reason, never as a pass.
 
-These files are reviewable data, not executable tests. Model execution and
-judgment complement manual repository, reference, and release review.
+These files are reviewable behavioral data. Model execution and judgment
+complement repository, reference, and release review.
 
 For contextual architecture assessment, compare the generated dimension vector, definitions, blocker recall, evidence expectations, sensitivity analysis, and citations. A numeric summary is optional, must be defensible and transparent, and must never carry approval authority or compensate for a critical blocker.

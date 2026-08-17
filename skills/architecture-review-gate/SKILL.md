@@ -212,7 +212,7 @@ Separate the initiating trigger from the architectural enabling conditions. Do n
 
 For every architecture metric, require definition, unit, source, data quality, intended decision, confounders, gaming risk, owner, and review/retirement date. Use metric vectors and within-system trends; never use architecture metrics to rank individual engineers.
 
-Perform this review through the active AI model and the supplied references. No executable helper or external model API is required.
+Perform this review through the active AI model and the supplied references.
 
 ## Critical Blockers
 

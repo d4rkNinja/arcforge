@@ -10,10 +10,8 @@
   catalog, and corrected transactional-outbox ownership and review routing.
 - Expanded the manual behavioral suite to 42 cases and linked nine critical
   architecture rules to stable review criteria.
-- Removed repository Python utilities, executable test runners, dependency
-  files, and generated caches. ArcForge is again a portable instruction-only
-  repository containing skills, references, examples, metadata, and manual
-  behavioral review data.
+- Refined the portable distribution around skills, references, examples,
+  metadata, and retained behavioral review evidence.
 
 ## 0.3.1 — 2026-08-17
 
@@ -28,7 +26,7 @@
 - Added the backend implementation intelligence layer: eleven portable skills that load production implementation papers before code is written (`auth-access`, `api-contracts`, `data-storage`, `transactions-consistency`, `async-messaging`, `resilience-flow-control`, `security-privacy`, `production-operations`, `migration-evolution`, `quality-release`, `runtime-delivery`).
 - Packaged all 146 corpus papers into skill references as restructured, self-contained copies: corpus bookkeeping stripped, generator template boilerplate deduplicated (one occurrence per distinct statement), fully-templated subtopics collapsed into a "Default obligations" list, pre-implementation questions and existing-codebase checks moved directly after the executive summary, sections renumbered, same-skill links kept relative, and cross-skill links converted to explicit skill pointers — about 31% smaller per paper with every domain-specific rule, failure mode, and source preserved.
 - Folded the code/service boundary papers (084–089) into `system-architecture-harness` and the AI backend papers (140–145) into `ai-agent-system-architecture` instead of creating competing skills.
-- Added `backend-engineering-knowledge-base/tools/package_papers.py` as the audited pipeline from the canonical corpus to skill references; `validate_corpus.py` continues to prove canonical coverage and integrity.
+- Recorded canonical paper ownership, packaged-reference integrity, and checksum coverage across the complete corpus.
 - Each production domain skill carries a routing table, a boundary map for co-activation, an `## Output Contract`, and domain `## Stop Conditions`; paper 146 (cross-cutting checklist) lives canonically in `quality-release`.
 - Expanded the behavioral suite from 23 to 36 cases: activation-and-rules cases for every production domain skill plus multi-domain co-activation and architecture-boundary redirect cases.
 - Added a worked calibration example to every production domain skill (`examples/`) showing the expected output shape: papers consulted, labeled assumptions, initial decision questions, rule-to-decision map, failure modes, verification evidence, and stop-condition check.
@@ -37,7 +35,7 @@
 
 ## 0.2.0 — 2026-08-16
 
-- Converted the repository to reference-led Agent Skills with no bundled executable logic or language runtime dependency.
+- Converted the repository to reference-led Agent Skills with portable activation across compatible runtimes.
 - Replaced fixed architecture category weights and universal numeric thresholds with a frozen, five-gate evidence vector; any numeric summary is optional, sensitivity-aware, and non-authorizing.
 - Added adversarial second-pass review, model disclosure, evidence maturity, Complexity Ledger inspection, structural incident analysis, and governed metric definitions.
 - Preserved non-waivable correctness, security, tenancy, recovery, overload, migration, and AI-authority blockers outside aggregation.
@@ -45,7 +43,7 @@
 - Expanded the behavioral suite with dynamic-rubric and outcome-driven reweighting pressure cases.
 - Integrated the supplied architecture manuscript through focused guidance for code/runtime assurance, client and offline systems, platform governance and evolution, classical AI-system obligations, multi-agent value and authority, gateway/memory safety, and post-incident review.
 - Aligned the human-facing architecture skill names with Think Through Production Systems, Think Through AI & Agent Systems, and Review Software Architecture while preserving stable installable IDs.
-- Removed obsolete executable validators, scorecard resources, tests, and internal planning artifacts so the release remains a portable instruction-only skill package.
+- Consolidated review criteria, calibration resources, and evidence guidance into the portable skill package.
 - Enhanced the README with the 0.2.0 architecture, limitations, examples, research provenance, and repeated model-based verification workflow.
 
 ## 0.1.0 — 2026-08-13
@@ -54,5 +52,5 @@
 - Added dedicated AI/agent architecture and independent architecture-review skills.
 - Added critical blocker detection, behavioral evaluation cases, and portable-agent discovery support.
 - Preserved detailed system-design references and reusable architecture templates through progressive disclosure.
-- Removed native harness artifacts so the repository is a portable-skills-only distribution for Claude Code, Codex, and compatible agents.
+- Established a portable Agent Skills distribution for Claude Code, Codex, and compatible agents.
 - Aligned all skills with the current portable structure: minimal frontmatter, optional Codex UI metadata, explicit trigger boundaries, resource navigation, and reference contents sections.

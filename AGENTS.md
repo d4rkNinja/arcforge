@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This repository publishes portable Agent Skills for production system architecture. It is intentionally skill-only: do not add a native AI Harness configuration, root `harness.md`, `.harness/` delegates, or runtime-specific hooks.
+This repository publishes portable Agent Skills for production system architecture. Core behavior belongs in the portable skill format and must remain usable across compatible runtimes.
 
 Portable skills live under `skills/*/`. Each skill must remain usable by Claude Code, Codex, and other Agent Skills-compatible runtimes without depending on a vendor-specific control plane.
 
@@ -20,11 +20,11 @@ Portable skills live under `skills/*/`. Each skill must remain usable by Claude 
 
 - Use only the shared Agent Skills frontmatter fields unless a runtime-specific field is clearly optional and isolated.
 - Keep portable `SKILL.md` frontmatter to `name` and `description`; place Codex UI metadata in the optional `agents/openai.yaml` file.
-- Do not require executable helpers, a provider API key, a native harness CLI, or a particular agent framework for skill installation or activation.
+- Keep installation and activation compatible with the shared Agent Skills format across supported runtimes.
 - Keep descriptions specific enough for implicit activation and include concrete trigger words.
 - Reference supporting files with paths relative to the skill directory.
 - Keep skill behavior in natural-language instructions, references, examples, and reusable Markdown assets.
-- Do not put secrets, tokens, personal data, generated caches, or runtime state in the repository.
+- Protect secrets, tokens, personal data, and runtime state from repository content.
 
 ## Architecture content rules
 
@@ -58,7 +58,7 @@ Portable skills live under `skills/*/`. Each skill must remain usable by Claude 
 
 - The canonical corpus is `backend-engineering-knowledge-base/papers/`; never edit it casually.
 - Skill copies under `skills/*/references/papers/` are committed portable reference artifacts. When a paper changes, update the canonical paper and every owning skill copy together, then review their semantic parity and links.
-- Keep the repository instruction-only. Do not add executable helpers, test runners, package dependencies, generated caches, or runtime-specific automation.
+- Keep canonical papers and owning skill copies semantically aligned and review their links together.
 
 ## Maintainer review
 
@@ -72,7 +72,7 @@ Before completion:
 
 ## Prohibited changes
 
-- Do not reintroduce native harness files, delegates, hooks, or undocumented runtime configuration.
+- Keep runtime-specific metadata optional, isolated, and documented.
 - Do not weaken behavioral cases, critical blockers, or evidence gates to make a change pass.
 - Do not add undocumented broad shell, network, filesystem, SQL, cloud, or deployment authority.
 - Do not claim Skills CLI discovery, agent loading, or model-based behavioral evaluation passed unless it was run in the current change and its output was inspected.

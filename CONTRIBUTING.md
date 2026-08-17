@@ -25,7 +25,7 @@
 
 ## Portable runtime requirements
 
-- Do not depend on `harness.md`, `.harness/`, a native harness CLI, or one vendor's configuration for core activation.
+- Keep core activation compatible with the shared Agent Skills format across supported runtimes.
 - Keep shared frontmatter valid for the Agent Skills specification.
 - If a runtime-specific enhancement is useful, isolate it as optional metadata or documentation and preserve the basic skill path.
 

@@ -17,12 +17,14 @@ Applied decisions:
 - portable `SKILL.md` frontmatter uses only stable `name` and concrete `description` fields;
 - optional Codex UI metadata lives in `skills/<slug>/agents/openai.yaml` and is not required by Claude Code;
 - every skill keeps its primary instructions in `SKILL.md` and loads deeper material progressively from `references/`, `assets/`, or `examples/`;
-- only `SKILL.md` is required by the specification; ArcForge deliberately uses the optional reference and asset pattern without bundled executable logic;
+- ArcForge uses the specification's optional reference and asset pattern to provide progressive domain depth;
 - primary instructions stay below the specification's recommended 500-line limit, while focused resources remain one link away where practical;
 - the repository grouping is declared in `skills.sh.json`;
-- no skill requires a particular vendor, model provider, native harness CLI, or root runtime configuration for basic use.
+- basic use remains portable across vendors, model providers, and Agent Skills-compatible runtimes.
 
-This structure follows the specification's three-stage loading model: metadata for discovery, full `SKILL.md` on activation, and supporting resources only when the task needs them. Worked examples are included as on-demand calibration context rather than executable evaluators.
+This structure follows the specification's three-stage loading model: metadata
+for discovery, full `SKILL.md` on activation, and supporting resources when the
+task needs them. Worked examples provide on-demand calibration context.
 
 ## Agent discovery and installation
 
