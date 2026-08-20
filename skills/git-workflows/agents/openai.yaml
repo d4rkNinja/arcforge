@@ -1,0 +1,4 @@
+interface:
+  display_name: "Think Through Git & Repository Workflows"
+  short_description: "Safe Git state, refs, workflows, tags, releases, and recovery"
+  default_prompt: "Use $git-workflows in Think, Review, Change, or Verify mode to inspect repository state, model exact ref transitions, preserve unrelated work, enforce remote authority, and verify branches, tags, versions, CI candidates, and release provenance."

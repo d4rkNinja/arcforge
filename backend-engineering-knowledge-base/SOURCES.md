@@ -1,8 +1,8 @@
 # Global Source Catalog
 
-**Catalog verification cutoff:** 2026-08-17
+**Catalog verification cutoff:** 2026-08-20
 
-Each paper contains a scoped bibliography. This file lists every source identifier available to the corpus. Source IDs are stable within corpus version 1.0.0. URLs point to official or primary material where available.
+Each paper contains a scoped bibliography. This file lists every source identifier available to the corpus. Source IDs are stable within corpus version 1.1.0. URLs point to official or primary material where available.
 
 | ID | Source | Organization | Year | Version/status | Tags |
 |---|---|---|---:|---|---|
@@ -146,6 +146,28 @@ Each paper contains a scoped bibliography. This file lists every source identifi
 | S138 | [Fencing off zombies](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html) | Martin Kleppmann | 2016 | Blog / distributed locking notes | distributed-locks, fencing, leases |
 | S139 | [Redis distributed locks with Redis](https://redis.io/docs/latest/develop/use/patterns/distributed-locks/) | Redis | 2026 | Current documentation | distributed-locks, redis, leases |
 | S140 | [Transactional Outbox Pattern](https://microservices.io/patterns/data/transactional-outbox.html) | Chris Richardson / microservices.io | 2026 | Current pattern write-up | outbox, events, transactions |
+| S141 | [Git User Manual](https://git-scm.com/docs/user-manual) | Git community | 2026 | Current documentation | git, objects, refs, workflows |
+| S142 | [git-push Documentation](https://git-scm.com/docs/git-push) | Git community | 2026 | Current documentation | git, push, refs, concurrency, atomicity |
+| S143 | [Git Repository Layout](https://git-scm.com/docs/gitrepository-layout) | Git community | 2026 | Current documentation | git, repository, refs, worktrees |
+| S144 | [git-update-ref Documentation](https://git-scm.com/docs/git-update-ref) | Git community | 2026 | Current documentation | git, ref-transactions, atomicity |
+| S145 | [A successful Git branching model](https://nvie.com/posts/a-successful-git-branching-model/) | Vincent Driessen | 2010/2020 reflection | Article | gitflow, branching, release-topology |
+| S146 | [Trunk Based Development](https://trunkbaseddevelopment.com/) | Trunk Based Development community | 2026 | Current guidance | trunk, branching, continuous-delivery |
+| S147 | [About rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets) | GitHub | 2026 | Current documentation | github, rulesets, protected-refs, bypass |
+| S148 | [About protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches) | GitHub | 2026 | Current documentation | github, branches, reviews, required-checks |
+| S149 | [Managing a merge queue](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue) | GitHub | 2026 | Current documentation | github, merge-queue, ci, concurrency |
+| S150 | [About commit signature verification](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification) | GitHub | 2026 | Current documentation | github, signatures, provenance |
+| S151 | [Removing sensitive data from a repository](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository) | GitHub | 2026 | Current documentation | github, secrets, history-rewrite, remediation |
+| S152 | [Security hardening your deployments with OpenID Connect](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-security-hardening-with-openid-connect) | GitHub | 2026 | Current documentation | github-actions, oidc, workload-identity |
+| S153 | [Merge requests](https://docs.gitlab.com/user/project/merge_requests/) | GitLab | 2026 | Current documentation | gitlab, merge-requests, reviews, checks |
+| S154 | [Control access to protected variables and runners](https://docs.gitlab.com/ci/pipelines/merge_request_pipelines/#control-access-to-protected-variables-and-runners) | GitLab | 2026 | Current documentation | gitlab, ci, protected-resources, secrets |
+| S155 | [Semantic Versioning 2.0.0](https://semver.org/) | Semantic Versioning | 2013 | SemVer 2.0.0 | versioning, compatibility, releases |
+| S156 | [SLSA v1.2 Source Track](https://slsa.dev/spec/v1.2/tracks) | OpenSSF / SLSA | 2026 | v1.2 | provenance, source, supply-chain |
+| S157 | [OpenSSF Project Security Baseline](https://baseline.openssf.org/) | OpenSSF | 2026 | Current baseline | project-security, releases, signing, ci |
+| S158 | [Code Review Developer Guide](https://google.github.io/eng-practices/review/) | Google | 2026 | Current engineering guidance | code-review, correctness, collaboration |
+| S159 | [Security hardening for GitHub Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions) | GitHub | 2026 | Current documentation | github-actions, runners, secrets, dependencies |
+| S160 | [Git Large File Storage](https://git-lfs.com/) | Git LFS community | 2026 | Current documentation | git-lfs, large-files, storage |
+| S161 | [Git Tools: Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules) | Git community | 2026 | Current documentation | git, submodules, dependencies |
+| S162 | [git-maintenance Documentation](https://git-scm.com/docs/git-maintenance) | Git community | 2026 | Current documentation | git, maintenance, scale, performance |
 
 ## Source-use policy
 

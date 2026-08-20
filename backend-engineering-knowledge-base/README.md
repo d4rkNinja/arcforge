@@ -1,10 +1,10 @@
 # Production-Grade Backend Engineering Knowledge Base
 
-**Corpus version:** 1.0.0  
-**Generated / verified through:** 2026-08-17  
-**Papers:** 146  
-**Canonical subtopics covered:** 1881  
-**Approximate paper word count:** 923,745
+**Corpus version:** 1.1.0
+**Generated / verified through:** 2026-08-20
+**Papers:** 147
+**Canonical subtopics covered:** 1901
+**Approximate paper word count:** 938,492
 
 This repository is designed as implementation intelligence for AI coding agents and experienced backend engineers. Each numbered topic from the canonical attachment is a separate research paper. The corpus emphasizes hidden correctness requirements, security boundaries, concurrency, failure recovery, compatibility, migration, observability, and operational evidence rather than framework syntax.
 
@@ -46,7 +46,7 @@ backend-engineering-knowledge-base/
 |---|---|---:|
 | `primitives` | Reusable reasoning units such as identifiers, time, validation, consistency, transactions, idempotency, and schema evolution. | 40 |
 | `systems` | Subsystems with lifecycle and ownership: identity, authentication, authorization, APIs, storage, queues, files, clients, and AI execution. | 54 |
-| `cross-cutting` | Security, reliability, observability, performance, deployment, testing, operations, recovery, and migration controls that span systems. | 52 |
+| `cross-cutting` | Security, reliability, observability, performance, deployment, testing, operations, recovery, migration, and version-control controls that span systems. | 53 |
 
 See [ONTOLOGY.md](ONTOLOGY.md) for classification rules and graph semantics.
 
@@ -218,15 +218,17 @@ Security, reliability, observability, performance, deployment, testing, operatio
 | 138 | [Operational Runbooks](papers/cross-cutting/138-operational-runbooks.md) | `observability` | 9 | 5,984 |
 | 139 | [Incident Readiness](papers/cross-cutting/139-incident-readiness.md) | `observability` | 10 | 5,858 |
 | 146 | [Cross-Cutting Implementation Checklist](papers/cross-cutting/146-cross-cutting-implementation-checklist.md) | `checklist` | 42 | 9,046 |
+| 147 | [Production-Grade Git and Git Flow](papers/cross-cutting/147-production-grade-git-and-git-flow.md) | `version_control` | 20 | 14,747 |
 
 ## Distribution into portable skills
 
 The canonical corpus stays in this directory. Portable, self-contained copies
 are committed under each owning skill's `references/papers/` directory. The root
 `../arcforge.catalog.yaml` records ownership (identity/auth maps to
-`auth-access`, transactions to `transactions-consistency`, papers 084–089 enrich
+`auth-access`, transactions to `transactions-consistency`, Git workflow and
+release controls to `git-workflows`, papers 084–089 enrich
 `system-architecture-harness`, and 140–145 enrich
-`ai-agent-system-architecture`). The portable copies:
+`ai-agent-system-architecture`). Each portable copy:
 
 - strips corpus bookkeeping (frontmatter, the canonical scope map, the scope note, the metadata footer);
 - removes the template boilerplate the generator repeated across the invariants, subtopic, normative, bugs, questions, testing, and codebase-check sections, keeping the first occurrence of every distinct statement;

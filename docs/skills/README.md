@@ -25,6 +25,7 @@ One page per skill: what it is, when to use it, what it covers, what a run produ
 | [Think Through Migrations & Evolution](migration-evolution.md) | `migration-evolution` | Schema and contract changes that ship without outages |
 | [Think Through Quality & Release Readiness](quality-release.md) | `quality-release` | Evidence-based readiness instead of unsupported confidence |
 | [Think Through Runtime & Delivery](runtime-delivery.md) | `runtime-delivery` | Config, pools, shutdown, and deploys that behave under failure |
+| [Think Through Git & Repository Workflows](git-workflows.md) | `git-workflows` | Safe Git state, refs, workflows, tags, versions, provenance, and recovery |
 
 ## How the layers fit together
 

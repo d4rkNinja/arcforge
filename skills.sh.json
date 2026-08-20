@@ -12,8 +12,8 @@
       ]
     },
     {
-      "title": "ArcForge Backend Thinking & Verification",
-      "description": "Production domain guidance for thinking, reviewing, changing, and verifying backend systems with explicit rules, failure modes, security boundaries, and evidence checks.",
+      "title": "ArcForge Backend & Repository Thinking",
+      "description": "Production guidance for thinking, reviewing, changing, and verifying backend systems and repository state with explicit rules, failure modes, authority boundaries, and evidence checks.",
       "skills": [
         "auth-access",
         "api-contracts",
@@ -25,7 +25,8 @@
         "production-operations",
         "migration-evolution",
         "quality-release",
-        "runtime-delivery"
+        "runtime-delivery",
+        "git-workflows"
       ]
     }
   ]

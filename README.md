@@ -2,7 +2,7 @@
 
 > Make production architecture decisions your AI coding agent can explain, challenge, and verify.
 
-**v0.3.2 · 14 portable Agent Skills · Claude Code, Codex, and compatible runtimes · MIT**
+**v0.4.0 · 15 portable Agent Skills · Claude Code, Codex, and compatible runtimes · MIT**
 
 ArcForge helps an AI agent reason about the decisions that determine whether a
 system survives production: invariants, failure modes, trust boundaries,
@@ -70,6 +70,12 @@ name the ID naturally in a prompt.
 |---|---|---|
 | **Review Software Architecture** | `architecture-review-gate` | An independent evidence gate for an RFC, ADR, migration plan, AI design, production proposal, or post-incident redesign |
 
+### Repository workflows
+
+| Skill | ID | Choose it for |
+|---|---|---|
+| **Think Through Git & Repository Workflows** | `git-workflows` | Branch topology, merges and rebases, conflicts, worktrees, remotes, protected refs, tags, versions, release provenance, history rewrites, or Git recovery |
+
 ### Backend domains
 
 | Skill | ID | Choose it for |
@@ -120,6 +126,15 @@ concurrency and failure checks, report observed results, and label every check
 that could not be run. Use quality-release in Verify mode.
 ~~~
 
+### Git and releases
+
+~~~text
+Review the current repository and hosted state, then publish the approved release
+without overwriting concurrent work or moving an existing tag. Bind the exact
+candidate commit to current checks and the release tag. Use git-workflows in
+Review, Change, and Verify modes.
+~~~
+
 ## How skills work together
 
 Real systems cross domains. ArcForge marks companion skills by relationship:
@@ -155,6 +170,7 @@ and regulate the system.
 - [Contributing](CONTRIBUTING.md) — repository conventions and review requirements
 - [Security](SECURITY.md) — source pinning, permissions, and reporting
 - [Changelog](CHANGELOG.md) — release history
+- [v0.4.0 release](https://github.com/d4rkNinja/arcforge/releases/tag/v0.4.0) — Git workflow skill and stronger release evidence gates
 
 ## License
 

@@ -1,6 +1,6 @@
 # AI Behavioral Evaluation Cases
 
-`cases.json` is a runtime-neutral pressure suite for testing whether ArcForge's fourteen portable skills activate and preserve their non-negotiable rules under technology pressure, deadline pressure, unsafe authority requests, and misleading architecture claims.
+`cases.json` is a runtime-neutral pressure suite for testing whether ArcForge's fifteen portable skills activate and preserve their non-negotiable rules under technology pressure, deadline pressure, unsafe authority requests, and misleading architecture claims.
 
 `schema/cases.schema.json` documents the optional structured fields. Existing
 prompt-oriented cases remain supported, while criteria, installed or
@@ -34,13 +34,15 @@ Storage**, **Think Through Transactions & Consistency**, **Think Through Async
 Work & Messaging**, **Think Through Resilience & Flow Control**, **Think Through
 Security & Privacy**, **Think Through Production Operations**, **Think Through
 Migrations & Evolution**, **Think Through Quality & Release Readiness**, and
-**Think Through Runtime & Delivery**. Historical `impl-*` case IDs remain stable
+**Think Through Runtime & Delivery**, and **Think Through Git & Repository
+Workflows**. Historical `impl-*` case IDs remain stable
 for compatibility; that prefix does not limit a skill to Change mode. Each case
 pairs a deadline-pressured request with the domain rules, questions, existing-
 system checks, bounds, and verification evidence that must remain visible, plus
 failures such as unbounded retries, floating-point money, secrets in logs,
-snapshot-as-DR claims, destructive one-step migrations, or happy-path-only
-readiness. Further cases exercise typed companion behavior across
+snapshot-as-DR claims, destructive one-step migrations, happy-path-only
+readiness, force-pushed shared refs, moved published tags, or stale release
+evidence. Further cases exercise typed companion behavior across
 `transactions-consistency` and `async-messaging`, and require a domain skill to
 hand whole-system architecture to `system-architecture-harness` without
 pretending that separate depth is installed.

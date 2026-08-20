@@ -1,4 +1,4 @@
-catalog_version: "1.0.0"
+catalog_version: "1.1.0"
 technical_id_policy: "Stable installation and activation contract; never derive it from the display name."
 display_name_policy: "User-facing promise projected into primary headings, guides, and optional runtime metadata."
 
@@ -43,6 +43,9 @@ installation_groups:
   transactional-workflow:
     description: "Authoritative state, outbox and jobs, retry controls, migration, and release evidence."
     skills: [transactions-consistency, async-messaging, resilience-flow-control, data-storage, migration-evolution, production-operations, quality-release]
+  repository-release-workflow:
+    description: "Git topology, protected refs, CI candidate identity, immutable release versions, provenance, and release evidence."
+    skills: [git-workflows, runtime-delivery, quality-release, security-privacy, production-operations]
 
 skills:
   - technical_id: system-architecture-harness
@@ -200,7 +203,7 @@ skills:
       - {type: recommended, skill: api-contracts, when: "validation, error leakage, or public security headers change", transfers: "attack and disclosure requirements", missing: "preserve validation and non-disclosure obligations"}
       - {type: recommended, skill: resilience-flow-control, when: "abuse defense needs throttling mechanics", transfers: "attack dimensions and fail policy", missing: "state required multi-dimensional limits without inventing mechanics"}
       - {type: recommended, skill: production-operations, when: "audit, alerting, rotation, or deletion evidence is required", transfers: "sensitive fields, actions, and control lifecycle", missing: "state required evidence and label operational depth missing"}
-    install_groups: [identity-boundary, ai-system-thinking, production-system-thinking]
+    install_groups: [identity-boundary, ai-system-thinking, production-system-thinking, repository-release-workflow]
     paths: {skill: skills/security-privacy/SKILL.md, metadata: skills/security-privacy/agents/openai.yaml, guide: docs/skills/security-privacy.md, examples: skills/security-privacy/examples}
     eval_cases: [impl-security-log-secrets]
 
@@ -216,7 +219,7 @@ skills:
       - {type: required, skill: security-privacy, when: "telemetry, export, audit, or recovery data contains sensitive material", transfers: "emission and retention surfaces", missing: "preserve redaction, access, and deletion obligations"}
       - {type: recommended, skill: quality-release, when: "load, failure, restore, or failover claims need proof", transfers: "operational claims and targets", missing: "state exact drills and label them unrun"}
       - {type: handoff, skill: system-architecture-harness, when: "availability or region choices change system topology", transfers: "observed constraints, targets, and recovery evidence", missing: "bound the operational design and identify architecture depth missing"}
-    install_groups: [transactional-workflow, identity-boundary, ai-system-thinking, production-system-thinking]
+    install_groups: [transactional-workflow, identity-boundary, ai-system-thinking, production-system-thinking, repository-release-workflow]
     paths: {skill: skills/production-operations/SKILL.md, metadata: skills/production-operations/agents/openai.yaml, guide: docs/skills/production-operations.md, examples: skills/production-operations/examples}
     eval_cases: [impl-ops-backup-equals-dr]
 
@@ -239,18 +242,25 @@ skills:
   - technical_id: quality-release
     display_name: "Think Through Quality & Release Readiness"
     domain: "test strategy, failure and load evidence, performance, resources, and release readiness"
-    routing_description: "Use when thinking through, reviewing, changing, or verifying quality and release readiness: test strategy, test data, concurrency and failure testing, load and performance evidence, scalability, resource management, compression, or cross-cutting release checks. For independent architecture approval use architecture-review-gate; for SLO design use system-architecture-harness; for runbooks use production-operations."
-    positive_triggers: [test strategy, test data, concurrency test, failure test, load test, performance, scalability, resource leak, release readiness]
+    routing_description: "Use when thinking through, reviewing, changing, or verifying quality and release readiness: test strategy, test data, concurrency and failure testing, load and performance evidence, scalability, resource management, compression, release exceptions, cross-domain completion, or production-ready claims. For independent architecture approval use architecture-review-gate; for SLO design use system-architecture-harness; for runbooks use production-operations."
+    positive_triggers: [test strategy, test data, concurrency test, failure test, load test, performance, scalability, resource leak, release readiness, release exception, production ready]
     negative_triggers: [independent architecture approval, SLO ownership, incident process]
     owner_papers: [90, 91, 92, 93, 94, 95, 96, 109, 117, 146]
     companions:
       - {type: recommended, skill: transactions-consistency, when: "transaction or concurrency invariants must be forced", transfers: "invariant, writers, interleavings, and expected losers", missing: "state the required interleavings and label domain depth missing"}
+      - {type: required, skill: auth-access, when: "identity, authorization, or tenant-isolation boundaries need proof", transfers: "actors, resources, actions, tenants, and required evidence", missing: "preserve access and tenancy blockers and identify missing policy depth"}
+      - {type: required, skill: security-privacy, when: "secrets, privacy, cryptography, or abuse boundaries need proof", transfers: "assets, data classes, threats, and required evidence", missing: "preserve security and data-lifecycle blockers and identify missing control depth"}
       - {type: recommended, skill: async-messaging, when: "queue, job, or event failure paths need proof", transfers: "delivery and replay semantics", missing: "state required crash and redelivery tests"}
+      - {type: recommended, skill: api-contracts, when: "request, response, webhook, or client compatibility needs proof", transfers: "surface contract and compatibility claims", missing: "trace the public contract and label compatibility evidence missing"}
+      - {type: recommended, skill: data-storage, when: "persistence constraints, precision, indexes, files, or lifecycle need proof", transfers: "authoritative data invariants", missing: "preserve data invariants and label storage evidence missing"}
+      - {type: recommended, skill: migration-evolution, when: "mixed-version compatibility, backfill, or cutover needs proof", transfers: "version matrix and transition claims", missing: "require coexistence and recovery evidence and label migration depth missing"}
+      - {type: recommended, skill: runtime-delivery, when: "configuration, artifact promotion, shutdown, or deployment needs proof", transfers: "release subject, configuration, and delivery claims", missing: "bind evidence to the exact subject and label delivery checks unrun"}
       - {type: recommended, skill: production-operations, when: "restore, failover, alert, or runbook claims need evidence", transfers: "targets and operational proof", missing: "mark operational evidence unrun"}
+      - {type: recommended, skill: git-workflows, when: "candidate refs, release tags, versions, or source-to-artifact identity need proof", transfers: "release subject and evidence requirements", missing: "require exact candidate identity and label hosted state unverified"}
       - {type: handoff, skill: architecture-review-gate, when: "an independent architecture approval verdict is requested", transfers: "verified and missing change evidence", missing: "return the readiness evidence without self-approving architecture"}
-    install_groups: [transactional-workflow, identity-boundary, ai-system-thinking, production-system-thinking]
+    install_groups: [transactional-workflow, identity-boundary, ai-system-thinking, production-system-thinking, repository-release-workflow]
     paths: {skill: skills/quality-release/SKILL.md, metadata: skills/quality-release/agents/openai.yaml, guide: docs/skills/quality-release.md, examples: skills/quality-release/examples}
-    eval_cases: [impl-quality-happy-path, mode-verify-quality-release]
+    eval_cases: [impl-quality-happy-path, impl-quality-exception-pressure, mode-verify-quality-release]
 
   - technical_id: runtime-delivery
     display_name: "Think Through Runtime & Delivery"
@@ -264,6 +274,25 @@ skills:
       - {type: recommended, skill: production-operations, when: "health, readiness, deployment, or shutdown behavior needs signals", transfers: "failure windows and gates", missing: "state required signals and label operational depth missing"}
       - {type: required, skill: security-privacy, when: "configuration carries secrets or service identity", transfers: "configuration and credential lifecycle", missing: "keep secrets outside general config and identify missing rotation depth"}
       - {type: recommended, skill: quality-release, when: "boot, shutdown, rollback, or pipeline claims need proof", transfers: "failure windows and acceptance criteria", missing: "state exact drills and label them unrun"}
-    install_groups: [ai-system-thinking, production-system-thinking]
+      - {type: recommended, skill: git-workflows, when: "branch protections, merge queues, tags, versions, or source refs are in scope", transfers: "pipeline candidate and artifact identity", missing: "preserve exact identity and label hosted Git state unverified"}
+    install_groups: [ai-system-thinking, production-system-thinking, repository-release-workflow]
     paths: {skill: skills/runtime-delivery/SKILL.md, metadata: skills/runtime-delivery/agents/openai.yaml, guide: docs/skills/runtime-delivery.md, examples: skills/runtime-delivery/examples}
     eval_cases: [impl-runtime-unvalidated-config]
+
+  - technical_id: git-workflows
+    display_name: "Think Through Git & Repository Workflows"
+    domain: "Git repositories, branch topology, refs, hosted policy, releases, history migration, and recovery"
+    routing_description: "Use when thinking through, reviewing, changing, or verifying Git repositories and version-control workflows: branches, commits, merges, rebases, cherry-picks, conflicts, worktrees, remotes, pull requests, protected refs, force pushes, tags, semantic versions, release branches, history rewrites, secret removal, merge queues, Git-aware CI, repository migrations, recovery, or source-to-artifact provenance. Distinguishes local Git state from hosted policy, authorization, and release evidence."
+    positive_triggers: [Git flow, branch, merge, rebase, cherry-pick, conflict, worktree, remote, pull request, protected ref, force push, tag, semantic version, release branch, history rewrite, secret removal, merge queue, Git CI, reflog]
+    negative_triggers: [deployment implementation only, test strategy only, independent architecture approval]
+    owner_papers: [147]
+    companions:
+      - {type: required, skill: runtime-delivery, when: "CI/CD, build identity, artifact promotion, or deployment is changed", transfers: "exact source candidate, ref policy, and release identity", missing: "preserve candidate and artifact identity and do not invent pipeline evidence"}
+      - {type: required, skill: security-privacy, when: "credentials, signing, untrusted CI, or sensitive history is involved", transfers: "exposure surface, authority, and affected refs", missing: "treat exposed credentials as an incident and preserve security blockers"}
+      - {type: recommended, skill: quality-release, when: "current checks, failure tests, or a release verdict is needed", transfers: "exact candidate and available evidence", missing: "keep readiness gaps visible and do not claim release readiness"}
+      - {type: recommended, skill: production-operations, when: "backup, restore, audit, or incident response evidence is needed", transfers: "ref transition, consumers, and recovery requirements", missing: "state recovery and audit requirements and label drills unrun"}
+      - {type: handoff, skill: migration-evolution, when: "default branch, workflow, shared history, or compatibility changes across consumers", transfers: "old and new refs, consumer inventory, and compatibility constraints", missing: "identify the unresolved coordinated migration sequence"}
+      - {type: handoff, skill: architecture-review-gate, when: "an independent repository or release design approval is requested", transfers: "Git state, policy, provenance, and blockers", missing: "return Git evidence without self-approving the design"}
+    install_groups: [repository-release-workflow]
+    paths: {skill: skills/git-workflows/SKILL.md, metadata: skills/git-workflows/agents/openai.yaml, guide: docs/skills/git-workflows.md, examples: skills/git-workflows/examples}
+    eval_cases: [impl-git-destructive-flow-pressure, impl-git-ambiguous-push-secret-pressure]

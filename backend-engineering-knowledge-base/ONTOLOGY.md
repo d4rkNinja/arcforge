@@ -28,6 +28,7 @@ Each paper has one primary `layer` for filesystem navigation and one `category`/
 - **Authentication** is a system but depends on identity, randomness, cryptography, sessions, abuse protection, and audit.
 - **Database migrations** are cross-version change mechanics and are linked from every storage-owning system.
 - **Cross-Cutting Implementation Checklist** acts as a release gate across all layers.
+- **Production-Grade Git and Git Flow** is a cross-cutting version-control and release-policy paper: it links immutable source identity, hosted authorization, CI trust, artifact provenance, recovery, and workflow migrations.
 
 ## Edge semantics in `knowledge-graph.json`
 
@@ -50,6 +51,7 @@ requested system paper
     -> cache/queue/integration failure semantics
     -> security/privacy/abuse
     -> observability/audit/runbooks
+    -> Git refs/workflow policy/release provenance
     -> compatibility/migrations/deployment/rollback
     -> testing/performance/scalability
     -> paper 146 release checklist
@@ -59,4 +61,4 @@ requested system paper
 
 - Primitives: 40
 - Systems: 54
-- Cross-cutting: 52
+- Cross-cutting: 53

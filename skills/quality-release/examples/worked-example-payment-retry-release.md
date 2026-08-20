@@ -30,11 +30,11 @@
 
 | Rule (level) | Decision | Enforcement point | Verification |
 |---|---|---|---|
-| Claims need evidence paths (MUST) | Claims-to-evidence table produced | Review artifact | Every claim maps to a test/drill or is labeled untested |
-| Forced interleavings (MUST) | Barrier tests at production isolation | Concurrency test suite | Duplicate-charge race asserted impossible, not probabilistic |
-| Failure injection (MUST) | Timeout-after-commit, provider outage, DLQ overflow scenarios | Failure harness | Behavior matches spec for each injected class |
-| Load shape (SHOULD) | Peak × 2 retry storm profile | Load test plan | Backlog drains within SLO; retry amplification bounded |
-| Checklist gate (MUST) | Paper 146 walked for this surface | Release checklist artifact | Blockers vs follow-ups separated with owners |
+| Claims need evidence paths (MUST) | Claims-to-evidence table produced | Review artifact | Every claim maps to inspected output or an honest non-executed state |
+| Forced interleavings (MUST) | Barrier tests at production isolation | Concurrency test suite | Required; not run from the supplied request |
+| Failure injection (MUST) | Timeout-after-commit, provider outage, DLQ overflow scenarios | Failure harness | Required; not run from the supplied request |
+| Load shape (SHOULD) | Peak × 2 retry storm profile | Load test plan | Planned; not current evidence |
+| Checklist gate (MUST) | Paper 146 walked for this surface | Release checklist artifact | Partial review only; runtime evidence unavailable |
 
 ## Failure modes addressed
 
@@ -43,17 +43,33 @@
 - Retry storm amplifying an outage — load profile with jitter verification.
 - Silent success without audit — checklist item requires audit-event assertion.
 
-## Verification evidence
+## Evidence states
 
-- Concurrency suite: 0 duplicate charges across 1,000 forced duplicate submissions.
-- Failure suite: each injected class terminates in the specified state (retry, DLQ, suppress) with audit events.
-- Load run: retry storm at 2× peak; drain time within objective.
-- Checklist verdict: 3 blockers open (audit assertion, DLQ alert, runbook step) — release is **not** approved until closed.
+| Evidence | State | Reason |
+|---|---|---|
+| Unit-test result | **claimed** | The requester says it passed; no command, output, revision, or artifact was supplied. |
+| Concurrency suite | **planned** | The required forced-interleaving test has not been run. |
+| Failure suite | **planned** | Timeout-after-commit and provider-outage scenarios have not been run. |
+| Load run | **planned** | The workload profile exists only as a proposal. |
+| Audit assertion, DLQ alert, runbook | **unavailable** | Their implementation and runtime evidence were not supplied. |
+
+No executed result may be invented from this request. The verdict is **INSUFFICIENT EVIDENCE**, not production-ready. If inspection confirms a missing critical control or a failing required test, the verdict becomes **BLOCKED**.
+
+## Boundary closure
+
+| Boundary | Sibling skill | Owner / enforcement point | Evidence state | Unresolved condition |
+|---|---|---|---|---|
+| Payment state and idempotency | `transactions-consistency` | Payment service and authoritative transaction/idempotency record | **unavailable** | Atomic reservation, terminal outcome, and ambiguous-timeout reconciliation are not demonstrated. |
+| Queue delivery and acknowledgment | `async-messaging` | Retry worker and durable queue/DLQ policy | **planned** | Crash windows, duplicate delivery, poison handling, and replay have not been exercised. |
+| Retry/deadline policy | `resilience-flow-control` | Provider adapter and end-to-end operation budget | **planned** | Attempts, backoff, jitter, pushback, and timeout budgets have not been tested. |
+| Audit, alerting, and recovery | `production-operations` | Operations owner, telemetry, reconciliation, and runbook | **unavailable** | No inspected alert, audit, reconciliation, rollback, or recovery drill exists. |
+
+No boundary is `not applicable`: the real payment, queue, provider, and recovery paths must be traced before any such conclusion.
 
 ## Stop-condition check
 
-The stop condition "declaring production readiness from happy-path unit tests alone" was triggered by the request and resolved by the evidence program above; the verdict remains "not ready" until the three blockers close.
+The stop conditions for declaring readiness from happy-path unit tests and for treating planned checks as evidence were triggered. The result remains **INSUFFICIENT EVIDENCE** until the required suites run against the exact release subject and their output is inspected.
 
 ## Deliverable summary
 
-A claims-to-evidence map, three new test suites, one load profile, and a checklist verdict with three named blockers and owners — an honest "not yet," with the shortest path to "ready."
+A claims-to-evidence map, three required test suites, one load profile, and a cross-skill checklist remain to be executed. The honest deliverable is "not yet," with the shortest evidence path to a defensible verdict—never fabricated pass results.

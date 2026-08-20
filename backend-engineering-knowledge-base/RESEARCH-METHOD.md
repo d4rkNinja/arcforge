@@ -1,10 +1,10 @@
 # Research and Synthesis Method
 
-**Verification cutoff:** 2026-08-17
+**Verification cutoff:** 2026-08-20
 
 ## Canonical scope
 
-The numbered titles, editorial notes, and bullet subtopics in `original/Pasted text.txt` are authoritative for scope. The generator/curation process does not silently remove a canonical subtopic. The manifest preserves every title and subtopic for machine validation.
+The numbered titles, editorial notes, and bullet subtopics in `original/Pasted text.txt` are authoritative for scope. The generator/curation process does not silently remove a canonical subtopic. The manifest preserves every title and subtopic for machine validation. Paper 147 adds a normalized version-control/release-policy contract while retaining the supplied research text as a traceability appendix.
 
 Canonical papers remain authoritative for engineering explanation, trade-offs,
 and contextual guidance. The structured registry under `rules/` owns stable
@@ -30,6 +30,7 @@ equivalent or stronger.
 - Treat caches, indexes, replicas, analytics, and embeddings as derived unless explicitly authoritative.
 - Require evidence for authorization, tenant isolation, privacy, audit, and abuse controls across asynchronous and administrative paths.
 - Use small state diagrams and schemas only when they clarify semantics; implementation syntax remains out of scope.
+- For Git workflow claims, distinguish immutable object identity, mutable refs, stale observations, hosted authorization, CI candidate identity, artifact provenance, and application rollback; do not treat a branch name or green local test as release evidence.
 
 ## Normative labels
 

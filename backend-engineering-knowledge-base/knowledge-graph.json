@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "generated_at": "2026-08-17",
+  "version": "1.1.0",
+  "generated_at": "2026-08-20",
   "nodes": [
     {
       "id": 1,
@@ -1169,6 +1169,14 @@
       "layer": "cross-cutting",
       "category": "checklist",
       "subtopic_count": 42
+    },
+    {
+      "id": 147,
+      "title": "Production-Grade Git and Git Flow",
+      "path": "papers/cross-cutting/147-production-grade-git-and-git-flow.md",
+      "layer": "cross-cutting",
+      "category": "version_control",
+      "subtopic_count": 20
     }
   ],
   "edges": [
@@ -9940,6 +9948,116 @@
     {
       "from": 146,
       "to": 105,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 1,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 23,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 25,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 36,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 48,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 52,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 63,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 71,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 76,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 77,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 89,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 90,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 92,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 93,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 106,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 107,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 122,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 123,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 124,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 137,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 139,
+      "type": "implementation_relationship"
+    },
+    {
+      "from": 147,
+      "to": 146,
       "type": "implementation_relationship"
     }
   ]

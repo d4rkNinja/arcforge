@@ -1,17 +1,17 @@
 {
   "corpus": {
     "name": "Production-Grade Backend Engineering Knowledge Base for AI Coding Agents",
-    "version": "1.0.0",
-    "generated_at": "2026-08-17",
-    "verified_through": "2026-08-17",
+    "version": "1.1.0",
+    "generated_at": "2026-08-20",
+    "verified_through": "2026-08-20",
     "canonical_source": "original/Pasted text.txt",
-    "paper_count": 146,
-    "canonical_subtopic_count": 1881,
-    "paper_word_count": 923745,
+    "paper_count": 147,
+    "canonical_subtopic_count": 1901,
+    "paper_word_count": 938492,
     "layers": {
       "systems": 54,
       "primitives": 40,
-      "cross-cutting": 52
+      "cross-cutting": 53
     },
     "categories": {
       "runtime": 11,
@@ -34,7 +34,8 @@
       "client": 2,
       "data_ops": 2,
       "ai": 6,
-      "checklist": 1
+      "checklist": 1,
+      "version_control": 1
     },
     "normative_vocabulary": [
       "MUST",
@@ -8313,6 +8314,91 @@
       "word_count": 9046,
       "byte_count": 72289,
       "sha256": "19a2130f7160483c84ec97f1fc27b19fc9863b181dff02754ce6022bd7cedfc1"
+    },
+    {
+      "number": 147,
+      "title": "Production-Grade Git and Git Flow",
+      "path": "papers/cross-cutting/147-production-grade-git-and-git-flow.md",
+      "layer": "cross-cutting",
+      "category": "version_control",
+      "canonical_notes": [
+        "Git correctness is graph correctness plus distributed-state correctness plus policy correctness."
+      ],
+      "subtopics": [
+        "Git objects, commits, trees, refs, and object identifiers",
+        "Working tree, index, HEAD, and remote state",
+        "Reachability, ancestry, revision ranges, and diff semantics",
+        "Filesystem portability, attributes, renames, and worktrees",
+        "Branching models and release topology",
+        "Merge, squash, rebase, fast-forward, and cherry-pick",
+        "Conflicts, sequencers, stash, and dirty state",
+        "Pull requests, approvals, required checks, and merge queues",
+        "Ref concurrency, force-with-lease, transactions, and atomic pushes",
+        "Idempotency, retry classification, ambiguous writes, and consistency",
+        "Recovery, reflogs, corruption, backups, and application rollback",
+        "Repository trust, identity, authorization, protected refs, and bypasses",
+        "Untrusted CI, credentials, runners, workflow dependencies, and OIDC",
+        "Commit and tag signing, provenance, audit, and release evidence",
+        "Secrets, sensitive data, branch deletion, and history rewriting",
+        "Release tags, versioning, artifacts, release branches, and backports",
+        "Repository scale, maintenance, sparse, partial, and shallow clones",
+        "Git LFS, submodules, monorepos, and cross-repository changes",
+        "Default-branch and workflow-policy migrations",
+        "Agent preflight, authority, testing, metrics, and verification"
+      ],
+      "relationships": [
+        1,
+        23,
+        25,
+        36,
+        48,
+        52,
+        63,
+        71,
+        76,
+        77,
+        89,
+        90,
+        92,
+        93,
+        106,
+        107,
+        122,
+        123,
+        124,
+        137,
+        139,
+        146
+      ],
+      "source_ids": [
+        "S001",
+        "S002",
+        "S141",
+        "S142",
+        "S143",
+        "S144",
+        "S145",
+        "S146",
+        "S147",
+        "S148",
+        "S149",
+        "S150",
+        "S151",
+        "S152",
+        "S153",
+        "S154",
+        "S155",
+        "S156",
+        "S157",
+        "S158",
+        "S159",
+        "S160",
+        "S161",
+        "S162"
+      ],
+      "word_count": 14747,
+      "byte_count": 116432,
+      "sha256": "1e659ce66b2105e79eefbfaa6ebf1089175b69adbc926f2ac4f12fbdd458f2d8"
     }
   ],
   "sources": [
@@ -10188,6 +10274,305 @@
         "outbox",
         "events",
         "transactions"
+      ]
+    },
+    {
+      "id": "S141",
+      "title": "Git User Manual",
+      "org": "Git community",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://git-scm.com/docs/user-manual",
+      "tags": [
+        "git",
+        "objects",
+        "refs",
+        "workflows"
+      ]
+    },
+    {
+      "id": "S142",
+      "title": "git-push Documentation",
+      "org": "Git community",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://git-scm.com/docs/git-push",
+      "tags": [
+        "git",
+        "push",
+        "refs",
+        "concurrency",
+        "atomicity"
+      ]
+    },
+    {
+      "id": "S143",
+      "title": "Git Repository Layout",
+      "org": "Git community",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://git-scm.com/docs/gitrepository-layout",
+      "tags": [
+        "git",
+        "repository",
+        "refs",
+        "worktrees"
+      ]
+    },
+    {
+      "id": "S144",
+      "title": "git-update-ref Documentation",
+      "org": "Git community",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://git-scm.com/docs/git-update-ref",
+      "tags": [
+        "git",
+        "ref-transactions",
+        "atomicity"
+      ]
+    },
+    {
+      "id": "S145",
+      "title": "A successful Git branching model",
+      "org": "Vincent Driessen",
+      "year": 2020,
+      "version": "2010 article / 2020 reflection",
+      "url": "https://nvie.com/posts/a-successful-git-branching-model/",
+      "tags": [
+        "gitflow",
+        "branching",
+        "release-topology"
+      ]
+    },
+    {
+      "id": "S146",
+      "title": "Trunk Based Development",
+      "org": "Trunk Based Development community",
+      "year": 2026,
+      "version": "Current guidance",
+      "url": "https://trunkbaseddevelopment.com/",
+      "tags": [
+        "trunk",
+        "branching",
+        "continuous-delivery"
+      ]
+    },
+    {
+      "id": "S147",
+      "title": "About rulesets",
+      "org": "GitHub",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets",
+      "tags": [
+        "github",
+        "rulesets",
+        "protected-refs",
+        "bypass"
+      ]
+    },
+    {
+      "id": "S148",
+      "title": "About protected branches",
+      "org": "GitHub",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches",
+      "tags": [
+        "github",
+        "branches",
+        "reviews",
+        "required-checks"
+      ]
+    },
+    {
+      "id": "S149",
+      "title": "Managing a merge queue",
+      "org": "GitHub",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue",
+      "tags": [
+        "github",
+        "merge-queue",
+        "ci",
+        "concurrency"
+      ]
+    },
+    {
+      "id": "S150",
+      "title": "About commit signature verification",
+      "org": "GitHub",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification",
+      "tags": [
+        "github",
+        "signatures",
+        "provenance"
+      ]
+    },
+    {
+      "id": "S151",
+      "title": "Removing sensitive data from a repository",
+      "org": "GitHub",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository",
+      "tags": [
+        "github",
+        "secrets",
+        "history-rewrite",
+        "remediation"
+      ]
+    },
+    {
+      "id": "S152",
+      "title": "Security hardening your deployments with OpenID Connect",
+      "org": "GitHub",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-security-hardening-with-openid-connect",
+      "tags": [
+        "github-actions",
+        "oidc",
+        "workload-identity"
+      ]
+    },
+    {
+      "id": "S153",
+      "title": "Merge requests",
+      "org": "GitLab",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://docs.gitlab.com/user/project/merge_requests/",
+      "tags": [
+        "gitlab",
+        "merge-requests",
+        "reviews",
+        "checks"
+      ]
+    },
+    {
+      "id": "S154",
+      "title": "Control access to protected variables and runners",
+      "org": "GitLab",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://docs.gitlab.com/ci/pipelines/merge_request_pipelines/#control-access-to-protected-variables-and-runners",
+      "tags": [
+        "gitlab",
+        "ci",
+        "protected-resources",
+        "secrets"
+      ]
+    },
+    {
+      "id": "S155",
+      "title": "Semantic Versioning 2.0.0",
+      "org": "Semantic Versioning",
+      "year": 2013,
+      "version": "SemVer 2.0.0",
+      "url": "https://semver.org/",
+      "tags": [
+        "versioning",
+        "compatibility",
+        "releases"
+      ]
+    },
+    {
+      "id": "S156",
+      "title": "SLSA v1.2 Source Track",
+      "org": "OpenSSF / SLSA",
+      "year": 2026,
+      "version": "v1.2",
+      "url": "https://slsa.dev/spec/v1.2/tracks",
+      "tags": [
+        "provenance",
+        "source",
+        "supply-chain"
+      ]
+    },
+    {
+      "id": "S157",
+      "title": "OpenSSF Project Security Baseline",
+      "org": "OpenSSF",
+      "year": 2026,
+      "version": "Current baseline",
+      "url": "https://baseline.openssf.org/",
+      "tags": [
+        "project-security",
+        "releases",
+        "signing",
+        "ci"
+      ]
+    },
+    {
+      "id": "S158",
+      "title": "Code Review Developer Guide",
+      "org": "Google",
+      "year": 2026,
+      "version": "Current engineering guidance",
+      "url": "https://google.github.io/eng-practices/review/",
+      "tags": [
+        "code-review",
+        "correctness",
+        "collaboration"
+      ]
+    },
+    {
+      "id": "S159",
+      "title": "Security hardening for GitHub Actions",
+      "org": "GitHub",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions",
+      "tags": [
+        "github-actions",
+        "runners",
+        "secrets",
+        "dependencies"
+      ]
+    },
+    {
+      "id": "S160",
+      "title": "Git Large File Storage",
+      "org": "Git LFS community",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://git-lfs.com/",
+      "tags": [
+        "git-lfs",
+        "large-files",
+        "storage"
+      ]
+    },
+    {
+      "id": "S161",
+      "title": "Git Tools: Submodules",
+      "org": "Git community",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://git-scm.com/book/en/v2/Git-Tools-Submodules",
+      "tags": [
+        "git",
+        "submodules",
+        "dependencies"
+      ]
+    },
+    {
+      "id": "S162",
+      "title": "git-maintenance Documentation",
+      "org": "Git community",
+      "year": 2026,
+      "version": "Current documentation",
+      "url": "https://git-scm.com/docs/git-maintenance",
+      "tags": [
+        "git",
+        "maintenance",
+        "scale",
+        "performance"
       ]
     }
   ]

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 — 2026-08-20
+
+### Added
+
+- Added `git-workflows`, a portable four-mode skill for repository inspection and safe Git change: branch topology, merges, rebases, conflicts, worktrees, distributed ref updates, protected refs, immutable release tags, semantic versions, source-to-artifact provenance, shared-history migration, secret incidents, and recovery.
+- Added canonical paper 147, `Production-Grade Git and Git Flow`, plus its portable skill reference, worked example, user guide, catalog routing, and current Git/GitHub/GitLab/SemVer/SLSA source map.
+- Added behavioral pressure cases for destructive Gitflow requests, non-fast-forward force pressure, ambiguous push outcomes, exposed signing keys, stale CI, published-tag immutability, and cross-skill release exceptions.
+
+### Changed
+
+- Strengthened `quality-release` with explicit evidence states, exact release-subject binding, cross-skill boundary closure, governed exception records, and non-waivable critical blockers.
+- Integrated the new skill with the repository-wide Think, Review, Change, and Verify modes, typed companion relationships, canonical catalog, install grouping, user-first README, guides, and runtime-neutral routing.
+- Updated the corpus to 147 papers and the distribution to 15 portable skills, with refreshed manifests, checksums, metadata, behavioral evaluation documentation, and release versioning.
+
 ## 0.3.2 — 2026-08-17
 
 - Renamed every user-facing skill to the approved Think Through or Review name

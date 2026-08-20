@@ -22,6 +22,8 @@ If no mode is named, the skill infers one and states it. Combined work proceeds 
 - scalability validation and limit assumptions;
 - resource management: pools, descriptors, memory, leaks;
 - compression trade-offs;
+- evidence states and exact release-subject binding, so plans and prior claims are not presented as current proof;
+- cross-skill boundary closure and governed release exceptions;
 - the cross-cutting pre-release checklist that gates any backend change.
 
 ## When to use
@@ -32,14 +34,17 @@ Before calling any backend change done; when planning tests for a feature; when 
 
 The output follows the active mode: Think returns decisions and open questions; Review returns findings without claiming changes; Change records the approved work and pending proof; Verify returns observed evidence and explicitly labels unrun checks.
 
-A claims-to-evidence map: every quality or performance claim mapped to the test, drill, or measurement that proves it — or explicitly labeled untested with a follow-up plan — plus the walked release checklist with blockers and follow-ups separated. The skill stops work on readiness claims that have no evidence path.
+A release verdict and claims-to-evidence map: every claim is classified as executed, planned, claimed, unavailable, or contradicted and tied to the exact release subject. The run also closes applicable sibling-skill boundaries, records any governed exceptions without changing the evidence, and separates blockers from bounded follow-ups.
 
 ## Works well with
 
 - `transactions-consistency` for the invariants behind concurrency tests;
 - `async-messaging` for queue and job failure drills;
 - `resilience-flow-control` for outage and degradation expectations;
+- `auth-access`, `api-contracts`, `data-storage`, and `security-privacy` for identity, contracts, persistence, and trust boundaries;
 - `production-operations` for restore and recovery drills;
+- `migration-evolution` and `runtime-delivery` for compatibility and release-subject integrity;
+- `git-workflows` for candidate refs, immutable release tags, and source-to-artifact identity;
 - `architecture-review-gate` for the formal approval decision itself.
 
 ## Try it

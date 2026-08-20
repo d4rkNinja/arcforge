@@ -2,7 +2,7 @@
 
 Read [`AGENTS.md`](AGENTS.md) as the repository source of truth.
 
-This is a portable Agent Skills repository. Keep all fourteen skills runtime-neutral and do not add native Claude Code plugins, hooks, agents, or a separate harness configuration unless the user explicitly requests a new distribution format.
+This is a portable Agent Skills repository. Keep all fifteen skills runtime-neutral and do not add native Claude Code plugins, hooks, agents, or a separate harness configuration unless the user explicitly requests a new distribution format.
 
 Route work by skill:
 
@@ -25,10 +25,11 @@ routed papers before making claims):
 - logging, metrics, tracing, health, audit, runbooks, backup/DR, multi-region -> `skills/production-operations/SKILL.md`;
 - schema/data/contract migration, backfills, cutover, legacy integration -> `skills/migration-evolution/SKILL.md`;
 - test strategy, concurrency/failure/load evidence, release checklist -> `skills/quality-release/SKILL.md`;
-- config, connection pools, graceful shutdown, deploy ordering, CI/CD -> `skills/runtime-delivery/SKILL.md`.
+- config, connection pools, graceful shutdown, deploy ordering, CI/CD -> `skills/runtime-delivery/SKILL.md`;
+- branches, commits, merges, rebases, remotes, tags, versions, protected refs, history rewrites, Git recovery -> `skills/git-workflows/SKILL.md`.
 
-Domain papers live in each skill's `references/papers/`; they are generated from
-the canonical corpus — edit the corpus and re-run the packager, never the skill
-copies.
+Domain papers live in each skill's `references/papers/`. When a canonical paper
+changes, update every owning skill copy with it and review semantic parity and
+links; do not hand-edit only one side.
 
 Use the Skills CLI for installation checks and restart Claude Code when a newly created top-level skill directory is not visible in the current session.

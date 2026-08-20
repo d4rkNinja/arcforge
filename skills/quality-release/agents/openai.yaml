@@ -1,4 +1,4 @@
 interface:
   display_name: "Think Through Quality & Release Readiness"
-  short_description: "Evidence-based quality and release-readiness decisions"
-  default_prompt: "Use $quality-release in Think, Review, Change, or Verify mode for test strategy, failure and load evidence, and release readiness."
+  short_description: "Evidence, boundary closure, and release readiness"
+  default_prompt: "Use $quality-release in Think, Review, Change, or Verify mode for test strategy, evidence states, cross-skill boundary closure, governed exceptions, and release readiness."

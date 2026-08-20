@@ -50,6 +50,7 @@ Portable skills live under `skills/*/`. Each skill must remain usable by Claude 
 - Schema, data, and contract migration and cutover: `skills/migration-evolution/`
 - Testing, performance, and release verification: `skills/quality-release/`
 - Runtime, configuration, deployment, CI/CD: `skills/runtime-delivery/`
+- Git repositories, branches, remotes, tags, versions, history, and repository workflow: `skills/git-workflows/`
 - Canonical backend knowledge corpus and reference integrity: `backend-engineering-knowledge-base/`
 - Repository documentation: `README.md`, `docs/`, `CONTRIBUTING.md`, and `SECURITY.md`
 - Behavioral pressure cases: `evals/`
