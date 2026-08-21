@@ -2,9 +2,14 @@
 
 Read [`AGENTS.md`](AGENTS.md) as the repository source of truth.
 
-This is a portable Agent Skills repository. Keep all fifteen skills runtime-neutral and do not add native Claude Code plugins, hooks, agents, or a separate harness configuration unless the user explicitly requests a new distribution format.
+This is a portable Agent Skills repository. Keep all seventeen skills runtime-neutral and do not add native Claude Code plugins, hooks, agents, or a separate harness configuration unless the user explicitly requests a new distribution format.
 
 Route work by skill:
+
+Routing layer (use when the owning skill, the mode, or the order is not settled):
+
+- pick the skill, the mode, the companions, and the order, then continue into the work -> `skills/using-forge/SKILL.md`;
+- answer which skill, which mode, and what order, then stop, with nothing inspected or changed -> `skills/think-forge/SKILL.md`.
 
 Architecture layer:
 

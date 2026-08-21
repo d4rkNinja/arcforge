@@ -1,6 +1,6 @@
 # AI Behavioral Evaluation Cases
 
-`cases.json` is a runtime-neutral pressure suite for testing whether ArcForge's fifteen portable skills activate and preserve their non-negotiable rules under technology pressure, deadline pressure, unsafe authority requests, and misleading architecture claims.
+`cases.json` is a runtime-neutral pressure suite for testing whether ArcForge's seventeen portable skills activate and preserve their non-negotiable rules under technology pressure, deadline pressure, unsafe authority requests, and misleading architecture claims.
 
 `schema/cases.schema.json` documents the optional structured fields. Existing
 prompt-oriented cases remain supported, while criteria, installed or

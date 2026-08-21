@@ -1,0 +1,4 @@
+interface:
+  display_name: "Think Forge"
+  short_description: "Which ArcForge skill, which mode, which order, then stop"
+  default_prompt: "Use $think-forge to return a route only: name the owning skill and mode for each surface of this request, order the steps, list the companions each owner will pull in, name the gaps and anything not installed, and stop without inspecting or changing anything."

@@ -3,6 +3,14 @@
   "notGrouped": "bottom",
   "groupings": [
     {
+      "title": "ArcForge Routing & Entry Point",
+      "description": "Start here when the owning skill, the mode, or the order is not settled: Using Forge routes the request and continues into the work, Think Forge answers the route only.",
+      "skills": [
+        "using-forge",
+        "think-forge"
+      ]
+    },
+    {
       "title": "ArcForge System Thinking & Review",
       "description": "Portable, evidence-backed skills for thinking through production systems and AI systems or reviewing architecture independently.",
       "skills": [

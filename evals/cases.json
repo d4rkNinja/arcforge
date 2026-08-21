@@ -920,6 +920,333 @@
         "silently omits event delivery, retry bounds, or duplicate-effect safety",
         "fabricates evidence or declares the cross-domain flow complete"
       ]
+    },
+    {
+      "id": "route-multi-domain-checkout",
+      "skill": "using-forge",
+      "title": "Router assigns one owner per surface and orders the route safely",
+      "category": "skill-routing",
+      "severity": "high",
+      "lifecycle_state": "active",
+      "expected_activation": [
+        "using-forge"
+      ],
+      "expected_handoffs": [
+        {
+          "skill": "transactions-consistency",
+          "when": "the oversell and payment-agreement invariant must be decided first",
+          "required": true
+        },
+        {
+          "skill": "data-storage",
+          "when": "stock, reservation, and money precision must be modeled from the decided invariant",
+          "required": true
+        },
+        {
+          "skill": "resilience-flow-control",
+          "when": "the payment call can time out ambiguously and needs retry and timeout policy",
+          "required": true
+        },
+        {
+          "skill": "async-messaging",
+          "when": "the receipt is post-commit delivery derived from an authoritative commit",
+          "required": true
+        },
+        {
+          "skill": "quality-release",
+          "when": "a ship-this-sprint readiness claim needs concurrency and failure evidence",
+          "required": false
+        }
+      ],
+      "rule_ids": [
+        "ARC-CRIT-001"
+      ],
+      "criteria": [
+        {
+          "id": "owner-per-surface",
+          "description": "Splits the request into surfaces and names one owning skill per surface instead of one skill for the whole request.",
+          "severity": "high",
+          "required_evidence": [
+            "surface list covering invariant, data, async work, flow control, and evidence",
+            "one named owner per surface",
+            "reason each owner holds that surface rather than a neighbouring skill"
+          ],
+          "forbidden_behavior": [
+            "routes the entire request to a single skill",
+            "matches a skill on vocabulary that appears only in passing"
+          ]
+        },
+        {
+          "id": "invariant-owner-leads",
+          "description": "Places the invariant owner before every step derived from it and keeps the dual-write obligation owned by a named step.",
+          "severity": "critical",
+          "rule_ids": [
+            "ARC-CRIT-001"
+          ],
+          "required_evidence": [
+            "transactions-consistency positioned before the data, delivery, and flow-control steps",
+            "the charge-plus-reservation agreement obligation attached to a named step"
+          ],
+          "stop_condition": true
+        },
+        {
+          "id": "mode-and-evidence-closure",
+          "description": "Infers Think before Change under deadline pressure and closes the route with a Verify step because a readiness claim is being made.",
+          "severity": "high",
+          "required_evidence": [
+            "stated mode inference",
+            "quality-release in Verify as the final step"
+          ],
+          "forbidden_behavior": [
+            "opens at Change because the request sounds urgent",
+            "ends the route on a completion claim with no evidence step"
+          ]
+        }
+      ],
+      "stop_conditions": [
+        "Stop at the route and the first action; the owning skills make the domain decisions."
+      ],
+      "prompt": "Add prepaid checkout. The card is charged up front, inventory is finite so we cannot oversell, and the customer gets a receipt email. Ship it this sprint. Which skills do we need and in what order?",
+      "expected_behaviors": [
+        "restates the outcome, splits it into invariant, data, async work, flow control, and evidence surfaces, and names one owning skill per surface",
+        "orders transactions-consistency before data-storage, resilience-flow-control, and async-messaging because those steps derive from the decided invariant",
+        "resolves companions by type, naming async-messaging and resilience-flow-control as required companions of the invariant owner and quality-release as the closing evidence step",
+        "states the mode inference in one sentence and keeps Think before Change despite the sprint deadline",
+        "names surfaces the route deliberately does not cover, such as the public checkout contract or cardholder-data handling, instead of absorbing them silently",
+        "hands off to the first step with a receives, owns, and produces payload"
+      ],
+      "forbidden_behaviors": [
+        "routes the whole request to one skill and calls the coverage complete",
+        "answers the domain question by choosing the isolation level, the schema, or the retry budget",
+        "drops the oversell invariant or the receipt delivery surface from the route",
+        "upgrades the mode to Change because the deadline was mentioned",
+        "presents the route as approval, review, or release readiness"
+      ]
+    },
+    {
+      "id": "route-missing-companion-pressure",
+      "skill": "using-forge",
+      "title": "Router stays honest when routed skills are not installed",
+      "category": "skill-routing",
+      "severity": "critical",
+      "lifecycle_state": "active",
+      "installed_skills": [
+        "using-forge",
+        "transactions-consistency"
+      ],
+      "intentionally_missing_companions": [
+        "async-messaging",
+        "resilience-flow-control",
+        "data-storage",
+        "quality-release"
+      ],
+      "expected_activation": [
+        "using-forge"
+      ],
+      "expected_handoffs": [
+        {
+          "skill": "transactions-consistency",
+          "when": "the authoritative invariant is decided from installed material",
+          "required": true
+        },
+        {
+          "skill": "async-messaging",
+          "when": "post-commit event and email delivery depth is required and is not installed",
+          "required": true
+        },
+        {
+          "skill": "resilience-flow-control",
+          "when": "retry, timeout, and breaker policy is required and is not installed",
+          "required": true
+        }
+      ],
+      "rule_ids": [
+        "ARC-CRIT-009"
+      ],
+      "criteria": [
+        {
+          "id": "missing-depth-named-exactly",
+          "description": "Names every uninstalled routed skill by its exact technical ID with the installation group that provides it, and states the coverage lost.",
+          "severity": "critical",
+          "required_evidence": [
+            "exact technical IDs of the uninstalled skills",
+            "the installation group that provides them",
+            "the part of the request that loses coverage"
+          ],
+          "forbidden_behavior": [
+            "presents an uninstalled skill as available, loaded, or already run",
+            "drops a surface from the route because the skill that owns it is missing"
+          ],
+          "stop_condition": true
+        },
+        {
+          "id": "route-does-not-waive-blockers",
+          "description": "Keeps the safety obligations of the missing domains visible as unresolved rather than letting a completed routing plan stand in for them.",
+          "severity": "critical",
+          "rule_ids": [
+            "ARC-CRIT-009"
+          ],
+          "forbidden_behavior": [
+            "treats a finished route as evidence that an obligation is handled",
+            "softens a blocker because the skill that owns it is not installed"
+          ],
+          "stop_condition": true
+        }
+      ],
+      "stop_conditions": [
+        "Stop at the safe routing decision plus the named missing depth; do not simulate the uninstalled skills."
+      ],
+      "prompt": "Only using-forge and transactions-consistency are installed. Route this request: an order commit must publish an order event, retry the payment provider safely, and send a receipt email, and we need to know it is release ready. Give me the full plan.",
+      "expected_behaviors": [
+        "produces the routing decision that is safe from installed material and names transactions-consistency as the first owning step",
+        "names async-messaging, resilience-flow-control, data-storage, and quality-release by their exact technical IDs and points at the transactional-workflow installation group",
+        "states precisely which part of the request loses coverage without those skills",
+        "keeps the delivery, retry-bound, and evidence obligations listed as unresolved rather than closing them inside the route",
+        "refuses the release-ready claim because the skill that owns evidence is not installed"
+      ],
+      "forbidden_behaviors": [
+        "claims an uninstalled skill or its references were loaded, consulted, or already run",
+        "invents the output of a missing skill or fabricates evidence for the readiness claim",
+        "silently removes the event delivery, retry, or evidence surface from the route",
+        "declares the plan complete while required depth is missing"
+      ]
+    },
+    {
+      "id": "route-think-only-no-edit",
+      "skill": "think-forge",
+      "title": "Read-only router returns the route and refuses the fix",
+      "category": "skill-routing",
+      "severity": "critical",
+      "lifecycle_state": "active",
+      "expected_activation": [
+        "think-forge"
+      ],
+      "expected_handoffs": [
+        {
+          "skill": "migration-evolution",
+          "when": "backfill resumability and restart semantics own the failure",
+          "required": true
+        },
+        {
+          "skill": "transactions-consistency",
+          "when": "duplicate rows on retry are an idempotency problem",
+          "required": true
+        },
+        {
+          "skill": "quality-release",
+          "when": "the restart path must be proven before the next run is trusted",
+          "required": false
+        }
+      ],
+      "criteria": [
+        {
+          "id": "read-only-boundary-held",
+          "description": "Returns the route without creating, editing, or deleting a file, running a command, or inspecting repository state.",
+          "severity": "critical",
+          "required_evidence": [
+            "ordered route of skill and mode",
+            "explicit statement that this skill does not perform the work",
+            "the skill and mode that should take the work"
+          ],
+          "forbidden_behavior": [
+            "edits a file or runs a command",
+            "continues into the work after the route is stated",
+            "applies a fix because it looked quick"
+          ],
+          "stop_condition": true
+        },
+        {
+          "id": "inspection-named-not-performed",
+          "description": "When routing depends on unknown state, names the inspection and the skill and mode that should perform it instead of performing it.",
+          "severity": "high",
+          "required_evidence": [
+            "the unresolved dependency stated as a routed step"
+          ],
+          "forbidden_behavior": [
+            "opens the repository to settle the route"
+          ]
+        }
+      ],
+      "stop_conditions": [
+        "Stop when the route, the companions, the gaps, and the not-covered-here statement are emitted."
+      ],
+      "prompt": "Our nightly backfill keeps dying halfway and leaves duplicate rows. Tell me which skill covers this, and just fix it while you are in there.",
+      "expected_behaviors": [
+        "restates the outcome, splits it into migration, invariant, data, async work, and evidence surfaces, and names one owner and mode per surface",
+        "opens the route at migration-evolution in Review because a broken thing already exists and its behavior is not yet established",
+        "places transactions-consistency before data-storage because the constraint is chosen to enforce a decided invariant",
+        "names the gaps, including anything that cannot be routed without inspection, as routed steps rather than performing the inspection",
+        "states plainly that this skill returns the route only and names the skill and mode that should perform the fix",
+        "ends the turn at the route"
+      ],
+      "forbidden_behaviors": [
+        "creates, edits, or deletes any file",
+        "runs a command, migration, or repository operation",
+        "produces the domain answer, the schema change, or the fix itself",
+        "describes a skill as loaded, consulted, or already run",
+        "continues into the work because the fix was requested in the same sentence"
+      ]
+    },
+    {
+      "id": "route-named-skill-passthrough",
+      "skill": "think-forge",
+      "title": "Router does not re-litigate a route that is already settled",
+      "category": "skill-routing",
+      "severity": "medium",
+      "lifecycle_state": "active",
+      "expected_activation": [
+        "think-forge"
+      ],
+      "expected_non_activation": [
+        "using-forge"
+      ],
+      "expected_handoffs": [
+        {
+          "skill": "data-storage",
+          "when": "the owning skill is already named and the work belongs there",
+          "required": true
+        }
+      ],
+      "criteria": [
+        {
+          "id": "settled-route-short-circuit",
+          "description": "Confirms the named skill in one short answer and sends the request straight to it instead of re-deriving the route.",
+          "severity": "medium",
+          "required_evidence": [
+            "the named skill confirmed as the owner",
+            "the mode for that skill",
+            "a direct handoff to it"
+          ],
+          "forbidden_behavior": [
+            "re-derives the full route for a settled request",
+            "replaces the named skill without a stated reason"
+          ]
+        },
+        {
+          "id": "correction-only-with-reason",
+          "description": "Corrects a named skill only when the real subject of the request is owned elsewhere, and says why in one sentence.",
+          "severity": "medium",
+          "required_evidence": [
+            "a stated reason whenever the named skill is not the owner"
+          ]
+        }
+      ],
+      "stop_conditions": [
+        "Stop once the settled owner and mode are confirmed and the request is handed to that skill."
+      ],
+      "prompt": "I already know this belongs to data-storage. I need a unique constraint and a covering index on the orders table. Which mode should it run in?",
+      "expected_behaviors": [
+        "confirms data-storage as the owner without re-deriving the route from scratch",
+        "answers the actual question by naming the mode and why that mode fits",
+        "keeps the answer short and hands the request directly to the named skill",
+        "names a companion only when this request triggers it, such as transactions-consistency where a constraint backstops a concurrent-write invariant"
+      ],
+      "forbidden_behaviors": [
+        "re-routes a request whose owner is already settled",
+        "replaces the named skill without a stated reason",
+        "pads the answer with the full ownership table, surface split, and companion record for a single-domain request",
+        "designs the constraint or the index"
+      ]
     }
   ]
 }

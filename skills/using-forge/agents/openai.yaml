@@ -1,0 +1,4 @@
+interface:
+  display_name: "Using Forge"
+  short_description: "Pick the right ArcForge skill, mode, companions, and order"
+  default_prompt: "Use $using-forge to route this request: name the owning skill for each surface, choose Think, Review, Change, or Verify, resolve required, recommended, handoff, and optional-depth companions, order the steps safely, state the handoff payloads, and name any skill that is not installed."

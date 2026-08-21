@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.4.1 — 2026-08-21
+
+### Added
+
+- Added `using-forge`, the routing entry point. It splits a plain-language request into surfaces (invariant, contract, data, async work, flow control, secret, operations, migration, evidence, runtime, repository), names exactly one owning skill per surface, selects Think, Review, Change, or Verify per step and states the inference, resolves required, recommended, handoff, and optional-depth companions, orders the steps so the owner of an invariant decides before anything derived from it and identity and secrets precede the flows that consume them, writes a receives/owns/produces handoff payload for each step, and names any routed skill that is not installed by its exact technical ID and installation group.
+- Added `think-forge`, the read-only routing answer. It returns which skill, which mode, and what order, names the coverage gaps, and stops. Reasoning about likely repository contents is allowed but opening it is not; naming a required check is allowed but running it is not; when the route depends on unknown state the inspection is named as a routed step instead of performed; and when the work is requested in the same sentence it returns the route, states that it does not perform the work, and names the skill and mode that should.
+- Added the shared routing map, carried as byte-identical `references/routing-map.md` copies by both routing skills, covering owned surface, positive and negative triggers, exclusions, typed companions, the four modes, the ordering rules, installation groups, and standalone policy for all seventeen skills. The map also carries a Routing layer section giving both routers their own entries, with every field derived literally from the catalog, and a top-level Standing down section stating the four rules that keep the routing layer from adding a step that buys no coverage: confirm-and-hand-off on a settled owner, name the skill directly on a single unambiguous domain whose mode and order are settled, never present a route as approval, review, or release readiness, and never answer the domain question or report a skill as loaded, consulted, or already run.
+- Added the `skill-routing` installation group so the routing layer installs on its own, two worked examples (a multi-domain prepaid-checkout route and a route-only answer that refuses an in-line fix), optional Codex interface metadata for each routing skill, and a user guide per routing skill in `docs/skills/`.
+- Added four behavioral pressure cases in a new `skill-routing` category, taking the suite from 45 to 49: multi-domain routing coverage and order under deadline pressure with the invariant-owner rule bound to `ARC-CRIT-001`; honest routing when the required depth is not installed, with the readiness claim refused and bound to `ARC-CRIT-009`; a route-only answer that refuses an in-line fix request; and a settled single-domain route that must not be re-derived or padded.
+
+### Changed
+
+- Raised the canonical catalog to 1.2.0 with the routing layer listed first because routing is the entry layer, both entries following the existing schema with `owner_papers: []`, and deliberately asymmetric triggers so the two routers do not compete: `using-forge` claims `route this`, `multi-domain request`, and `companion skills`, `think-forge` claims `route only`, `do not change anything`, `check my plan`, and `second opinion on the route`, and both suppress on `user already named a skill`, `single unambiguous domain`, and `independent approval verdict`.
+- Documented routing-map parity discipline in `AGENTS.md`, mirroring the existing paper-reference discipline: the catalog is canonical, the two map copies are derived, they are updated together and confirmed byte-identical, and neither is hand-edited alone.
+- Rewrote the README around a three-step start, the two ways in, the four modes, the full skill list grouped by layer, copy-paste prompts per mode, how skills work together, and common questions, with the internal machinery removed from the document.
+- Updated `CLAUDE.md` routing and count, `AGENTS.md` file ownership, `skills.sh.json` with a first "ArcForge Routing & Entry Point" grouping, a Routing layer table in `docs/skills/README.md`, evaluation documentation, `VERSION`, and `MANIFEST.sha256` (455 entries, LF-normalized) for seventeen portable skills.
+
+### Compatibility
+
+- Every existing technical skill ID is unchanged; nothing installed against 0.4.0 needs renaming or reinstalling.
+- The routing layer is additive and instruction-only: no executable script files and no new shell, network, filesystem, database, or deployment authority. Naming a skill directly still works and skips routing entirely.
+- The four operating modes and all fifteen existing skills' instructions, references, and stop conditions are unchanged.
+
+### Not verified
+
+- The model-based behavioral evaluation for the four new routing cases was not run: no baseline or skill-installed runs, no fresh-context trials, and no independent reviewer assessment retained under `evals/results/`. Routing behavior is unproven until that evaluation is recorded.
+
 ## 0.4.0 — 2026-08-20
 
 ### Added

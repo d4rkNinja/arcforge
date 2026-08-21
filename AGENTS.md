@@ -36,6 +36,8 @@ Portable skills live under `skills/*/`. Each skill must remain usable by Claude 
 
 ## File ownership
 
+- Skill routing, mode selection, companion resolution, and step order: `skills/using-forge/`
+- Route-only answers that inspect and change nothing: `skills/think-forge/`
 - General architecture: `skills/system-architecture-harness/`
 - AI/agent architecture: `skills/ai-agent-system-architecture/`
 - Independent AI review: `skills/architecture-review-gate/`
@@ -60,6 +62,12 @@ Portable skills live under `skills/*/`. Each skill must remain usable by Claude 
 - The canonical corpus is `backend-engineering-knowledge-base/papers/`; never edit it casually.
 - Skill copies under `skills/*/references/papers/` are committed portable reference artifacts. When a paper changes, update the canonical paper and every owning skill copy together, then review their semantic parity and links.
 - Keep canonical papers and owning skill copies semantically aligned and review their links together.
+
+## Routing map discipline
+
+- The canonical routing source is `arcforge.catalog.yaml`: technical IDs, routing descriptions, positive and negative triggers, typed companions, and installation groups.
+- `skills/using-forge/references/routing-map.md` and `skills/think-forge/references/routing-map.md` are identical committed copies derived from that catalog. When routing changes, update the catalog and both copies together and confirm they stay byte-identical.
+- Never hand-edit one routing map copy alone, and never let a skill route from a name that merely sounds related instead of from the map.
 
 ## Maintainer review
 

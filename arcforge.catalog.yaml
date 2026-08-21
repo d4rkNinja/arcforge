@@ -1,4 +1,4 @@
-catalog_version: "1.1.0"
+catalog_version: "1.2.0"
 technical_id_policy: "Stable installation and activation contract; never derive it from the display name."
 display_name_policy: "User-facing promise projected into primary headings, guides, and optional runtime metadata."
 
@@ -46,8 +46,41 @@ installation_groups:
   repository-release-workflow:
     description: "Git topology, protected refs, CI candidate identity, immutable release versions, provenance, and release evidence."
     skills: [git-workflows, runtime-delivery, quality-release, security-privacy, production-operations]
+  skill-routing:
+    description: "Routing entry point that selects the owning skill, mode, companions, and order."
+    skills: [using-forge, think-forge]
 
 skills:
+  - technical_id: using-forge
+    display_name: "Using Forge"
+    domain: "routing entry point: skill selection, mode selection, companion resolution, and step order"
+    routing_description: "Use when a request needs ArcForge but the owning skill, the mode, or the order is not settled: choose the skill, choose Think, Review, Change, or Verify, resolve required, recommended, handoff, and optional-depth companions, and sequence multi-domain work such as checkout, signup, migration, release, or incident follow-up. Produces an ordered routing plan with handoff payloads and names any skill that is not installed. Use think-forge for a route only, with no repository change."
+    positive_triggers: [which skill, where do I start, route this, multi-domain request, what order, which mode, companion skills, is anything missing]
+    negative_triggers: [user already named a skill, single unambiguous domain, independent approval verdict, the domain answer itself]
+    owner_papers: []
+    companions:
+      - {type: handoff, skill: think-forge, when: "the route is the whole question and nothing should be inspected or changed", transfers: "the requested outcome and the surfaces identified", missing: "state that a route-only answer is unavailable and keep the routing output free of domain work"}
+      - {type: handoff, skill: system-architecture-harness, when: "the routed surface is whole-system architecture", transfers: "requested outcome, surfaces, mode, and companion set", missing: "name the missing owner and the coverage lost; do not answer the architecture question in the route"}
+      - {type: handoff, skill: architecture-review-gate, when: "an independent approval verdict is requested", transfers: "the artifact to review and the evidence available", missing: "do not self-approve; report that independent review remains unavailable"}
+      - {type: recommended, skill: quality-release, when: "the route ends in a readiness or completion claim", transfers: "the claims made and the validation plan", missing: "retain the validation plan and label every unrun check"}
+    install_groups: [skill-routing]
+    paths: {skill: skills/using-forge/SKILL.md, metadata: skills/using-forge/agents/openai.yaml, guide: docs/skills/using-forge.md, references: skills/using-forge/references, examples: skills/using-forge/examples}
+    eval_cases: [route-multi-domain-checkout, route-missing-companion-pressure]
+
+  - technical_id: think-forge
+    display_name: "Think Forge"
+    domain: "read-only routing answer: which skill, which mode, which order"
+    routing_description: "Use when the question is which ArcForge skill to use and in what order, and nothing should be inspected, changed, or implemented yet: name the owning skill, the mode, the sequence, and the coverage gaps, then stop. Answers where do I start, which skill covers this, which mode should this run in, what order should these run in, and is anything missing. Read-only by contract. Use using-forge when the route should carry companion contracts and continue into the work."
+    positive_triggers: [which skill covers this, where do I start, which mode, what order, route only, do not change anything, check my plan, second opinion on the route]
+    negative_triggers: [perform the work, apply the change, user already named a skill, single unambiguous domain with the mode settled, independent approval verdict, inspect the repository]
+    owner_papers: []
+    companions:
+      - {type: handoff, skill: using-forge, when: "the route must carry companion contracts and continue into the work", transfers: "the route, modes, order, and named gaps", missing: "return the route and state that execution routing is unavailable"}
+      - {type: handoff, skill: architecture-review-gate, when: "an independent approval verdict is requested", transfers: "the artifact to review and the evidence available", missing: "do not present a route as approval or readiness"}
+    install_groups: [skill-routing]
+    paths: {skill: skills/think-forge/SKILL.md, metadata: skills/think-forge/agents/openai.yaml, guide: docs/skills/think-forge.md, references: skills/think-forge/references, examples: skills/think-forge/examples}
+    eval_cases: [route-think-only-no-edit, route-named-skill-passthrough]
+
   - technical_id: system-architecture-harness
     display_name: "Think Through Production Systems"
     domain: "general production-system architecture"

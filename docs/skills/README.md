@@ -1,6 +1,13 @@
 # Skill Guides
 
-One page per skill: what it is, when to use it, what it covers, what a run produces, and which skills it pairs with. Every skill supports **Think**, **Review**, **Change**, and **Verify**. Start here when deciding which skill fits your task; the skill's own `SKILL.md` remains the authoritative instructions.
+One page per skill: what it is, when to use it, what it covers, what a run produces, and which skills it pairs with. Not sure which one you need? Start with the routing layer and it will tell you. Every design and domain skill supports **Think**, **Review**, **Change**, and **Verify**. The `SKILL.md` inside each skill remains the authoritative instructions.
+
+## Routing layer
+
+| Guide | Skill ID | One-line purpose |
+|---|---|---|
+| [Using Forge](using-forge.md) | `using-forge` | Pick the owning skill, the mode, the companions, and the order, then start the work |
+| [Think Forge](think-forge.md) | `think-forge` | Answer which skill, which mode, and what order, then stop |
 
 ## Design & review layer
 
