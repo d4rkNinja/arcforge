@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Agent loops need hard limits on time, steps, cost, tool scope, and side effects.
 5. **Invariant 5:** Memory and RAG must enforce the same authorization, deletion, provenance, and tenant boundaries as the source data.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -135,33 +133,33 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.3. Chunking
 
-- **SHOULD — engineering rule:** Process bounded deterministic chunks with checkpoints after durable commit, idempotent writes, rate/resource limits, pause/resume, version guards, and validation samples plus full reconciliation.
-- **Production failure mode:** Restart repeats or skips rows, live writes are overwritten by stale data, or the job saturates production.
-- **Existing-codebase evidence:** Kill workers at every boundary, mutate rows during backfill, resume from checkpoints, and compare source/target counts and checksums.
+- **SHOULD — engineering rule:** Treat chunk size and overlap as measured trade-offs, not defaults: larger chunks keep semantic coherence but dilute embedding specificity and consume context budget, while smaller chunks retrieve precisely but lose surrounding context; start near 256–1024 tokens with ~10–20% overlap and validate per corpus against a retrieval eval set rather than assuming library defaults transfer; split at document-structure boundaries (headings, paragraphs, code blocks, table rows) instead of fixed character windows; store lineage metadata on every chunk (source document ID, section path, character offsets, ingestion version) so citations can resolve later.
+- **Production failure mode:** Fixed character windows sever tables, code blocks, and arguments mid-thought, so even top-ranked chunks arrive unreadable; a chunker or library upgrade silently changes boundaries and stored offsets/citations point at text different from what was embedded.
+- **Existing-codebase evidence:** Locate the chunking configuration and the eval results that justified its size/overlap values; sample split output over representative documents (tables, code, nested headings) and verify every persisted chunk carries source-ID, section-path, offset, and ingestion-version metadata.
 
 ### 8.4. Embeddings
 
-- **SHOULD — engineering rule:** Version parser, chunker, embedding model, metadata, ACLs, and source revision; retain byte/page offsets for citations and evaluate retrieval/reranking separately from generation.
-- **Production failure mode:** Index entries cannot be traced to current source text, ACLs drift, or a model change makes old/new vectors incomparable.
-- **Existing-codebase evidence:** Use a labeled retrieval corpus, deletion/ACL tests, reindex shadow comparison, and citation offset verification.
+- **SHOULD — engineering rule:** The embedding-model choice defines the similarity space: vectors from different models (or versions) are incomparable, so any model change forces full re-embedding of every affected collection; size storage and memory from dimensionality × vector count before ingestion; match the normalization convention to the distance metric (cosine vs inner product); store the embedding model identifier with each index/collection and refuse queries embedded by a different model.
+- **Production failure mode:** Index entries cannot be traced to current source text, ACLs drift, or a model change makes old/new vectors incomparable — queries embedded with the newer model score against vectors built with the older one and relevance collapses without any error signal.
+- **Existing-codebase evidence:** Check whether embedding model IDs are recorded with each index/collection and enforced at query time; use a labeled retrieval corpus, deletion/ACL tests, reindex shadow comparison, and citation offset verification.
 
 ### 8.9. Reranking
 
-- **SHOULD — engineering rule:** Version parser, chunker, embedding model, metadata, ACLs, and source revision; retain byte/page offsets for citations and evaluate retrieval/reranking separately from generation.
-- **Production failure mode:** Index entries cannot be traced to current source text, ACLs drift, or a model change makes old/new vectors incomparable.
-- **Existing-codebase evidence:** Use a labeled retrieval corpus, deletion/ACL tests, reindex shadow comparison, and citation offset verification.
+- **SHOULD — engineering rule:** Two-stage retrieve-then-rerank is the standard precision play: cheap ANN recall pulls top-k (~50–100 candidates), then a slower cross-encoder reranks down to the top-n (~5–10 passages) fed to the model; budget latency per stage explicitly; reranking improves answer grounding when first-stage recall is broad enough, but per-query cost and added failure surface must be justified by measured retrieval-quality deltas, evaluated separately from generation.
+- **Production failure mode:** The reranker adds latency and a timeout/failure point to every query while improving nothing because first-stage recall was too narrow — a cross-encoder can only reorder what recall returned; an unversioned reranker swap silently changes which passages reach the prompt.
+- **Existing-codebase evidence:** Measure stage-by-stage latency and candidate counts (recall k vs rerank n); run a labeled retrieval corpus with and without reranking to capture the actual quality delta before paying its per-query cost in production.
 
 ### 8.11. Citation mapping
 
-- **SHOULD — engineering rule:** Version parser, chunker, embedding model, metadata, ACLs, and source revision; retain byte/page offsets for citations and evaluate retrieval/reranking separately from generation.
-- **Production failure mode:** Index entries cannot be traced to current source text, ACLs drift, or a model change makes old/new vectors incomparable.
-- **Existing-codebase evidence:** Use a labeled retrieval corpus, deletion/ACL tests, reindex shadow comparison, and citation offset verification.
+- **SHOULD — engineering rule:** Attribute each generated claim back to the specific chunk(s) it came from using stored lineage metadata; index entries must record the source-document VERSION so citations resolve to what was true at indexing time, not current document state; enforce citation-validity checks server-side — a cited chunk must actually have been retrieved into the model context, not fabricated after generation.
+- **Production failure mode:** Citations rendered from current document state contradict the answer built from indexed text after the source changed; the model fabricates confident references for claims whose chunks were never retrieved, and nothing catches it because the citation format itself looks valid.
+- **Existing-codebase evidence:** Simulate citation resolution against a mutated source document and assert citations still resolve to the indexed version; verify validity checks reject citations whose chunks were absent from retrieved context.
 
 ### 8.12. Reindexing
 
-- **SHOULD — engineering rule:** Design indexes from concrete query predicates and ordering, considering equality/range order, selectivity, write amplification, storage, uniqueness, tenant prefixing, and online build behavior.
-- **Production failure mode:** An index exists but cannot support the actual predicate/order, low-selectivity indexes waste writes, or an online build saturates I/O and replication.
-- **Existing-codebase evidence:** Capture explain plans and latency for representative cardinalities; rehearse create/drop/rebuild on production-like data.
+- **SHOULD — engineering rule:** Full re-index means running the entire embed pipeline into a NEW collection/index while the old one keeps serving traffic; validate retrieval quality offline against a golden question set BEFORE cutover; swap atomically through alias/pointer flip, retain the previous index as rollback, and budget dual-storage cost during rebuild windows.
+- **Production failure mode:** An in-place rebuild locks or empties the live index mid-run so search degrades for hours; cutover fires on job completion rather than measured retrieval quality and ships a silent regression; the previous index is dropped immediately, eliminating rollback.
+- **Existing-codebase evidence:** Find the alias-swap mechanics (or confirm their absence) in the vector-store client; rehearse build → golden-set validation → atomic flip → rollback on production-like data volumes.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 

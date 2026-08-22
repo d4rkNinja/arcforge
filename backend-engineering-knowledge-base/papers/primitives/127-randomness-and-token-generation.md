@@ -135,63 +135,63 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.1. Cryptographic randomness
 
-- **MUST — engineering rule:** Use well-reviewed libraries and current algorithms; define key purpose, scope, version, generation, storage, rotation, revocation, nonce uniqueness, and authenticated context.
-- **Production failure mode:** Custom crypto, nonce reuse, weak randomness, key/algorithm confusion, or unauthenticated encryption destroys the intended guarantee.
-- **Existing-codebase evidence:** Review against a cryptographic design document and test key rotation, corruption, wrong context/key, entropy failure, and legacy ciphertext.
+- **MUST — engineering rule:** Draw every security token from an OS CSPRNG through reviewed libraries; this paper complements [064. Cryptography](../cross-cutting/064-cryptography.md), which owns CSPRNG fundamentals — never seed or hand-roll a generator for token material, and never derive credentials from timestamps, counters, or process state.
+- **Production failure mode:** A generator seeded from the clock produces session IDs recoverable from a few observed samples; a refactor swaps a secure call for an insecure one and nothing fails loudly.
+- **Existing-codebase evidence:** Trace every token-generation call site to an OS CSPRNG; grep forbidden sources (`Math.random`, `rand`, `mt_rand`, time-seeded PRNGs) feeding anything used as a credential.
 
 ### 7.2. Token entropy
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Token entropy** within Randomness & Token Generation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for token entropy is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for token entropy, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Set entropy floors per token class: session identifiers, reset tokens, and API keys need at least 128 bits from a CSPRNG; a 6-digit OTP carries only ~20 bits of space (10^6) and is acceptable ONLY behind aggressive rate limiting, attempt-count lockout, and minute-scale TTL.
+- **Production failure mode:** A "random" token actually carries far fewer bits than assumed because truncation or alphabet choice shrank it; brute force succeeds against verification endpoints nobody rate-limits.
+- **Existing-codebase evidence:** Compute the entropy of generated identifiers from the actual alphabet and length in code (bits = log2(alphabet^length)), not from documentation; flag credential-class tokens below 128 bits lacking compensating controls.
 
 ### 7.3. Collision probability
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Collision probability** within Randomness & Token Generation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for collision probability is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for collision probability, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Budget identifiers with the birthday bound — collision probability grows as roughly n^2/2^bits across n issued values; 128-bit IDs make collisions negligible at any realistic n, while 64-bit IDs already collide around billions of issuances.
+- **Production failure mode:** A shortened ID scheme (first 8 characters of a hash) collides in production years later and corrupts or blocks another user's record; only a unique constraint prevents silent overwrite, and the request fails confusingly.
+- **Existing-codebase evidence:** Find where IDs are truncated or alphabet-mapped, compute effective bits after transformation, and verify a uniqueness constraint plus collision-retry exists wherever full entropy is not preserved.
 
 ### 7.4. Guessability
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Guessability** within Randomness & Token Generation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for guessability is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for guessability, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Treat sequential, timestamp-derived, or otherwise guessable external identifiers as enumeration vulnerabilities REGARDLESS of authorization checks — predictability amplifies IDOR into mass scraping and account probing; if humans need readable IDs, pair them with an unguessable opaque secret for access decisions.
+- **Production failure mode:** Incremental order numbers let a competitor enumerate every order and reconstruct revenue by walking `/orders/{id}` until rate limits respond; authorization logs the abuse only after the data left.
+- **Existing-codebase evidence:** Create two objects seconds apart and compare their external identifiers; walk a sample of the ID space unauthenticated in staging and measure what the response pattern leaks.
 
 ### 7.5. Secure random APIs
 
-- **MUST — engineering rule:** Define the exact semantics of **Secure random APIs** within Randomness & Token Generation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for secure random apis is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for secure random apis, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Use the OS CSPRNG binding for each language — `crypto/rand` (Go), `os.urandom`/`secrets` (Python), `SecureRandom` (JVM/Ruby), `crypto.getRandomValues` (browser/Node) — forbid `Math.random()`, C `rand()`, time-seeded PRNGs, and truncated UUIDv4 as token sources, and use rejection sampling when mapping random bytes onto alphabets so modulo bias cannot shrink the space.
+- **Production failure mode:** `% alphabetSize` over raw bytes biases early alphabet positions (256 % 62 does not divide evenly), quietly halving effective search space; a browser bundle's `Math.random` becomes the session-token source after a careless refactor.
+- **Existing-codebase evidence:** Grep forbidden PRNGs feeding token paths, review every bytes-to-string conversion for modulo bias, and confirm the CSPRNG call fails closed rather than silently degrading on entropy exhaustion.
 
 ### 7.6. Token length
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Token length** within Randomness & Token Generation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for token length is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for token length, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Derive encoded length from the entropy floor and the alphabet: a 128-bit floor needs 22 base64url characters, 32 hex characters, or roughly 43 characters of unambiguous lowercase alphanumeric — never shorten below the floor for aesthetics.
+- **Production failure mode:** A "nicer-looking" 16-character key cuts entropy below 80 bits and becomes the weakest credential in the system; padding-stripped base64 breaks strict parsers into accepting alternate encodings.
+- **Existing-codebase evidence:** Compute bits-per-encoded-character for each token format in use and verify encoded length meets the class floor; check parsers reject malformed lengths instead of trimming silently.
 
 ### 7.7. Encoding
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Encoding** within Randomness & Token Generation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for encoding is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for encoding, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Encode tokens as base64url (no padding pitfalls in URLs and headers) or hex; avoid visually ambiguous alphabets (no O/0, l/1/I) where humans transcribe codes; prefix tokens with type markers such as `sk_live_` and `ghp_` so revocation classes are identifiable and secret scanners can detect leaked values.
+- **Production failure mode:** Standard base64 with `+` and `/` corrupts inside URLs via intermediaries; unprefixed tokens cannot be classified after a leak, forcing rotation of every credential family at once.
+- **Existing-codebase evidence:** Check which alphabet each token class uses, whether URL-safe variants apply wherever tokens appear in links, and whether prefixes distinguish environment and token families.
 
 ### 7.8. Storage
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Storage** within Randomness & Token Generation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for storage is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for storage, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Store tokens only as hashes suitable for lookup indexes — never plaintext and never in designs that let the store mint valid tokens; keep token storage outside the issuing service's blast radius and exclude token material from logs, traces, and table backups.
+- **Production failure mode:** A database dump doubles as a session-hijacking kit because verifier columns sat in plaintext; support tooling pastes token values into tickets.
+- **Existing-codebase evidence:** Inspect token table schemas for hashed-verifier versus plaintext columns, grep logs and dumps for token-shaped strings, and confirm backups receive the same protection as password material.
 
 ### 7.9. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
-- **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
+- **SHOULD — engineering rule:** Assign TTL per token class (session, reset, API key, refresh); enforce single-use atomically through a conditional delete/update that returns affected-row counts; maintain revocation lists for long-lived tokens; rotate refresh tokens with reuse detection so replaying an already-rotated refresh token kills the entire token family.
+- **Production failure mode:** Reset links live forever because TTL defaulted to null; two parallel submissions redeem one reset token because check-then-update races; a stolen refresh token goes undetected because rotation lacks reuse detection.
+- **Existing-codebase evidence:** Verify single-use atomicity by racing two redemptions (exactly one must succeed), confirm TTLs are explicit per class rather than defaulted, and test that replaying a rotated refresh token revokes the family.
 
 ### 7.10. Hashing tokens at rest
 
-- **SHOULD — engineering rule:** Use well-reviewed libraries and current algorithms; define key purpose, scope, version, generation, storage, rotation, revocation, nonce uniqueness, and authenticated context.
-- **Production failure mode:** Custom crypto, nonce reuse, weak randomness, key/algorithm confusion, or unauthenticated encryption destroys the intended guarantee.
-- **Existing-codebase evidence:** Review against a cryptographic design document and test key rotation, corruption, wrong context/key, entropy failure, and legacy ciphertext.
+- **SHOULD — engineering rule:** Look tokens up by hash index: plain SHA-256 is acceptable for high-entropy tokens because entropy defeats brute force, but prefer HMAC with a server-side pepper key whenever generation entropy is uncertain or legacy tokens exist; compare presented tokens in constant time against stored verifiers.
+- **Production failure mode:** Tokens stored plaintext turn every database read path into credential theft; unsalted low-entropy tokens (short numeric codes) fall to offline rainbow attacks once the column leaks.
+- **Existing-codebase evidence:** Verify the token-hash storage scheme (algorithm, pepper key custody, index usage), confirm lookup happens by hash not plaintext, and test comparison behavior under timing observation for low-entropy token classes.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 
@@ -368,7 +368,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - **Guessability:** A framework or provider default for guessability is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Secure random APIs:** A framework or provider default for secure random apis is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Encoding:** A framework or provider default for encoding is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Expiration:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **Expiration:** Token lifetimes outlive the threat window they defend against, or single-use enforcement expires before legitimate retry windows close.
 - **Hashing tokens at rest:** Custom crypto, nonce reuse, weak randomness, key/algorithm confusion, or unauthenticated encryption destroys the intended guarantee.
 
 ## 18. AI coding-agent failure modes

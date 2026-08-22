@@ -6,17 +6,17 @@
 
 ## 1. Executive engineering summary
 
-**CI/CD** exists to make process startup, steady-state execution, and termination deterministic across environments and orchestrators. A basic implementation usually handles the visible happy path; a production implementation must also preserve identity and ownership, valid state transitions, race-safe invariants, failure recovery, compatibility, and bounded operations.
+**CI/CD** exists so every change reaches production through one auditable, gated path. A basic setup builds and deploys ad hoc; a production pipeline is deterministic by construction: one immutable artifact per commit, promoted environment to environment through ordered stages — build, unit, integration, security scans, artifact packaging, deploy-to-dev, e2e/smoke, promotion gates — where each stage defines its failure semantics and no partial artifact is ever promoted.
 
-The composition root owns configuration parsing, dependency construction, lifecycle registration, and process-wide policy. Feature modules should receive validated dependencies rather than read environment variables, create clients, or register signal handlers themselves. Startup readiness is a contract with the orchestrator: a process may be alive while still unready, and it may be draining while health endpoints continue to answer.
+Provenance is the spine: SBOMs, signing, and verification at deploy admission tie every running artifact to a reviewed commit. Migrations run as gated, lock-protected pipeline steps before app deploy and are forward-fix by policy. CI secrets arrive via OIDC workload federation instead of stored credentials, fork PRs stay isolated from secret scopes, and branch protection with merge queues guarantees the tested SHA is the merged SHA.
 
 The most important evidence base for this paper includes [S122](#s122) [S123](#s123) [S124](#s124) [S070](#s070). The source list at the end distinguishes standards, official product documentation, research, and production engineering guidance.
 
 ### What an experienced engineer notices first
 
-- The process is not ready merely because its socket is listening; readiness requires every dependency needed for the advertised request class to be usable.
-- Initialization order is a dependency graph, not a convenient list. Cycles and hidden lazy initialization create startup-only incidents.
-- Shutdown is a protocol: stop admission, drain work, finish or abandon with explicit semantics, then release resources.
+- One artifact, many promotions: rebuilding per environment destroys reproducibility and provenance.
+- Every stage owns explicit failure semantics; partial or unsigned artifacts never get promoted.
+- The tested SHA must equal the merged SHA; merge queues rerun tests or nothing merges.
 - Build identity and configuration identity are operational data. Without them, mixed-version and rollback failures are hard to diagnose.
 - Development conveniences must not silently change security or durability semantics in production.
 
@@ -32,7 +32,7 @@ The most important evidence base for this paper includes [S122](#s122) [S123](#s
 - What compatibility matrix must hold during rolling deployment, old-client use, schema/event evolution, and rollback?
 - What load shape, cardinality, skew, payload size, concurrency, and failure rate define production capacity?
 - What telemetry, alert, audit event, reconciliation, cleanup job, and runbook prove the feature remains correct after release?
-- Which dependencies are fatal for startup/readiness, which are degradable, and who owns their cleanup during partial initialization?
+- Which artifact digest is deployed to each environment right now, and how fast can the previous digest be redeployed?
 
 ## 3. Existing-codebase checks before changing anything
 
@@ -41,11 +41,11 @@ The most important evidence base for this paper includes [S122](#s122) [S123](#s
 - [ ] Identify the actual source of truth and all derived copies; record ownership, freshness, deletion propagation, and reconciliation.
 - [ ] Inspect database constraints, indexes, isolation settings, atomic update predicates, transaction wrappers, and retry behavior rather than relying on repository names.
 - [ ] Search for duplicated implementations, bypass paths, feature flags, legacy compatibility branches, TODOs, incident fixes, and environment-specific behavior.
-- [ ] Read deployment manifests, configuration schemas, secret injection, probes, resource limits, shutdown grace periods, and migration ordering.
+- [ ] Read pipeline definitions, runner/executor configuration, secret-injection mechanisms, branch protection and merge-queue settings, and migration ordering.
 - [ ] Check existing API/event schemas and real client/consumer usage before renaming fields, changing defaults, strengthening validation, or altering errors.
 - [ ] Review telemetry and runbooks to learn current failure modes, latency, scale, and operational ownership before proposing architecture changes.
 - [ ] Run the existing suite and targeted production-like probes before edits; preserve unrelated behavior and capture a baseline for correctness and performance.
-- [ ] Locate every process-wide goroutine/thread/task, client, listener, file, and signal handler; prove ownership and cleanup ordering.
+- [ ] Locate every path an artifact can take from commit to production, including manual bypasses; prove each crosses the same gates.
 
 ## 4. Correctness model and production invariants
 
@@ -56,8 +56,6 @@ The primary correctness question is not “does the happy path work?” but “c
 3. **Invariant 3:** Shutdown is a protocol: stop admission, drain work, finish or abandon with explicit semantics, then release resources.
 4. **Invariant 4:** Build identity and configuration identity are operational data. Without them, mixed-version and rollback failures are hard to diagnose.
 5. **Invariant 5:** Development conveniences must not silently change security or durability semantics in production.
-
-Additional topic-specific invariants:
 
 ## 5. Architecture decisions and conflicting approaches
 
@@ -119,27 +117,77 @@ A production representation commonly needs the following fields or equivalent ev
 
 Each subsection answers three questions: what rule must be implemented, what fails in production, and what an agent must inspect in an existing codebase before changing it.
 
-### Default obligations
+### 8.1. Builds
 
-These subtopics carry no additional domain-specific rule beyond the default obligation: for each, define owner, inputs, outputs, invariants, lifecycle, failure classification, and a compatibility contract; make the rule enforceable at the narrowest authoritative boundary; and do not accept a framework or provider default without proving it fits the domain.
+- **SHOULD — engineering rule:** Build ONCE per commit: produce one immutable artifact tagged with the commit SHA, push it to a registry, and promote that same artifact environment to environment. Rebuilding per environment breaks provenance and reproducibility — "works in staging" becomes ambiguous because the bytes differ.
+- **Production failure mode:** Staging and production run different bytes built from the "same" commit; a later rebuild resolves dependencies differently, and incident response cannot name the artifact that produced a failure.
+- **Existing-codebase evidence:** Trace one artifact SHA end to end across environments and confirm the digest never changes after the single build; flag any job that compiles again after that build.
 
-- **Builds**
-- **Tests**
-- **Linting**
-- **Type checking**
-- **Security scanning**
-- **Dependency scanning**
-- **Artifact creation**
-- **Environment promotion**
-- **Deployment**
-- **Migration execution**
-- **Quality gates**
+### 8.2. Tests
+
+- **SHOULD — engineering rule:** Order pipeline stages — build → unit → integration → security scans → artifact packaging → deploy-to-dev → e2e/smoke → promotion gates — and give every stage explicit failure semantics: fail fast, stop the run, publish nothing downstream, so no partial artifact is ever promoted.
+- **Production failure mode:** A failed unit stage still publishes its artifact, a flaky e2e stage is retried into green, or smoke tests pass against dev-shaped data while promotion assumes production parity.
+- **Existing-codebase evidence:** Inject a failure at every stage and verify the run stops, downstream stages do not execute, and reported status names the true failing stage.
+
+### 8.3. Linting
+
+- **SHOULD — engineering rule:** Pin the linter version, run it as a fast blocking stage on the exact candidate commit, attach results to commit status so branch protection can require them, and budget warnings instead of letting suppressions accumulate silently.
+- **Production failure mode:** Diffs merge locally-clean but CI-dirty because lint ran on a stale base; suppression comments pile up until real defects hide among them.
+- **Existing-codebase evidence:** Confirm which commits trigger lint, that the linter version is pinned, and that required status checks include the lint job.
+
+### 8.4. Type checking
+
+- **SHOULD — engineering rule:** Type-check the full project (no incremental cache) with a locked toolchain as a blocking pre-packaging stage, including generated code in the checked surface so checks cover what actually ships.
+- **Production failure mode:** Incremental caches pass locally while CI surfaces type errors days later, or generated clients drift until runtime casts fail in production.
+- **Existing-codebase evidence:** Commit a deliberate type error and verify the pipeline blocks promotion; confirm generated code is inside the checked surface.
+
+### 8.5. Security scanning
+
+- **MUST — engineering rule:** Gate deploys on security scans (SAST, secret detection, image scanning) with severity thresholds defined before the scan runs; supply CI credentials through OIDC workload federation instead of stored secrets, keep fork PRs fully isolated from secret scopes, and treat log masking as best-effort, never as containment.
+- **Production failure mode:** A fork PR reads stored cloud credentials, a critical finding is triaged into silence, or a "masked" secret leaks through build logs or artifact metadata.
+- **Existing-codebase evidence:** Attempt fork-PR secret access in dry-run mode and prove denial; verify scan failures block promotion and thresholds are version-controlled.
+
+### 8.6. Dependency scanning
+
+- **SHOULD — engineering rule:** Generate an SBOM (SPDX/CycloneDX) for every artifact and gate on dependency vulnerability scanning at build time; re-scan promoted artifacts when new advisories land, and treat an artifact without an SBOM as unpromotable. Frame pipeline maturity SLSA-style where useful.
+- **Production failure mode:** A vulnerable transitive dependency ships because only direct manifests were scanned, or responders cannot match a CVE to the deployed artifact because no SBOM exists.
+- **Existing-codebase evidence:** Verify SBOM presence per artifact; publish a new advisory and confirm re-scan flags affected releases; map one CVE report back to the deployed SHA.
+
+### 8.7. Artifact creation
+
+- **SHOULD — engineering rule:** Package deterministically with embedded build metadata (commit SHA, build time, pipeline run), sign the artifact, and attach provenance attestation; deploy admission verifies signature and provenance before anything is allowed to run.
+- **Production failure mode:** Unsigned artifacts slip past admission, metadata claims a commit that was never built, or two builds of one SHA yield different digests and break verification.
+- **Existing-codebase evidence:** Verify signature/provenance at admission in staging with a tampered artifact; rebuild one SHA twice and compare digests for reproducibility.
+
+### 8.8. Environment promotion
+
+- **SHOULD — engineering rule:** Promotion moves the SAME immutable artifact through gates: dev → staging → production transitions require the previous environment's health evidence plus recorded approval, and promotion state lives in the pipeline control plane rather than tribal knowledge.
+- **Production failure mode:** An artifact reaches production having skipped staging, approvals exist outside any audit trail, or "promotion" secretly re-runs the build with different variables.
+- **Existing-codebase evidence:** Enumerate every path an artifact can take to production and prove each crosses the same gates; replay one promotion's approval trail from audit logs.
+
+### 8.9. Deployment
+
+- **SHOULD — engineering rule:** Deploy jobs reference the immutable artifact by digest, verification happens at deploy admission, and pipeline success requires post-deploy rollout health from the platform — not merely a zero exit code from an apply command.
+- **Production failure mode:** Admission verification is skipped under time pressure, or the pipeline reports success while the rollout quietly fails behind health gates nobody watches.
+- **Existing-codebase evidence:** Deploy a tampered artifact in staging and confirm rejection at admission; confirm pipeline success status is granted only after health evidence arrives.
 
 ### 8.10. Rollback
 
-- **SHOULD — engineering rule:** Define what can be reversed, what requires compensation or forward repair, and how data written by the new version remains readable. Rehearse the exact control-plane and data-plane sequence.
-- **Production failure mode:** Code rolls back while schema/data/side effects do not, creating a second outage or corruption.
-- **Existing-codebase evidence:** Perform a production-like rollback drill after generating new-version data and partially completed work.
+- **SHOULD — engineering rule:** Rollback means redeploying the PREVIOUS immutable artifact — never rebuilding old source. Database changes follow the documented forward-fix policy (compatible-expand schema; destructive reversal refused), and rollback is rehearsed in staging exactly like a rollout, including DB coupling behavior.
+- **Production failure mode:** Rollback rebuilds from an old tag with drifted dependencies, or reverted code cannot read rows written by the newer schema, causing a second outage worse than the first.
+- **Existing-codebase evidence:** Perform a production-like rollback drill after generating new-version data and partially completed work; verify the restored digest matches the previous release exactly.
+
+### 8.11. Migration execution
+
+- **SHOULD — engineering rule:** Schema migrations run as gated pipeline steps BEFORE app deploy, additive-first (expand pattern), serialized by advisory locking so parallel pipeline runs cannot migrate concurrently. Migrations are forward-fix: document why automatic schema rollback is refused instead of shipping a reverse path.
+- **Production failure mode:** Two pipeline runs apply overlapping migrations, an app deploy races its own migration, or an automatic rollback reverses a schema that newer data already depends on.
+- **Existing-codebase evidence:** Launch parallel pipeline runs against one migration step and verify the lock serializes them; confirm migration ordering precedes app deploy and expand steps are idempotent.
+
+### 8.12. Quality gates
+
+- **SHOULD — engineering rule:** Required status checks fail closed in branch protection; merge queues can change the commit SHA, so tests must rerun on the final merged SHA unless the queue guarantees identity; promotion gates aggregate stage results into one automated go/no-go decision.
+- **Production failure mode:** CI was green on the merge-group SHA but never ran on the final merged SHA, or a manually skipped gate becomes the silent precedent for every future skip.
+- **Existing-codebase evidence:** Check recent merges for cases where CI did not test the exact merged SHA; attempt to bypass a required check and confirm rejection; verify the gate decision is machine-readable.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 
@@ -251,9 +299,9 @@ Runtime changes must work during rolling deployments where old and new processes
 
 ### SHOULD
 
-- **SHOULD** — The process is not ready merely because its socket is listening; readiness requires every dependency needed for the advertised request class to be usable.
-- **SHOULD** — Initialization order is a dependency graph, not a convenient list. Cycles and hidden lazy initialization create startup-only incidents.
-- **SHOULD** — Shutdown is a protocol: stop admission, drain work, finish or abandon with explicit semantics, then release resources.
+- **SHOULD** — Promote on evidence from the previous environment (health, metrics, smoke results), not on pipeline greenness alone.
+- **SHOULD** — Keep stages ordered by dependency: nothing downstream consumes upstream output that has not passed its gate.
+- **SHOULD** — Make every manual override (gate skip, emergency deploy) rare, recorded, and reviewed; silent precedents become policy.
 - **SHOULD** — Build identity and configuration identity are operational data. Without them, mixed-version and rollback failures are hard to diagnose.
 - **SHOULD** — Development conveniences must not silently change security or durability semantics in production.
 - **SHOULD** — Prefer simple, locally enforceable invariants over coordination-heavy designs.
@@ -261,36 +309,36 @@ Runtime changes must work during rolling deployments where old and new processes
 
 ### MAY
 
-- **MAY** — Adopt the **Eager vs lazy initialization** option that fits the workload and ownership boundary; Prefer eager initialization for mandatory dependencies; use lazy loading only for optional or high-cost capabilities with explicit degraded behavior.
-- **MAY** — Adopt the **Single process vs separate workers** option that fits the workload and ownership boundary; Split when workload, scaling, privilege, or failure characteristics differ materially.
-- **MAY** — Adopt the **Strict startup vs degraded startup** option that fits the workload and ownership boundary; Define dependency classes and expose degraded state in readiness and metrics.
+- **MAY** — Choose a **merge-queue strategy** (rerun-on-merge versus batching) according to merge throughput and the cost of testing unmerged combinations.
+- **MAY** — Adopt dynamic dependency rescans (re-check promoted artifacts when new advisories drop) where artifact volume makes full re-scanning affordable.
+- **MAY** — Parallelize environment suites (staging shards) where wall-clock duration, not correctness, limits delivery speed.
 
 ### AVOID
 
-- **AVOID** — Accepting traffic before migrations/config/dependencies are ready.
-- **AVOID** — Hanging on termination because background tasks ignore cancellation.
-- **AVOID** — Double-starting workers after reload or fork.
-- **AVOID** — Leaking pooled connections on failed startup.
+- **AVOID** — Deploying application versions whose required migration has not completed in the target environment.
+- **AVOID** — Auto-retrying failed gates until they pass; a retried-into-green stage hides a real defect.
+- **AVOID** — Parallel pipeline runs mutating shared state (migrations, shared environments) without advisory locking.
+- **AVOID** — Publishing artifacts from failed runs even "temporarily"; partial artifacts eventually get promoted.
 - **AVOID** — Different defaults between local and production.
-- **AVOID** — Adding another global singleton instead of using the composition root.
-- **AVOID** — Reading environment variables inside handlers or packages.
-- **AVOID** — Reporting ready before migrations/dependencies are usable.
+- **AVOID** — Pipeline logic copy-pasted across repositories instead of shared, versioned templates.
+- **AVOID** — Long-lived stored CI credentials where OIDC workload federation is available.
+- **AVOID** — Reporting deploy success on exit codes alone, without rollout health evidence.
 
 ### NEVER
 
-- **NEVER** — Never report readiness before required correctness dependencies and configuration are usable.
-- **NEVER** — Never let termination wait forever; every drain and flush needs a bounded deadline.
-- **NEVER** — Never allow feature modules to create untracked process-wide resources.
+- **NEVER** — Never merge through a red required check; use the documented emergency process instead.
+- **NEVER** — Never run a migration step without its advisory lock held against concurrent pipeline runs.
+- **NEVER** — Never promote an artifact whose SHA cannot be traced to a reviewed commit.
 
 ## 17. Testing and verification requirements
 
 Passing unit tests is not sufficient. The release needs evidence at the storage, protocol, concurrency, deployment, and operational layers where the failure can actually occur.
 
-- [ ] Start with every required configuration value missing, malformed, out of range, and mutually inconsistent; assert a deterministic non-zero exit before readiness.
-- [ ] Inject failure and delay at each dependency-initialization step; prove already-created resources close exactly once and startup retry is bounded.
-- [ ] Send one and multiple termination signals while requests, streams, workers, and transactions are active; verify admission stops, work drains or is safely abandoned, and the process exits within the platform grace period.
-- [ ] Run mixed-version rolling deployment tests for probes, configuration, ports, worker ownership, and shutdown behavior.
-- [ ] Exercise pool exhaustion, file-descriptor limits, disk pressure, and telemetry sink failure without deadlock or misleading readiness.
+- [ ] Trace one artifact SHA end to end across all environments and confirm the digest never changes after the single build.
+- [ ] Inject a failure at each pipeline stage and verify fail-fast semantics: the run stops, nothing downstream executes, and no partial artifact is promoted.
+- [ ] Attempt fork-PR secret access in dry-run mode and prove denial; confirm masking does not extend to artifact metadata.
+- [ ] Launch two pipeline runs targeting the same migration step and verify advisory locking serializes them.
+- [ ] Inspect recent merges for cases where CI tested the merge-group SHA but not the final merged SHA; verify queue reruns where required.
 - [ ] Verify unauthorized, cross-tenant, malformed, duplicate, concurrent, cancelled, timed-out, dependency-failed, partial-success, stale-data, large-data, and rollback paths.
 - [ ] Verify logs, metrics, traces, audit events, alerts, cleanup, reconciliation, and runbook steps using the actual deployed topology.
 

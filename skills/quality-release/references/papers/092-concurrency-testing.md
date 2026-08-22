@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Performance tests are capacity experiments with workload models and saturation signals, not single latency numbers.
 5. **Invariant 5:** Production-like data must preserve distribution and shape without exposing real PII.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

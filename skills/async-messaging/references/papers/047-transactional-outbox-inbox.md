@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Ordering is usually scoped to a partition/key and conflicts with parallelism.
 5. **Invariant 5:** Poison messages require bounded retries, quarantine, diagnosis, and replay tooling.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -129,7 +127,6 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 - **Duplicate publication**
 - **Delivery state**
 - **Failure recovery**
-- **Cleanup**
 - **Transaction atomicity**
 
 ### 8.1. Outbox table
@@ -146,21 +143,27 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.4. CDC-based publishing
 
-- **SHOULD — engineering rule:** Write domain state and outbox record in one local transaction; publish asynchronously with stable event IDs and consumer inbox deduplication. Track watermark, retries, ordering, and cleanup.
-- **Production failure mode:** State commits without an event, event publishes before rollback, or duplicate publication repeats effects.
-- **Existing-codebase evidence:** Crash after each boundary—before commit, after commit, after publish, before mark-sent—and verify eventual single logical effect.
+- **SHOULD — engineering rule:** A log-based CDC connector (Debezium-style) streams committed outbox rows from the write-ahead log; there are NO publisher watermarks or mark-sent flags — offsets live in connector/Kafka state, and the sink deduplicates at-least-once redelivery. Handle tombstones for cleanup events, evolve payload schemas through a schema registry, and monitor connector lag instead of unpublished-row counts [S061].
+- **Production failure mode:** An operator adds a mark-sent flag or cleanup job that races the connector and deletes rows before the log is read; events vanish silently while the database looks perfectly healthy.
+- **Existing-codebase evidence:** Confirm offsets are managed by connector state rather than application tables, sink-side idempotency absorbs redelivery, and alerting tracks connector lag rather than unpublished-row counts.
 
 ### 8.6. Inbox deduplication
 
-- **SHOULD — engineering rule:** Write domain state and outbox record in one local transaction; publish asynchronously with stable event IDs and consumer inbox deduplication. Track watermark, retries, ordering, and cleanup.
-- **Production failure mode:** State commits without an event, event publishes before rollback, or duplicate publication repeats effects.
-- **Existing-codebase evidence:** Crash after each boundary—before commit, after commit, after publish, before mark-sent—and verify eventual single logical effect.
+- **SHOULD — engineering rule:** Consumer side: an inbox table keyed by message/event ID with a UNIQUE constraint, inserted-or-skipped inside the SAME local transaction as the business effect; duplicate delivery converges because the second insert loses the race atomically. Purge processed inbox rows on a retention window sized beyond the maximum redelivery horizon.
+- **Production failure mode:** Deduplication checks-then-inserts without the unique constraint or outside the effect transaction; two concurrent deliveries both pass the check and the effect executes twice.
+- **Existing-codebase evidence:** Verify the inbox unique constraint exists in schema rather than only in code, that inbox insert and effect share one transaction, and that purge jobs cannot run ahead of the redelivery horizon.
 
 ### 8.9. Ordering
 
-- **SHOULD — engineering rule:** Define deterministic ordering, null placement, collation, and a unique tie-breaker. Treat user-selected sort fields as an allowlisted query plan, not arbitrary SQL/expressions.
-- **Production failure mode:** Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
-- **Existing-codebase evidence:** Inspect explain plans for every allowed sort/filter combination and test ties, nulls, Unicode, and concurrent writes.
+- **SHOULD — engineering rule:** Assign per-aggregate sequence numbers in the same transaction as the domain write; the relay preserves per-key order through single-threaded lanes per partition/key; parallel consumers reorder across keys, so consumers needing cross-key order must buffer by sequence. Retries can deliver event N+1 before N — detect gaps or converge last-write-wins by version instead of trusting arrival order.
+- **Production failure mode:** A retry lane delivers an older event after a newer one already applied, reverting aggregate state that had moved forward.
+- **Existing-codebase evidence:** Find where sequence numbers are minted relative to the domain commit, verify relay and consumer lanes preserve per-key order, and check consumers handle gaps and late retries explicitly.
+
+### 8.10. Cleanup
+
+- **MUST — engineering rule:** Delete published outbox rows only after confirmed delivery — delete-after-confirm for pollers, archive-by-age once CDC has captured them; NEVER truncate blindly ahead of delivery confirmation, and size retention beyond the maximum redelivery/replay horizon.
+- **Production failure mode:** A nightly cleanup removes rows the poller selected but has not yet published (or the connector has not yet read); events are lost permanently with no error anywhere.
+- **Existing-codebase evidence:** Trace cleanup predicates against delivery-confirmation state, verify cleanup cannot outrun publisher or connector progress, and confirm archived rows remain replayable within retention.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 

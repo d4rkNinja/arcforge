@@ -129,39 +129,39 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.1. Schema migrations
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Schema migrations** within Database Migrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for schema migrations is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for schema migrations, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Know each DDL statement's lock behavior before shipping it: adding a nullable column is metadata-only on modern engines; adding NOT NULL to a large PostgreSQL 12+ table goes ADD CONSTRAINT ... NOT VALID, then VALIDATE CONSTRAINT (SHARE UPDATE EXCLUSIVE, does not block reads or writes), then SET NOT NULL which is metadata-only after validation — pre-12 SET NOT NULL performs a full scan under ACCESS EXCLUSIVE, and pre-11 adding a column with a volatile DEFAULT rewrote the whole table.
+- **Production failure mode:** A one-line ALTER COLUMN SET NOT NULL runs a full scan under ACCESS EXCLUSIVE on a hundred-million-row table during business hours and blocks every read and write for its duration; nobody rehearsed it against production-sized data.
+- **Existing-codebase evidence:** Read every pending ALTER statement and classify its lock level and expected duration; confirm which engine-version-specific behaviors the migration relies on; check whether recently added constraints used NOT VALID/VALIDATE or blocked outright.
 
 ### 7.2. Online migrations
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Online migrations** within Database Migrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for online migrations is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for online migrations, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Build indexes online and verify the result: CREATE INDEX CONCURRENTLY cannot run inside a transaction, takes two table scans, and on failure leaves an INVALID index that still taxes every write — check pg_index.indisvalid afterwards and DROP INDEX and retry on failure; on MySQL know the ALGORITHM per operation (INPLACE varies, COPY rebuilds the table, INSTANT covers instant add-column in 8.0+), and when native online DDL still blocks metadata or the table is huge, use gh-ost or pt-online-schema-change shadow-table tools with throttling controls and a pausable cut-over.
+- **Production failure mode:** A concurrent index build fails halfway and weeks later every insert still pays maintenance overhead for an index no query can use because nobody checked indisvalid; or a MySQL ALTER silently falls back from INPLACE to COPY, doubling disk usage and write latency mid-traffic.
+- **Existing-codebase evidence:** Query pg_index/pg_indexes for indisvalid = false entries in history; scan MySQL migration files for ALGORITHM clauses or their absence; verify throttling configuration (replica lag, load thresholds) and cut-over pause controls wherever gh-ost/pt-osc run.
 
 ### 7.3. Zero-downtime migrations
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Zero-downtime migrations** within Database Migrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for zero-downtime migrations is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for zero-downtime migrations, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Sequence expand-contract against deploys, not commits: additive expand, then backfill, then switch code to read the new shape, then contract (drop column/constraint/index) only in a LATER release after the entire fleet rolled forward — dropping a column in the same deploy that stops writing it bricks rolling deployments because old pods still INSERT into it until they are replaced.
+- **Production failure mode:** The legacy column is dropped in the same release that removes its ORM field; during the rolling update old replicas fail every insert with undefined-column errors, the deploy aborts halfway, and the fleet is stuck mixed between versions that each need incompatible schemas.
+- **Existing-codebase evidence:** For recent destructive changes compare the release timeline of the drop versus full fleet rollout of stop-writing code; verify any contract step obeyed the later-release rule; check whether feature flags gate readers of the new shape during the transition.
 
 ### 7.4. Migration ordering
 
-- **SHOULD — engineering rule:** State the ordering scope, assign monotonic per-aggregate/version metadata where needed, and make consumers reject, buffer, or reconcile stale/out-of-order items.
-- **Production failure mode:** Parallel partitions or retries apply an older event after a newer one and regress state.
-- **Existing-codebase evidence:** Deliver permutations, duplicates, gaps, and partition rebalances; verify deterministic final state.
+- **SHOULD — engineering rule:** Order migrations by monotonic version/timestamp with explicit dependency declaration, apply strictly in sequence per environment, and couple them to the deploy pipeline: migrations run BEFORE the rollout they enable and MUST be compatible with the CURRENTLY deployed application version, not just the new one; never edit or reuse an applied migration — append a new one.
+- **Production failure mode:** Two merged branches carry the same sequence number and one migration silently never runs in some environments; or a migration ships coupled to the code that needs it, so rolling back the app leaves a schema the old binary cannot read.
+- **Existing-codebase evidence:** Inspect the tool's version/history table across environments for gaps, duplicate sequence numbers, and out-of-order applications; verify CI applies the full history to a fresh database and proves compatibility with the previous application version; look for edited already-applied files (checksum mismatches).
 
 ### 7.5. Migration locks
 
-- **MUST — engineering rule:** Define the exact semantics of **Migration locks** within Database Migrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for migration locks is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for migration locks, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Guard every potentially locking DDL with a short lock_timeout (for example 2 seconds) plus a retry loop, and set statement_timeout on migration sessions: a PostgreSQL ALTER TABLE takes ACCESS EXCLUSIVE and even milliseconds-fast DDL queues behind a long-running query and then blocks ALL subsequent queries behind itself — the queue pileup stalls the whole site, not just the migrated table; coordinate racing migrators (multiple app instances migrating on boot) with advisory locks or version-table locking as Flyway/Liquibase provide, verifying it is enabled, and treat checksum-drifted applied migrations as an incident signal to investigate rather than something to patch casually in place.
+- **Production failure mode:** A trivial ALTER waits 40 seconds behind an analytics query while every web request piles up behind the DDL lock request and the site returns errors for minutes although the ALTER itself took 30 milliseconds; simultaneously two autoscaled pods race the same migration and one crashes on a duplicate-column error.
+- **Existing-codebase evidence:** Grep migration scripts for lock_timeout/statement_timeout settings and retry helpers; confirm the advisory-lock or lock-table configuration of the migration tooling is active; check deploy manifests for concurrent migrator instances at startup and how races are prevented.
 
 ### 7.6. Long-running migrations
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Long-running migrations** within Database Migrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for long-running migrations is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for long-running migrations, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Give long operations progress visibility and an abort path: watch pg_stat_progress_create_index/pg_stat_progress_vacuum (or engine equivalents), run bulk DATA migrations as chunked, resumable, rate-limited batches separate from schema DDL, and document the cancel plan: who may kill it, how (pg_cancel_backend versus pg_terminate_backend), and what partial state remains with who cleans it up.
+- **Production failure mode:** A four-hour data backfill runs inside one giant transaction, bloats tables, blocks autovacuum, then fails at 95 percent and rolls back everything; there was no progress telemetry, no checkpoint, and no safe cancel point, so recovery means rerunning the whole weekend job.
+- **Existing-codebase evidence:** Find data backfills embedded inside schema migration files; check whether progress metrics and batch checkpoints exist; confirm a documented procedure exists for killing a stuck migration safely and repairing partial state.
 
 ### 7.7. Rollback
 
@@ -171,27 +171,27 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.8. Forward-only migrations
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Forward-only migrations** within Database Migrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for forward-only migrations is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for forward-only migrations, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Treat migrations as forward-only: prefer forward-compatible changes and forward-fixes over down-migrations, which can destroy data written since the change or cannot reverse irreversible transformations; if reversal is genuinely required, author it as a NEW reviewed migration proven safe against production-shaped data first.
+- **Production failure mode:** An emergency down-migration drops a column created after the last backup and deletes hours of customer data the rollback was supposed to protect; or an untested down script fails midway, leaving mixed state that is harder to repair than the original incident.
+- **Existing-codebase evidence:** Check whether the tooling exposes down/reverse migrations and whether any has actually executed in production history; search claimed-reversible migrations for irreversible operations such as DROP or type narrowing.
 
 ### 7.9. Migration verification
 
-- **MUST — engineering rule:** Define the exact semantics of **Migration verification** within Database Migrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for migration verification is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for migration verification, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Verify migrations with production evidence, not local green checks: rehearse on production-sized clones under realistic concurrent traffic, measure actual lock acquisition time under representative load, verify postconditions mechanically (indisvalid on new indexes, validated constraint states, backfill counts and checksums), and gate the rollout on those artifacts existing and passing.
+- **Production failure mode:** A migration passes on a 10k-row development database in 200ms, then waits for and holds its lock for 20 minutes in production behind real traffic; no production-scale rehearsal existed, so the outage was scheduled by accident.
+- **Existing-codebase evidence:** Ask where rehearsal artifacts (timings, lock waits, plans) live and at what data scale they were produced; check CI for a step applying migrations against production-shaped fixtures; verify post-migration assertions exist in code or runbooks rather than tribal memory.
 
 ### 7.10. Deployment coordination
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Deployment coordination** within Database Migrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for deployment coordination is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for deployment coordination, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Make migration-versus-deploy ordering an explicit automated contract: migrations run before the rollout they serve, remain backward-compatible with the running fleet for at least one release, failed migrations block the deploy, and each deploy records the schema version it requires.
+- **Production failure mode:** Application instances start before the migration finishes and crash-loop on missing columns; or the release system retries the whole pipeline including an already-applied non-idempotent migration and corrupts state.
+- **Existing-codebase evidence:** Inspect the deploy pipeline for the migrate step's position, idempotency assumptions, and failure handling; determine whether health checks gate on schema version; look for undocumented manual migrations performed by humans during past incidents.
 
 ### 7.11. Multi-service migration safety
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Multi-service migration safety** within Database Migrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for multi-service migration safety is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for multi-service migration safety, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** For shared databases name the owning service for every table and route all DDL through the owner's reviewed migration pipeline; consumer services get compatibility windows and published contract versions instead of direct schema changes, and cross-service cutovers define joint verification and rollback criteria up front.
+- **Production failure mode:** Service B renames a column on a table it merely shares; service A's independent deploy starts failing at midnight, and neither team's runbook covers the shared-table blast radius or who coordinates the fix.
+- **Existing-codebase evidence:** Map tables to owning teams/services and find any service running migrations against foreign-owned tables; check whether consumers are inventoried before contract changes and whether a compatibility window is announced and enforced.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 
@@ -365,7 +365,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - Rollback code unable to read newly written data.
 - **Schema migrations:** A framework or provider default for schema migrations is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Zero-downtime migrations:** A framework or provider default for zero-downtime migrations is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Migration ordering:** Parallel partitions or retries apply an older event after a newer one and regress state.
+- **Migration ordering:** Two merged branches collide on migration sequence numbers so one migration silently never runs in some environments, or a schema change deploys coupled to code that cannot operate on the interim schema.
 - **Long-running migrations:** A framework or provider default for long-running migrations is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Forward-only migrations:** A framework or provider default for forward-only migrations is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Migration verification:** A framework or provider default for migration verification is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
@@ -417,7 +417,7 @@ An AI agent is especially likely to:
 - [ ] Run the existing suite and targeted production-like probes before edits; preserve unrelated behavior and capture a baseline for correctness and performance.
 - [ ] **Schema migrations:** Locate every implementation path for schema migrations, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Zero-downtime migrations:** Locate every implementation path for zero-downtime migrations, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **Migration ordering:** Deliver permutations, duplicates, gaps, and partition rebalances; verify deterministic final state.
+- [ ] **Migration ordering:** Apply the complete migration history to a fresh database and to a database at the previous application version; verify there are no gaps, duplicate sequence numbers, out-of-order applications, or checksum mismatches across environments.
 - [ ] **Long-running migrations:** Locate every implementation path for long-running migrations, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Forward-only migrations:** Locate every implementation path for forward-only migrations, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Migration verification:** Locate every implementation path for migration verification, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.

@@ -58,15 +58,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Dual-write creates two possible truths unless conflict resolution and reconciliation are explicit.
 5. **Invariant 5:** Rollback may mean rolling application code forward with a fix rather than reversing an irreversible data transformation.
 
-Additional topic-specific invariants:
-
-- **SHOULD — Anti-corruption layers:** Define the exact semantics of **Anti-corruption layers** within Legacy-System Integration: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Adapters:** Define the exact semantics of **Adapters** within Legacy-System Integration: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Data synchronization:** Define the exact semantics of **Data synchronization** within Legacy-System Integration: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Legacy identifiers:** Define the exact semantics of **Legacy identifiers** within Legacy-System Integration: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Strangler pattern:** Define the exact semantics of **Strangler pattern** within Legacy-System Integration: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Compatibility:** Define the exact semantics of **Compatibility** within Legacy-System Integration: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

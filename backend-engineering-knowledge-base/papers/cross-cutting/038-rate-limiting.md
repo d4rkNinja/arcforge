@@ -29,7 +29,7 @@ The most important evidence base for this paper includes [S042](#s042) [S055](#s
 - A cache is a derived copy with an explicit source of truth, staleness budget, invalidation mechanism, and failure mode.
 - Cache keys are part of the security boundary and must include tenant, principal, locale, version, and policy context when those affect the value.
 - TTL is not invalidation; it is only an upper bound on staleness under some conditions.
-- Negative entries, hot keys, stampedes, and serialization upgrades can dominate production behavior.
+A saturated limiter store, clock drift between enforcer nodes, and bursty tenants dominate production behavior.
 - Correctness must survive cache loss, partial outage, and eviction unless the cache is deliberately authoritative.
 
 ## 2. Scope and terminology map
@@ -59,13 +59,13 @@ The primary correctness question is not “does the happy path work?” but “c
 1. **Invariant 1:** A cache is a derived copy with an explicit source of truth, staleness budget, invalidation mechanism, and failure mode.
 2. **Invariant 2:** Cache keys are part of the security boundary and must include tenant, principal, locale, version, and policy context when those affect the value.
 3. **Invariant 3:** TTL is not invalidation; it is only an upper bound on staleness under some conditions.
-4. **Invariant 4:** Negative entries, hot keys, stampedes, and serialization upgrades can dominate production behavior.
+4. **Invariant 4:** A saturated limiter store, clock drift between enforcer nodes, and bursty tenants dominate production behavior.
 5. **Invariant 5:** Correctness must survive cache loss, partial outage, and eviction unless the cache is deliberately authoritative.
 
 Additional topic-specific invariants:
 
 - **SHOULD — IP limits:** Define the exact semantics of **IP limits** within Rate Limiting: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST — Tenant limits:** Derive tenant context from an authenticated, authorized binding; propagate it explicitly through queries, caches, jobs, events, files, metrics, and audit records. Make unscoped access difficult or impossible.
+- **MUST — Tenant limits:** Derive the tenant limit key from an authenticated, authorized binding; enforce tenant fairness quotas with burst allowances at shared infrastructure (edge/gateway/central limiter), not per-service best-effort. Make unscoped access to shared capacity difficult or impossible.
 - **SHOULD — Fixed window:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
 - **SHOULD — Token bucket:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
 - **SHOULD — Burst handling:** Define the exact semantics of **Burst handling** within Rate Limiting: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
@@ -135,93 +135,93 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.1. IP limits
 
-- **SHOULD — engineering rule:** Define the exact semantics of **IP limits** within Rate Limiting: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for ip limits is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for ip limits, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Treat IP as a coarse, secondary dimension only: CGNAT/NAT shares thousands of users behind one address and mobile handoffs rotate IPs, so apply coarse IP tiers to anonymous abuse surfaces while authenticated traffic gets identity-based limits; fix IPv6 granularity (/64 vs host) and trusted-proxy extraction before trusting any IP key.
+- **Production failure mode:** A strict per-IP cap locks out an entire office or carrier block behind NAT while a bot farm on rotating residential IPs stays under threshold.
+- **Existing-codebase evidence:** Locate where the client IP is extracted (trusted proxy chain? spoofable X-Forwarded-For?) and whether anonymous endpoints get IP tiers distinct from identity limits.
 
 ### 7.2. User limits
 
-- **SHOULD — engineering rule:** Define the exact semantics of **User limits** within Rate Limiting: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for user limits is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for user limits, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Key primary limits on the authenticated principal derived after authentication/authorization — never from client-supplied headers, query parameters, or body fields; bound per-principal limiter state with TTL/eviction so key cardinality cannot be weaponized.
+- **Production failure mode:** Limits keyed on unverified `user_id` parameters let attackers rotate fake identities for unlimited budget while a spoofed victim inherits their consumption.
+- **Existing-codebase evidence:** Trace each limit-key construction back to the verified session/token claim; flag keys built from request-controlled values.
 
 ### 7.3. Token limits
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Token limits** within Rate Limiting: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for token limits is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for token limits, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** For API-key/token credentials, scope limits per credential AND per owning account (aggregate ceiling across all of an account's keys) with separate tiers for machine traffic; revocation and expiry must invalidate limiter participation promptly.
+- **Production failure mode:** Per-key limits without an account ceiling let one customer mint hundreds of keys, each legitimately under its cap, multiplying real consumption.
+- **Existing-codebase evidence:** Check whether limiter keys embed account/tenant alongside the credential; test that a revoked key stops consuming budget immediately.
 
 ### 7.4. Tenant limits
 
-- **MUST — engineering rule:** Derive tenant context from an authenticated, authorized binding; propagate it explicitly through queries, caches, jobs, events, files, metrics, and audit records. Make unscoped access difficult or impossible.
-- **Production failure mode:** A missing filter, reused cache key, delayed job, or admin path reads or writes another tenant's data.
-- **Existing-codebase evidence:** Search for data-access methods that accept no tenant scope; run mutation and property tests that swap tenant identifiers at every boundary.
+- **MUST — engineering rule:** Derive the limit key from authenticated tenant identity; the purpose is fairness — stop one tenant from consuming shared capacity (noisy neighbor) — via per-tier quotas with burst allowances enforced at shared infrastructure (edge/gateway/central limiter), not per-service best-effort.
+- **Production failure mode:** One tenant's bulk import degrades latency for every tenant because per-service caps never observe aggregate cross-endpoint consumption.
+- **Existing-codebase evidence:** Identify where tenant quotas are enforced and whether they cover aggregates across endpoints; burst one tenant to quota while measuring neighboring tenants' latency and confirming their budgets stay untouched.
 
 ### 7.5. Endpoint limits
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Endpoint limits** within Rate Limiting: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for endpoint limits is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for endpoint limits, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Price endpoints differently — expensive search is not a cheap GET: assign cost tiers or weights per route (requests consume proportional token cost) so heavy routes get stricter budgets without strangling light ones.
+- **Production failure mode:** Uniform per-route limits either starve a cheap high-QPS read path or let one expensive aggregation consume the resources of hundreds of cheap calls.
+- **Existing-codebase evidence:** Compare configured per-route limits against measured per-route cost (CPU/database time); flag routes where limit and cost diverge by orders of magnitude.
 
 ### 7.6. Global limits
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Global limits** within Rate Limiting: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for global limits is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for global limits, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Keep a global ceiling protecting shared infrastructure (total requests/sec, total concurrent expensive operations) beneath all per-identity limits; global state requires atomic distributed counters, so decide its accuracy and availability budget explicitly.
+- **Production failure mode:** Every per-user limit passes while aggregate demand exceeds capacity; the origin collapses without any individual limit ever tripping.
+- **Existing-codebase evidence:** Verify a global guard exists upstream of per-identity checks; load-test aggregate-at-limit conditions and record which layer sheds first.
 
 ### 7.7. Fixed window
 
-- **SHOULD — engineering rule:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
-- **Production failure mode:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
-- **Existing-codebase evidence:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
+- **SHOULD — engineering rule:** Count requests per (key, window start) with an atomic increment-and-check; simple and memory-cheap, but it allows 2x limit at window boundaries — a client can spend its full quota in the last seconds of window N and again immediately in N+1.
+- **Production failure mode:** Boundary bursts double instantaneous load exactly at rollover; cron-like traffic aligned to wall-clock windows amplifies the spike.
+- **Existing-codebase evidence:** Drive burst-then-sustained load across a boundary and record accepted counts; verify increments are atomic under concurrency (no read-modify-write races).
 
 ### 7.8. Sliding window
 
-- **SHOULD — engineering rule:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
-- **Production failure mode:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
-- **Existing-codebase evidence:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
+- **SHOULD — engineering rule:** Sliding window LOG stores per-request timestamps — exact but O(requests) memory per key; sliding window COUNTER approximates with a weighted blend of current + previous window (weight = elapsed fraction) — memory-cheap, but the uniformity assumption makes it overcount (under-admit) when previous-window traffic clustered early in its window and undercount (over-admit) when clustered at the boundary, with worst-case overshoot approaching the fixed-window 2x spike under adversarial end-of-window clustering.
+- **Production failure mode:** Log variants leak memory on high-cardinality keys when timestamp lists go unpruned; counter variants quietly over-admit under skewed, bursty traffic patterns.
+- **Existing-codebase evidence:** Identify which sliding variant ships; measure memory per active key and pruning behavior; compare accepted counts against an exact reference under bursty traces.
 
 ### 7.9. Token bucket
 
-- **SHOULD — engineering rule:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
-- **Production failure mode:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
-- **Existing-codebase evidence:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
+- **SHOULD — engineering rule:** Bucket capacity b, refill rate r tokens/sec; each request consumes token(s); refill computes tokens = min(b, tokens + r * dt) atomically at check time; allows burst b with a sustained rate r — the most common choice for API limiting.
+- **Production failure mode:** Non-atomic read-compute-write on tokens loses refills under concurrency (two requests both see full buckets); b and r copied from defaults mismatch real endpoint cost.
+- **Existing-codebase evidence:** Confirm refill-and-consume is a single atomic operation per key (Lua script, compare-and-set, or mutex); verify b and r per tier against documented quotas.
 
 ### 7.10. Leaky bucket
 
-- **SHOULD — engineering rule:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
-- **Production failure mode:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
-- **Existing-codebase evidence:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
+- **SHOULD — engineering rule:** Distinguish the two shapes consciously: leaky bucket AS METER (constant outflow equivalent to a token bucket; smooths observed rate) vs AS QUEUE (buffers requests in a bounded FIFO drained at constant rate — adds queuing latency and can mask overload by hiding demand behind the queue).
+- **Production failure mode:** Queue-mode absorbs an overload attack as growing latency instead of rejecting; queues fill memory while dashboards look healthy and every served request is late.
+- **Existing-codebase evidence:** Determine whether the implementation rejects immediately or buffers; if buffering, find the queue bound, overflow behavior, and the added p99 latency.
 
 ### 7.11. Distributed rate limiting
 
-- **SHOULD — engineering rule:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
-- **Production failure mode:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
-- **Existing-codebase evidence:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
+- **SHOULD — engineering rule:** A centralized atomic counter store (Redis Lua check-and-decrement) gives exactness at the cost of a round-trip per request and makes the store's availability yours; periodic-sync local approximate counters avoid the hot path but over-admit between syncs — bound the error (sync interval x drift) and document it; sticky routing trades rebalancing pain for locally atomic counters.
+- **Production failure mode:** The counter store becomes a write hotspot; when it slows, either every request queues behind it (a synchronous dependency you built yourself) or fail-open silently disables all limits.
+- **Existing-codebase evidence:** Identify limiter placement (edge/gateway/service) and store topology; measure limiter-store p99, compute worst-case between-sync over-admission, and confirm the documented store-outage fail mode.
 
 ### 7.12. Burst handling
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Burst handling** within Rate Limiting: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for burst handling is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for burst handling, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Model bursts explicitly: size burst capacity (bucket depth or window headroom) above legitimate client concurrency (page loads fire parallel requests), with sustained rate below it; absorb micro-bursts and reject sustained excess rather than punishing every parallel page-load.
+- **Production failure mode:** A zero-burst window limiter rejects legitimate concurrent first-page fan-out (auth + profile + preferences in one sweep), producing mystery 429s on login.
+- **Existing-codebase evidence:** Replay realistic client startup bursts against the limiter; tune burst capacity until legitimate fan-out passes while sustained abuse still trips.
 
 ### 7.13. Retry-after
 
-- **SHOULD — engineering rule:** Classify retryable outcomes, cap attempts and elapsed time, use exponential backoff with jitter, honor provider pushback, and make side effects idempotent or detect ambiguous completion.
-- **Production failure mode:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
-- **Existing-codebase evidence:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+- **MUST — engineering rule:** Response contract: rejections return 429 + Retry-After (delta-seconds or HTTP-date) computed from the key's refill time — when enough budget regenerates — not a constant; the limiter emits it and clients honor it; forwarding an upstream provider's Retry-After unchanged is a separate passthrough path.
+- **Production failure mode:** Constant or absent Retry-After turns throttling into hammering (clients poll on their own cadence) or freezes clients far longer than the actual refill horizon.
+- **Existing-codebase evidence:** Verify every 429 carries Retry-After consistent with the key's refill math; check clients parse delta-seconds AND HTTP-date forms and clamp honored delays to their deadlines.
 
 ### 7.14. Rate-limit headers
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Rate-limit headers** within Rate Limiting: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for rate-limit headers is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for rate-limit headers, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Expose remaining-budget headers consistently (standardized RateLimit-/Retry-After family or documented legacy X-RateLimit-*): limit, remaining, reset — on BOTH successes and 429s so well-behaved clients self-throttle before hitting the wall; document header semantics publicly and keep them stable across gateways.
+- **Production failure mode:** Headers emitted only on 429 give clients no proactive signal; inconsistent names across gateways force parsing hacks that break silently on rename.
+- **Existing-codebase evidence:** Snapshot emitted headers per route and status; confirm remaining/reset update correctly mid-window and documentation matches the wire format.
 
 ### 7.15. Fail-open vs fail-closed
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Fail-open vs fail-closed** within Rate Limiting: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for fail-open vs fail-closed is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for fail-open vs fail-closed, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** When the limiter store is down, behavior must be documented PER ENDPOINT CLASS: auth/login endpoints usually fail closed (brute-force protection must not vanish); general read paths often fail open with alerting; record the decision matrix in reviewable configuration and monitor both paths.
+- **Production failure mode:** Default-fail-open middleware silently disables login throttling during a cache outage, handing attackers a brute-force window exactly when defenses are down.
+- **Existing-codebase evidence:** Simulate a limiter-store outage per endpoint class and observe the documented fail mode; confirm alerts fire on fail-open decisions and the decision matrix exists.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 
@@ -314,7 +314,7 @@ Version serialized values and key formats. During deployment, readers should tol
 | Constraints / atomicity | Translate race-sensitive invariants into database constraints, atomic predicates, transaction boundaries, or durable workflow state; document what cannot be atomic. |
 | Concurrency / idempotency | Specify behavior for duplicate and concurrent create, update, delete, transition, retry, and recovery operations. Make one logical operation distinguishable from repeated transport attempts. |
 | Timeouts / retries | Set a finite end-to-end deadline, classify retryable failures, budget attempts with jitter, and protect ambiguous side effects with idempotency or outcome lookup. |
-| Consistency / caching | Treat cached values as versioned derived data. Define freshness, stale allowance, negative entries, tenant/authorization key scope, stampede control, and cache-down behavior. |
+| Centralized vs local counters | A shared store gives one truth but adds a round-trip and a new failure point; local approximate counters over-admit between syncs. | Bound the over-admission error, document the fail-open/fail-closed decision per endpoint class, and monitor counter-store latency as a dependency. |
 | Security / abuse | Threat-model attacker-controlled identifiers, payloads, ordering, volume, and timing. Apply least privilege, rate/resource controls, secure failure, and sensitive-data redaction. |
 | Privacy / retention | Classify data produced or touched by Rate Limiting; minimize collection, define access and export, propagate deletion, and address logs, derived stores, backups, and legal hold. |
 | Observability / audit | Emit bounded structured telemetry with request/workflow IDs and outcome class. Audit security- or state-significant actions with actor, target, result, and policy/version context. |
@@ -331,7 +331,7 @@ Version serialized values and key formats. During deployment, readers should tol
 - **MUST** — Use finite deadlines and bounded resource consumption; define what happens when dependencies, caches, telemetry, or providers are unavailable.
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
 - **MUST** — For **IP limits**: Define the exact semantics of **IP limits** within Rate Limiting: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST** — For **Tenant limits**: Derive tenant context from an authenticated, authorized binding; propagate it explicitly through queries, caches, jobs, events, files, metrics, and audit records. Make unscoped access difficult or impossible.
+- **MUST** — For **Tenant limits**: Derive the limit key from authenticated tenant identity and enforce per-tier quotas with burst allowances at shared infrastructure so one noisy tenant cannot consume shared capacity at the expense of others.
 - **MUST** — For **Fixed window**: Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
 - **MUST** — For **Token bucket**: Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
 
@@ -340,7 +340,7 @@ Version serialized values and key formats. During deployment, readers should tol
 - **SHOULD** — A cache is a derived copy with an explicit source of truth, staleness budget, invalidation mechanism, and failure mode.
 - **SHOULD** — Cache keys are part of the security boundary and must include tenant, principal, locale, version, and policy context when those affect the value.
 - **SHOULD** — TTL is not invalidation; it is only an upper bound on staleness under some conditions.
-- **SHOULD** — Negative entries, hot keys, stampedes, and serialization upgrades can dominate production behavior.
+A saturated limiter store, clock drift between enforcer nodes, and bursty tenants dominate production behavior.
 - **SHOULD** — Correctness must survive cache loss, partial outage, and eviction unless the cache is deliberately authoritative.
 - **SHOULD** — Prefer simple, locally enforceable invariants over coordination-heavy designs.
 - **SHOULD** — Use production-shaped tests and operational telemetry to verify assumptions after deployment.
@@ -374,12 +374,12 @@ Version serialized values and key formats. During deployment, readers should tol
 Passing unit tests is not sufficient. The release needs evidence at the storage, protocol, concurrency, deployment, and operational layers where the failure can actually occur.
 
 - [ ] Run cold-cache, eviction-storm, cache-down, slow-cache, partition, failover, and serialization-version scenarios.
-- [ ] Synchronize miss/fill/invalidate/write races and verify stampede controls, stale bounds, and tenant/authorization key dimensions.
+Synchronize concurrent limiter decisions and verify fail-mode behavior, budget accounting under races, and tenant
 - [ ] Test hot keys, negative caching, TTL jitter, lock expiry, and origin overload at production concurrency.
 - [ ] Roll old and new key/value formats together without a global flush; verify rollback parsing.
 - [ ] Inject stale authorization or quota data and prove the documented fail-open/fail-closed behavior.
 - [ ] **IP limits:** Locate every implementation path for ip limits, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **Tenant limits:** Search for data-access methods that accept no tenant scope; run mutation and property tests that swap tenant identifiers at every boundary.
+- [ ] **Tenant limits:** Identify limiter placement (edge/gateway/service); drive one tenant from burst into sustained load until throttled and verify neighboring tenants keep full budgets, unaffected latency, and 429s carrying Retry-After.
 - [ ] **Fixed window:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
 - [ ] **Token bucket:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
 - [ ] **Burst handling:** Locate every implementation path for burst handling, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
@@ -399,7 +399,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - **Global limits:** A framework or provider default for global limits is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Sliding window:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
 - **Leaky bucket:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
-- **Retry-after:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
+- **Retry-after:** Throttled clients ignore Retry-After and hammer the limiter, converting soft throttling into sustained overload; or emitted Retry-After values are unrelated to the actual refill time of the key.
 - **Fail-open vs fail-closed:** A framework or provider default for fail-open vs fail-closed is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 
 ## 18. AI coding-agent failure modes
@@ -429,7 +429,7 @@ An AI agent is especially likely to:
 - What load shape, cardinality, skew, payload size, concurrency, and failure rate define production capacity?
 - What telemetry, alert, audit event, reconciliation, cleanup job, and runbook prove the feature remains correct after release?
 - For **IP limits**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for ip limits is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- For **Tenant limits**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A missing filter, reused cache key, delayed job, or admin path reads or writes another tenant's data.
+- For **Tenant limits**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: One tenant consumes shared capacity until neighbors are throttled or degraded because enforcement is per-service best-effort instead of shared infrastructure.
 - For **Fixed window**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
 - For **Token bucket**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
 - For **Burst handling**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for burst handling is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
@@ -451,7 +451,7 @@ An AI agent is especially likely to:
 - [ ] **Global limits:** Locate every implementation path for global limits, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Sliding window:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
 - [ ] **Leaky bucket:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
-- [ ] **Retry-after:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+- [ ] **Retry-after:** Verify every 429 response carries a Retry-After derived from the key refill time and that documented client/SDK behavior honors it instead of polling.
 - [ ] **Fail-open vs fail-closed:** Locate every implementation path for fail-open vs fail-closed, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] Enumerate key builders and invalidation publishers; compare tenant, locale, auth, schema, and environment dimensions.
 

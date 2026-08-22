@@ -20,7 +20,7 @@ status: production-engineering-reference
 
 **Quotas** exists to trade freshness and operational complexity for latency, throughput, and dependency isolation without changing correctness silently. A basic implementation usually handles the visible happy path; a production implementation must also preserve identity and ownership, valid state transitions, race-safe invariants, failure recovery, compatibility, and bounded operations.
 
-A cache is a derived, disposable representation unless explicitly designed as a durable system of record. The owning domain defines key namespace, tenant scope, freshness, negative entries, serialization version, and fallback behavior. Never let cache reachability decide authorization without a bounded, secure source of truth.
+A quota is an enforceable capacity contract between the platform and its consumers. The owning domain defines the consumption unit, scope (tenant/key/endpoint), window semantics, reset behavior, and what happens at exhaustion. Never let best-effort counting decide commitments that need atomic enforcement.
 
 The most important evidence base for this paper includes [S042](#s042) [S055](#s055) [S053](#s053). The source list at the end distinguishes standards, official product documentation, research, and production engineering guidance.
 
@@ -29,7 +29,7 @@ The most important evidence base for this paper includes [S042](#s042) [S055](#s
 - A cache is a derived copy with an explicit source of truth, staleness budget, invalidation mechanism, and failure mode.
 - Cache keys are part of the security boundary and must include tenant, principal, locale, version, and policy context when those affect the value.
 - TTL is not invalidation; it is only an upper bound on staleness under some conditions.
-- Negative entries, hot keys, stampedes, and serialization upgrades can dominate production behavior.
+- Quota exhaustion cliffs, period-boundary reset bursts, and uneven tenant consumption dominate production behavior.
 - Correctness must survive cache loss, partial outage, and eviction unless the cache is deliberately authoritative.
 
 ## 2. Scope and terminology map
@@ -59,7 +59,7 @@ The primary correctness question is not “does the happy path work?” but “c
 1. **Invariant 1:** A cache is a derived copy with an explicit source of truth, staleness budget, invalidation mechanism, and failure mode.
 2. **Invariant 2:** Cache keys are part of the security boundary and must include tenant, principal, locale, version, and policy context when those affect the value.
 3. **Invariant 3:** TTL is not invalidation; it is only an upper bound on staleness under some conditions.
-4. **Invariant 4:** Negative entries, hot keys, stampedes, and serialization upgrades can dominate production behavior.
+4. **Invariant 4:** Quota consumption is enforced atomically against authoritative counters; approximate local counts never authorize commitments that require global accuracy.
 5. **Invariant 5:** Correctness must survive cache loss, partial outage, and eviction unless the cache is deliberately authoritative.
 
 Additional topic-specific invariants:
@@ -206,7 +206,7 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 
-Cache-aside has windows after writes and on failed invalidation. Versioned or generational keys avoid some delete races; write-through/write-behind introduce their own commit ordering. Stampede protection must prevent stale lock holders and bound waiting. Quotas and rate limits need atomic distributed operations when global accuracy matters.
+Quota accounting races show up as overspend: two requests both read remaining=1 and both proceed. Atomic check-and-decrement (conditional update or Lua-style script), reservation with release on failure, and per-scope serialization bound the error. Define whether slight over-admission is acceptable or hard stops are mandatory — that decision drives every mechanism choice.
 
 ### Required reasoning sequence
 
@@ -295,7 +295,7 @@ Version serialized values and key formats. During deployment, readers should tol
 | Constraints / atomicity | Translate race-sensitive invariants into database constraints, atomic predicates, transaction boundaries, or durable workflow state; document what cannot be atomic. |
 | Concurrency / idempotency | Specify behavior for duplicate and concurrent create, update, delete, transition, retry, and recovery operations. Make one logical operation distinguishable from repeated transport attempts. |
 | Timeouts / retries | Set a finite end-to-end deadline, classify retryable failures, budget attempts with jitter, and protect ambiguous side effects with idempotency or outcome lookup. |
-| Consistency / caching | Treat cached values as versioned derived data. Define freshness, stale allowance, negative entries, tenant/authorization key scope, stampede control, and cache-down behavior. |
+| Fixed-window vs rolling-window quotas | Calendar resets are simple and predictable but create demand cliffs; rolling windows smooth consumption at higher counter cost. | Pick by product fairness semantics, size counter storage for the tenant count, and alert on reset-time load spikes. |
 | Security / abuse | Threat-model attacker-controlled identifiers, payloads, ordering, volume, and timing. Apply least privilege, rate/resource controls, secure failure, and sensitive-data redaction. |
 | Privacy / retention | Classify data produced or touched by Quotas; minimize collection, define access and export, propagate deletion, and address logs, derived stores, backups, and legal hold. |
 | Observability / audit | Emit bounded structured telemetry with request/workflow IDs and outcome class. Audit security- or state-significant actions with actor, target, result, and policy/version context. |
@@ -321,7 +321,7 @@ Version serialized values and key formats. During deployment, readers should tol
 - **SHOULD** — A cache is a derived copy with an explicit source of truth, staleness budget, invalidation mechanism, and failure mode.
 - **SHOULD** — Cache keys are part of the security boundary and must include tenant, principal, locale, version, and policy context when those affect the value.
 - **SHOULD** — TTL is not invalidation; it is only an upper bound on staleness under some conditions.
-- **SHOULD** — Negative entries, hot keys, stampedes, and serialization upgrades can dominate production behavior.
+- Quota exhaustion cliffs, period-boundary reset bursts, and uneven tenant consumption dominate production behavior.
 - **SHOULD** — Correctness must survive cache loss, partial outage, and eviction unless the cache is deliberately authoritative.
 - **SHOULD** — Prefer simple, locally enforceable invariants over coordination-heavy designs.
 - **SHOULD** — Use production-shaped tests and operational telemetry to verify assumptions after deployment.
@@ -354,7 +354,7 @@ Version serialized values and key formats. During deployment, readers should tol
 Passing unit tests is not sufficient. The release needs evidence at the storage, protocol, concurrency, deployment, and operational layers where the failure can actually occur.
 
 - [ ] Run cold-cache, eviction-storm, cache-down, slow-cache, partition, failover, and serialization-version scenarios.
-- [ ] Synchronize miss/fill/invalidate/write races and verify stampede controls, stale bounds, and tenant/authorization key dimensions.
+- Synchronize concurrent consumption against resets and verify reservation races, carryover semantics, and tenant
 - [ ] Test hot keys, negative caching, TTL jitter, lock expiry, and origin overload at production concurrency.
 - [ ] Roll old and new key/value formats together without a global flush; verify rollback parsing.
 - [ ] Inject stale authorization or quota data and prove the documented fail-open/fail-closed behavior.
@@ -371,7 +371,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 
 - Cross-tenant cache key collision.
 - Stale value resurrected after invalidation.
-- Stampede after common expiry.
+- Reset bursts where all tenants refire simultaneously at the period boundary overwhelm downstream capacity.
 - Unbounded cache cardinality from user input.
 - Cache outage taking down the source database.
 - **Request quotas:** Parallel operations overspend quota or failed work never releases reservations.

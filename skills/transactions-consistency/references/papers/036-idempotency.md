@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Network calls inside database transactions extend lock time and create outcomes that cannot be atomically rolled back.
 5. **Invariant 5:** Distributed locks without fencing cannot prevent a paused or partitioned former owner from writing after lease expiry.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -146,8 +144,8 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.8. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **SHOULD - engineering rule:** Size idempotency-record retention beyond the maximum retry/redelivery horizon of every caller (provider retry windows included); within that window replays return the stored terminal outcome, after cleanup a replayed key is a distinct operation by contract â€” document both behaviors.
+- **Production failure mode:** Keys expire before a slow caller finishes retrying, the retry executes as a duplicate charge/creation; conversely unbounded retention turns the idempotency table into an unmanaged growth liability nobody owns.
 - **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
 
 ### 8.9. Concurrent duplicates

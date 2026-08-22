@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Fallbacks can return stale or lower-quality data, but they must not weaken security or silently corrupt state.
 5. **Invariant 5:** Graceful degradation requires a predefined reduced contract, not ad hoc exception swallowing.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -88,6 +86,7 @@ stateDiagram-v2
     attempt --> nonretryable_failure
     attempt --> deadline_exhausted
     closed_breaker --> open_breaker --> half_open --> closed_breaker
+    half_open --> open_breaker
 ```
 
 ### Lifecycle rules
@@ -120,20 +119,41 @@ A production representation commonly needs the following fields or equivalent ev
 
 Each subsection answers three questions: what rule must be implemented, what fails in production, and what an agent must inspect in an existing codebase before changing it.
 
-### Default obligations
+### 8.1. States: closed, open, half-open
 
-These subtopics carry no additional domain-specific rule beyond the default obligation: for each, define owner, inputs, outputs, invariants, lifecycle, failure classification, and a compatibility contract; make the rule enforceable at the narrowest authoritative boundary; and do not accept a framework or provider default without proving it fits the domain.
+- **MUST — engineering rule:** CLOSED flows traffic while accumulating failure statistics (including retried attempts); OPEN fails fast locally with NO network call — microseconds, not timeouts — raising a distinct circuit-open error; HALF_OPEN admits limited probe traffic only.
+- **Production failure mode:** An open breaker that still performs the call protects nothing — threads pile up inside the breaker; a half-open that floods probes re-kills the recovering dependency.
+- **Existing-codebase evidence:** Measure open-state rejection latency (must be microseconds-to-milliseconds with zero sockets) and confirm callers get a distinguishable error type for branching.
 
-- **Closed state**
-- **Open state**
-- **Half-open state**
-- **Failure thresholds**
-- **Recovery**
-- **Per-provider breakers**
-- **Per-endpoint breakers**
-- **Fallback behavior**
-- **Monitoring**
-- **Distributed circuit breakers**
+### 8.2. Trip criteria and thresholds
+
+- **SHOULD — engineering rule:** Trip on a consecutive-failure count OR a sliding-window failure-rate WITH a minimum-volume floor (never trip on 3 requests); include slow-call detection — over-threshold latency counts as a failure — because hangs cause cascades faster than errors.
+- **Production failure mode:** Pure-rate thresholds trip on quiet-period noise; missing slow-call detection lets latency-only overloads cascade without ever tripping.
+- **Existing-codebase evidence:** Locate thresholds config (consecutive count, rate, window size, volume floor, slow-call duration); verify retried attempts feed the same counters.
+
+### 8.3. Half-open mechanics and open-duration policy
+
+- **MUST — engineering rule:** Admit at most k concurrent probes via a semaphore (defined grant order, bounded concurrency); any probe failure reopens with the timer reset; k successes close and reset stats. Open duration: fixed cool-down or exponential on repeated re-trips, with hysteresis (exit criteria stricter than entry) to prevent flapping.
+- **Production failure mode:** Unbounded half-open traffic re-trips a barely-recovering dependency into open/half-open flapping; short fixed cool-downs against a slow-recovering dependency cycle indefinitely.
+- **Existing-codebase evidence:** Test the full trip -> half-open -> close cycle with a stub dependency; verify the k-probe cap under concurrency and that transitions-per-minute are observable.
+
+### 8.4. Scope: per dependency and operation class
+
+- **MUST — engineering rule:** One breaker per dependency + operation class, never one global breaker; local per-instance state is standard; shared/distributed store-backed state adds staleness windows and a new failure point — document the consistency trade-off and degrade to local breaking when the store is down.
+- **Production failure mode:** A global breaker opened by one non-critical dependency fail-fasts everything in the process; a store-backed breaker failing closed blocks all traffic.
+- **Existing-codebase evidence:** Map each external dependency to its breaker instance; flag shared/global breakers; test store-backed variants with the store unavailable.
+
+### 8.5. Fallback behavior
+
+- **MUST — engineering rule:** Fallbacks are product decisions with a predefined reduced contract — cached response, static default, degraded feature, or fail-fast error — chosen per route; instrument the fallback activation rate because silent fallbacks mask outages; fallback output obeys the same authorization and tenant scoping as live responses.
+- **Production failure mode:** A silent cached-response fallback serves stale data as fresh truth for days while dashboards stay green.
+- **Existing-codebase evidence:** Require an activation metric/log per fallback handler; verify fallbacks never fabricate authoritative results or bypass authorization.
+
+### 8.6. Interaction with retries and monitoring
+
+- **SHOULD — engineering rule:** Place the breaker between the retry loop and the network call so retries see fail-fast and stop burning budget — an open breaker converts a retry storm into immediate rejection; count underlying outcomes including retried attempts; export state transitions, rejected-request counts, and fallback activations with alerts on OPEN transitions.
+- **Production failure mode:** A breaker outside the retry loop lets every attempt burn budget against a dead dependency; missing transition alerts hide nightly open/close cycles.
+- **Existing-codebase evidence:** Confirm transition metrics and rejected-counters exist per scope; verify the retry loop observes the breaker's fail-fast error rather than treating it as retryable transport failure.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 

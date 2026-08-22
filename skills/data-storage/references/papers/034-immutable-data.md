@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Optionality, deletion semantics, history, and ownership must be explicit because they affect every query and migration.
 5. **Invariant 5:** Derived fields need a source of truth, recomputation rule, and divergence detection.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

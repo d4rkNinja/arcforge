@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Cryptographic protection fails when keys, randomness, nonces, algorithms, or lifecycle management are wrong.
 5. **Invariant 5:** Security controls require abuse-case tests and operational detection, not only happy-path unit tests.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

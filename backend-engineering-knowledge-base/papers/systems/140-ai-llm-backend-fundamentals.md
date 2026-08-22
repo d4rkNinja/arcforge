@@ -170,33 +170,33 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.5. Token accounting
 
-- **SHOULD — engineering rule:** Estimate and record input/output/cache/tool usage per request and tenant, reserve budget before execution, cap context/iterations/output, and reconcile provider-reported usage.
-- **Production failure mode:** Large retrieved context or loops create unbounded spend and latency, while provider rounding/retries make local estimates drift.
-- **Existing-codebase evidence:** Test oversized inputs, fallback providers, streaming cancellation, retries, and reconciliation against billing records.
+- **SHOULD — engineering rule:** Count tokens with the actual model tokenizer — tokenizers differ per model, so identical text produces different counts across models and hardcoded ratios misestimate; price input and output tokens separately; apply prompt-caching discounts only within provider cache windows; track spend per feature and per tenant because unit economics live at that granularity, not in request counts.
+- **Production failure mode:** A chars-per-token estimate quietly under-counts code-heavy or non-English traffic, budgets tuned to estimates diverge from billed tokens, cached-prefix discounts assumed everywhere expire outside cache windows, and per-feature margin analysis is impossible because usage was never attributed below the account level.
+- **Existing-codebase evidence:** Check whether token estimates run a real tokenizer or a hardcoded ratio; verify usage records separate input/output/cache fields per tenant and feature, and reconcile sampled requests against provider billing lines.
 
 ### 7.6. Context limits
 
-- **SHOULD — engineering rule:** Estimate and record input/output/cache/tool usage per request and tenant, reserve budget before execution, cap context/iterations/output, and reconcile provider-reported usage.
-- **Production failure mode:** Large retrieved context or loops create unbounded spend and latency, while provider rounding/retries make local estimates drift.
-- **Existing-codebase evidence:** Test oversized inputs, fallback providers, streaming cancellation, retries, and reconciliation against billing records.
+- **SHOULD — engineering rule:** Treat the maximum context window as one shared budget: system prompt + conversation history + retrieved documents + RESERVED OUTPUT SPACE must fit together; exceeding it fails requests outright or triggers silent truncation, so truncation policy must be explicit — drop oldest turns, summarize history, or clip retrieval chunks — because silent middle-truncation masquerades as model-quality regressions; reserve output budget explicitly for long generations.
+- **Production failure mode:** Growing retrieved documents silently truncate conversation history mid-thread, so the model "forgets" earlier instructions and teams chase a quality regression that is actually context overflow; or whole requests hard-fail with context-length errors only at peak payload sizes.
+- **Existing-codebase evidence:** Find the truncation-policy implementation and confirm it drops a deliberate side (oldest turns vs retrieval clips) rather than relying on provider defaults; test inputs near the window limit and verify reserved output space survives worst-case retrieved-context sizes.
 
 ### 7.7. Prompt versioning
 
-- **SHOULD — engineering rule:** Version prompts, schemas, tools, model, decoding settings, and policy together; validate outputs as untrusted commands and require authorization/approval at execution time.
-- **Production failure mode:** A syntactically valid output violates domain invariants or an old prompt/tool pair becomes incompatible after a rollout.
-- **Existing-codebase evidence:** Replay a golden/adversarial corpus across versions and reject unknown fields, invalid transitions, and unauthorized tool arguments.
+- **SHOULD — engineering rule:** Prompts are versioned artifacts with eval baselines: changes pass regression suites before rollout, variants are tested like code (canary/A-B), and production prompts record their version in telemetry for incident forensics. Pin decoding settings to the prompt version: temperature near 0 for extraction/classification tasks wanting stability and higher temperatures for ideation; temperature 0 is NOT bit-reproducible across provider model versions; top_p interacts with temperature, so tune one primarily; seed parameters vary by provider and do not guarantee determinism across infrastructure updates.
+- **Production failure mode:** A prompt tweak ships without its regression baseline and silently degrades extraction precision; a provider model update changes sampling behavior behind an unchanged temperature setting, and nobody can reproduce last week's outputs because neither prompt version nor decoding configuration was logged.
+- **Existing-codebase evidence:** Confirm prompt-version logging exists in production telemetry; check that decoding settings (temperature/top_p/seed) are pinned and reviewed per task type rather than left at client defaults; replay a golden/adversarial corpus across versions and reject unknown fields, invalid transitions, and unauthorized tool arguments.
 
 ### 7.8. Structured output
 
-- **SHOULD — engineering rule:** Version prompts, schemas, tools, model, decoding settings, and policy together; validate outputs as untrusted commands and require authorization/approval at execution time.
-- **Production failure mode:** A syntactically valid output violates domain invariants or an old prompt/tool pair becomes incompatible after a rollout.
-- **Existing-codebase evidence:** Replay a golden/adversarial corpus across versions and reject unknown fields, invalid transitions, and unauthorized tool arguments.
+- **SHOULD — engineering rule:** Schema-constrained decoding (JSON mode, function/tool schemas) reduces malformed outputs but never eliminates them: validate server-side against the schema AND domain invariants, and define a repair-or-fail path (bounded re-ask carrying the validation error, then reject); measure schema-adherence rates per schema/model version instead of assuming them.
+- **Production failure mode:** A provider upgrade or long-context edge case yields JSON that parses but violates field constraints, or streamed output truncates mid-object; without measured adherence rates and a repair path, malformed responses surface as customer-visible failures or corrupted downstream writes.
+- **Existing-codebase evidence:** Test malformed-JSON repair paths end-to-end by injecting truncated and schema-violating outputs; check adherence-rate metrics exist per schema/version and that unknown-field and semantic-invariant rejection happens server-side.
 
 ### 7.9. Tool calling
 
-- **SHOULD — engineering rule:** Version prompts, schemas, tools, model, decoding settings, and policy together; validate outputs as untrusted commands and require authorization/approval at execution time.
-- **Production failure mode:** A syntactically valid output violates domain invariants or an old prompt/tool pair becomes incompatible after a rollout.
-- **Existing-codebase evidence:** Replay a golden/adversarial corpus across versions and reject unknown fields, invalid transitions, and unauthorized tool arguments.
+- **SHOULD — engineering rule:** Tool schemas are contracts versioned alongside implementations; argument validation happens server-side regardless of trust in model output; handle parallel/multiple tool calls explicitly (ordering, conflicts, per-call authorization) and design bounded error feedback loops — tool errors return to the model for retry decisions within the same step/cost/time budgets, never open-ended.
+- **Production failure mode:** The model emits plausible-but-hostile arguments — another tenant's ID, oversized payloads, injected shell metacharacters — that execute because only the happy path validates; parallel tool calls race on shared state, or an unbounded error loop retries a failing tool until cost caps blow.
+- **Existing-codebase evidence:** Verify tool argument validation rejects hostile inputs (cross-tenant identifiers, oversize/malformed values) server-side; exercise multi-tool-call handling and confirm tool-error feedback to the model is bounded by step/cost budgets.
 
 ### 7.10. Retries
 

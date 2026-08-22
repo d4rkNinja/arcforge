@@ -70,7 +70,7 @@ Additional topic-specific invariants:
 
 - **MUST — Transaction logs:** Define the exact semantics of **Transaction logs** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **SHOULD — Database change events:** Define the exact semantics of **Database change events** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Ordering:** Define deterministic ordering, null placement, collation, and a unique tie-breaker. Treat user-selected sort fields as an allowlisted query plan, not arbitrary SQL/expressions.
+- **SHOULD — Ordering:** Preserve the commit order the log already provides per shard/table lane; when parallelizing by key keep one in-flight event per key, route global-order consumers through a single lane, and make consumers detect or buffer out-of-order records instead of overwriting newer state with older events.
 - **SHOULD — Backfills:** Process bounded deterministic chunks with checkpoints after durable commit, idempotent writes, rate/resource limits, pause/resume, version guards, and validation samples plus full reconciliation.
 - **SHOULD — Offset management:** Define the exact semantics of **Offset management** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **SHOULD — Search synchronization:** Define the exact semantics of **Search synchronization** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
@@ -137,39 +137,39 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.1. Transaction logs
 
-- **MUST — engineering rule:** Define the exact semantics of **Transaction logs** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for transaction logs is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for transaction logs, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Prefer log-based change data capture: read the database's own transaction log (Postgres WAL via logical decoding, MySQL binlog, MongoDB oplog) so the database remains the single authoritative writer, no application dual-write exists to drift, and every change is captured regardless of which client made it — including manual SQL fixes, batch jobs, and other applications the publisher never knew about.
+- **Production failure mode:** A dual-write implementation (application writes the table, then publishes an event) misses rows written by operators, scripts, and sibling services, so the derived store silently diverges from the source; log-based capture would have seen all of them.
+- **Existing-codebase evidence:** Inventory every writer to replicated tables including admin tooling and scripts; search for publish-after-commit code paths that constitute dual writes; check whether the connector holds a replication role/slot or falls back to trigger- or timestamp-polling, and note why.
 
 ### 7.2. CDC streams
 
-- **SHOULD — engineering rule:** Define the exact semantics of **CDC streams** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for cdc streams is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for cdc streams, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Make the initial snapshot to live-stream transition exact: the initial consistent snapshot MUST pin a precise log position (Postgres LSN, MySQL GTID/binlog coordinates, oplog timestamp) captured atomically with the snapshot read, and streaming MUST resume from exactly that position — snapshotting without pinning a position silently drops every row committed during the snapshot, while resuming from before snapshot completion replays duplicates; Debezium-style connectors encode this in snapshot modes (initial, incremental/read-replica-aware, blocking), so choose and record the mode explicitly instead of accepting defaults.
+- **Production failure mode:** A connector configured with snapshots disabled is pointed at a populated table and streams only new changes, so the sink permanently lacks pre-existing rows and nobody notices until counts are compared months later; or a reset snapshot.mode re-emits full table state into a sink expecting deltas, duplicating or regressing records.
+- **Existing-codebase evidence:** Locate every CDC connector configuration and record its snapshot mode and start-position strategy; ask how a brand-new environment is bootstrapped and whether the snapshot-position pairing is exercised in tests; verify resume positions survive connector restarts, rebalances, and version upgrades.
 
 ### 7.3. Database change events
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Database change events** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for database change events is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for database change events, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Model the change event envelope explicitly: primary key, operation type (create/update/delete/snapshot-read), before and after images as configured, and source metadata (log position, commit timestamp, transaction identifier); emit tombstone events for deletes so sinks learn to remove state rather than ignore it, and keep the envelope backward-compatible as producers evolve.
+- **Production failure mode:** A sink treats delete/tombstone events as unknown messages and skips them, so deleted accounts stay active in the search index or cache indefinitely; or before-images are disabled and consumers cannot distinguish substantive updates from no-op touches.
+- **Existing-codebase evidence:** Sample live events from the stream and confirm operation-type coverage; trace one delete end-to-end into every sink; check image configuration (full/partial/before) against consumer requirements and whether TOASTed/large-column truncation drops fields consumers need.
 
 ### 7.4. Consumers
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Consumers** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for consumers is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for consumers, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Assume at-least-once delivery and require every sink to be idempotent: deduplicate on the row primary key using upsert semantics (INSERT ON CONFLICT/REPLACE/merge) or version/log-position-guarded conditional writes so re-delivery converges to identical state; a sink that blind-inserts will duplicate rows on the first connector restart or rebalance.
+- **Production failure mode:** After a routine rebalance redelivers an offset window, a non-idempotent sink double-inserts; row counts inflate, analytics over-report, and someone discovers the discrepancy days later during manual reconciliation instead of by construction.
+- **Existing-codebase evidence:** Inspect each sink's write path for upsert/conditional-version logic versus plain INSERT; force duplicate delivery in staging and observe the outcome; distinguish legitimate event-ID dedupe from the row-level idempotency that state stores actually need.
 
 ### 7.5. Ordering
 
-- **SHOULD — engineering rule:** Define deterministic ordering, null placement, collation, and a unique tie-breaker. Treat user-selected sort fields as an allowlisted query plan, not arbitrary SQL/expressions.
-- **Production failure mode:** Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
-- **Existing-codebase evidence:** Inspect explain plans for every allowed sort/filter combination and test ties, nulls, Unicode, and concurrent writes.
+- **MUST — engineering rule:** The log preserves commit order per shard/table lane: parallelizing consumption by key preserves per-key order but reorders events across keys, so global-order consumers need a single lane while per-key processors must guarantee one in-flight event per key; use transaction-metadata markers to group events into commit boundaries so partially applied transactions are never observed downstream.
+- **Production failure mode:** A fan-out worker pool applies an INSERT after its subsequent UPDATE for the same key, leaving older state in the sink than in the source; or a consumer reacts to half of a multi-row transaction because commit-boundary grouping is disabled.
+- **Existing-codebase evidence:** Map the parallelism topology (topic partitions, worker pools, table lanes) against keys; drive rapid interleaved updates to one key through staging and verify final sink state equals source; check whether transaction-boundary/staging features are enabled where multi-statement consistency matters.
 
 ### 7.6. Schema changes
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Schema changes** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for schema changes is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for schema changes, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Track DDL through the connector's schema-history topic or schema registry and evolve compatibly: widening types is safe, renames are breaking because they arrive as delete-plus-add, and while two producer generations coexist the sink MUST tolerate BOTH shapes — stage the sink migration, deploy tolerant consumers first, and coordinate removal of old-shape handling only after cutover completes.
+- **Production failure mode:** A column rename deploys on the database; the connector emits the new shape, the old-schema sink fails deserialization, parks events in a dead-letter queue, and downstream state silently stops updating until someone inspects the DLQ days later.
+- **Existing-codebase evidence:** Find where schema history lives (internal topic, history file) and whether it survives connector redeployment and topic cleanup policies; rehearse a type-widen and a rename against staging sinks; inventory every sink's tolerance for unknown fields and changed types.
 
 ### 7.7. Backfills
 
@@ -179,27 +179,27 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.8. Replay
 
-- **MUST — engineering rule:** Define the exact semantics of **Replay** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for replay is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for replay, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Replay means resetting consumption to a known snapshot-plus-position pair and re-processing: idempotent sinks are what make replay safe, retention must cover the worst-case replay horizon, and achievable replay throughput — bounded by source read capacity and sink write capacity, competing with live traffic — must be measured when sizing recovery-time objectives.
+- **Production failure mode:** A corrupted sink needs full rebuild; the team then discovers retained history is shorter than the divergence, the snapshot-position pair was never recorded, or replaying at full speed saturates the production sink and turns one outage into two.
+- **Existing-codebase evidence:** Run a bounded replay (one table, limited window) into a staging sink and measure wall-clock throughput; confirm sinks remain idempotent under replay; verify restart positions are recorded durably and can be rewound deliberately, not just advanced.
 
 ### 7.9. Offset management
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Offset management** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for offset management is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for offset management, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Commit consumer offsets/watermarks AFTER downstream durability, never before — committing first loses every event between the offset and the effect on crash; on Postgres this discipline is embodied by replication slots: a stalled consumer retains WAL indefinitely and exhausts primary disk, so monitor slot lag (restarted_lsn/confirmed_flush_lsn versus current WAL position) with paging alerts and drop unused slots deliberately.
+- **Production failure mode:** A paused-for-days consumer holds a replication slot, the primary fills its disk with retained WAL, and the production database goes down — the classic CDC-caused outage; symmetrically, offsets committed ahead of sink writes create an unrecoverable gap after consumer crashes.
+- **Existing-codebase evidence:** List replication slots and confirm lag monitoring and alerting exist; identify slots with no healthy consumer and the documented procedure for dropping them; inspect offset-commit timing relative to sink durability in consumer code and test the crash-between-commit-and-write window.
 
 ### 7.10. Duplicate events
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Duplicate events** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for duplicate events is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for duplicate events, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Treat duplicates as normal operation, not exceptional: restarts, rebalances, and replays re-deliver events, so deduplicate with primary-key upserts where state semantics allow, event-ID dedupe tables where they do not, and version/position guards preventing older events from overwriting newer state regardless of arrival count.
+- **Production failure mode:** A notification sink without dedupe emails customers twice after every connector restart; an analytics pipeline double-counts a day of events and finance numbers diverge from product dashboards with no obvious cause.
+- **Existing-codebase evidence:** Restart connectors and consumers in staging and measure duplicate rates delivered to each sink; audit each sink for a concrete dedupe mechanism; review dead-letter queues for repeat offenders indicating poison-duplicate loops.
 
 ### 7.11. Search synchronization
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Search synchronization** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for search synchronization is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for search synchronization, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Drive search indexes from CDC events with explicit tombstone-driven deletes, indexing lag published and monitored as an SLO, and a full-rebuild path that is itself snapshot-plus-replay so reindexing never reintroduces application-level dual writes.
+- **Production failure mode:** Tombstones filtered as noise mean removed products remain searchable and purchasable; or the indexer falls behind during traffic spikes and support sees stale prices that contradict the database of record.
+- **Existing-codebase evidence:** Measure end-to-end lag from source commit to searchable; kill the indexer mid-stream and prove lossless resume; run a create/update/delete storm and diff index contents against source queries afterward, paying attention to deletions.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 
@@ -310,7 +310,7 @@ The whole topic is evolution: compatibility must be proven in a matrix of old/ne
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
 - **MUST** — For **Transaction logs**: Define the exact semantics of **Transaction logs** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **MUST** — For **Database change events**: Define the exact semantics of **Database change events** within Change Data Capture: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST** — For **Ordering**: Define deterministic ordering, null placement, collation, and a unique tie-breaker. Treat user-selected sort fields as an allowlisted query plan, not arbitrary SQL/expressions.
+- **MUST** — For **Ordering**: Preserve log commit order per shard/table lane: consume each lane in position order, guarantee at most one in-flight event per key under parallel consumption, require global-order consumers to use a single lane, and enable transaction-boundary grouping so partial transactions are never observed downstream.
 - **MUST** — For **Backfills**: Process bounded deterministic chunks with checkpoints after durable commit, idempotent writes, rate/resource limits, pause/resume, version guards, and validation samples plus full reconciliation.
 
 ### SHOULD
@@ -357,7 +357,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - [ ] Rollback application versions after new schema/data/events exist; prove old code remains safe or is explicitly blocked.
 - [ ] **Transaction logs:** Locate every implementation path for transaction logs, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Database change events:** Locate every implementation path for database change events, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **Ordering:** Inspect explain plans for every allowed sort/filter combination and test ties, nulls, Unicode, and concurrent writes.
+- [ ] **Ordering:** Replay interleaved writes across tables/shards into a staging sink and verify per-key final state matches the source; prove out-of-order delivery is detected or buffered rather than applied.
 - [ ] **Backfills:** Kill workers at every boundary, mutate rows during backfill, resume from checkpoints, and compare source/target counts and checksums.
 - [ ] **Offset management:** Locate every implementation path for offset management, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Search synchronization:** Locate every implementation path for search synchronization, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
@@ -407,7 +407,7 @@ An AI agent is especially likely to:
 - What telemetry, alert, audit event, reconciliation, cleanup job, and runbook prove the feature remains correct after release?
 - For **Transaction logs**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for transaction logs is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - For **Database change events**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for database change events is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- For **Ordering**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
+- For **Ordering**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A parallel consumer applies an older change after a newer one for the same key and regresses sink state relative to the source.
 - For **Backfills**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Restart repeats or skips rows, live writes are overwritten by stale data, or the job saturates production.
 - For **Offset management**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for offset management is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - At every phase, which representation is authoritative and can old code safely read/write the new state?

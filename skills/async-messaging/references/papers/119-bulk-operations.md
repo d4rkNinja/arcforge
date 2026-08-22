@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Ordering is usually scoped to a partition/key and conflicts with parallelism.
 5. **Invariant 5:** Poison messages require bounded retries, quarantine, diagnosis, and replay tooling.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

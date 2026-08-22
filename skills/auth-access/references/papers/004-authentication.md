@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Token and session expiry limit exposure but do not by themselves provide revocation or prevent replay.
 5. **Invariant 5:** Authentication responses must resist account enumeration while still being diagnosable internally.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

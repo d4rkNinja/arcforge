@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Cleanup is a correctness process with retention, legal hold, references, and retry behavior—not a periodic delete-all query.
 5. **Invariant 5:** Temporary data is security-sensitive because its short lifetime often encourages weak storage and validation.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

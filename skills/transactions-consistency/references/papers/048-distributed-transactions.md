@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Network calls inside database transactions extend lock time and create outcomes that cannot be atomically rolled back.
 5. **Invariant 5:** Distributed locks without fencing cannot prevent a paused or partitioned former owner from writing after lease expiry.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -120,26 +118,71 @@ A production representation commonly needs the following fields or equivalent ev
 
 Each subsection answers three questions: what rule must be implemented, what fails in production, and what an agent must inspect in an existing codebase before changing it.
 
-### Default obligations
+### 8.1. Local transactions
 
-These subtopics carry no additional domain-specific rule beyond the default obligation: for each, define owner, inputs, outputs, invariants, lifecycle, failure classification, and a compatibility contract; make the rule enforceable at the narrowest authoritative boundary; and do not accept a framework or provider default without proving it fits the domain.
+- **MUST — engineering rule:** Collapse boundaries before reaching for distributed machinery: if every invariant-bearing write fits in one database transaction, keep it there and emit cross-boundary effects after commit from durable intent. One authoritative local transaction plus asynchronous propagation (transactional outbox/CDC, paper 047) avoids distributed atomicity entirely; choose saga versus outbox by whether downstream steps are reversible.
+- **Production failure mode:** A handler writes its database and then calls another service's API or broker directly; the call succeeds while the local commit rolls back (or the reverse), and no mechanism detects the divergence — the classic dual write.
+- **Existing-codebase evidence:** Search for multi-resource writes lacking any protocol (database plus broker/API/email inside one handler); confirm domain commit and outbound intent share one transaction wherever an outbox exists.
 
-- **Local transactions**
-- **Two-phase commit**
-- **Sagas**
-- **Choreography**
-- **Orchestration**
-- **Compensating actions**
-- **Partial failures**
-- **Compensation failure**
-- **Consistency boundaries**
-- **Transaction ownership**
+### 8.2. Two-phase commit
+
+- **SHOULD — engineering rule:** Prepare acquires locks and persists intent at every participant; the coordinator decides commit/abort only after all prepares. THE blocking defect: if the coordinator dies between prepare and its decision, participants hold locks indefinitely on in-doubt transactions — historically resolved manually; modern coordinators persist decision logs and fail over, but participant lock retention during coordinator failover remains real, and lock duration spans the slowest participant, coupling tail latency across systems. Three-phase commit adds a pre-commit stage yet still fails network partitions (divergent sides can elect conflicting outcomes — split brain): it trades blocking for inconsistency risk, which is why production systems do not adopt it as the fix. Plain 2PC/XA is acceptable only with a coordinator on equally stable storage, low contention, short durations, and rehearsed transaction-log recovery; avoid it at high fan-out, across long interactive waits, with XA-less participants, or where compensation carries better business semantics.
+- **Production failure mode:** A coordinator crashes mid-commit and strands prepared transactions holding row locks across databases until operators intervene; unrelated requests queue behind those locks and tail latency explodes.
+- **Existing-codebase evidence:** Locate in-doubt/stuck-transaction monitoring and alerts; verify the coordinator decision log is persisted and failover has been rehearsed; check whether XA/heuristic-resolution tooling exists and has been exercised outside production defaults.
+
+### 8.3. Sagas
+
+- **SHOULD — engineering rule:** A saga sequences local transactions that each commit immediately, plus compensating transactions for rollback [S062]. Classify steps — pivot (the commit point after which only forward recovery remains), compensatable (can roll back), retriable (always eventually succeeds) — and place pivots as late as safely possible. There is NO isolation between steps: intermediate states are visible to other transactions and users (money debited before the order row exists); mitigate with semantic locks and pending states presented to users ("payment processing", never "failed").
+- **Production failure mode:** An implementation treats the saga as atomic; a mid-sequence crash leaves a debit without an order, users see raw intermediate state, and nothing records which remaining steps are compensatable versus must complete forward.
+- **Existing-codebase evidence:** Find saga orchestrators and verify compensation idempotency tests exist; check that pivot/compensatable/retriable classification appears in code or runbooks rather than only in design diagrams.
+
+### 8.4. Choreography
+
+- **SHOULD — engineering rule:** Services react to events and emit the next step with no central coordinator; this demands reliable pub/sub, per-key ordering lanes, consumer inbox deduplication, and correlation IDs so flow state can be reconstructed from logs — observability must replace the missing orchestrator view.
+- **Production failure mode:** One dropped or unconsumed event silently ends a customer flow mid-flight; per-topic dashboards stay green because no owner tracks end-to-end completion.
+- **Existing-codebase evidence:** Map the event chains that form business processes; verify ordering lanes and inbox dedupe exist at each consumer; confirm something measures saga-level completion age and alerts on stuck flows.
+
+### 8.5. Orchestration
+
+- **SHOULD — engineering rule:** A central orchestrator persists workflow state durably and drives steps, retries, and compensation explicitly; commands to participants must be idempotent, outcomes recorded so retries converge, and workflow definitions versioned for instances already in flight.
+- **Production failure mode:** In-memory orchestration loses position on restart, replaying completed commands (double charges) or skipping unfinished ones until reconciliation finds phantom steps.
+- **Existing-codebase evidence:** Inspect orchestrator persistence (journal/state rows), crash-resume tests, and command idempotency keys; confirm definition versioning handles in-flight instances during deploys.
+
+### 8.6. Compensating actions
+
+- **SHOULD — engineering rule:** Compensations undo business effects, not bytes: they MUST be idempotent (retries are certain), commutative with concurrent activity to the extent possible, and designed so they CANNOT fail permanently — where permanent failure is possible (refund declined, external system retired), ship the manual-intervention fallback with quarantine and alerting up front. Prefer business-level reversal (refund, cancellation) over physical rollback; refunds usually carry better semantics than attempting to uncommit.
+- **Production failure mode:** A refund call fails once, the retry loop exhausts, and the customer keeps the money and the goods; no terminal or quarantined state exists, so nobody is alerted.
+- **Existing-codebase evidence:** Verify compensation handlers stay idempotent under replay, bound retries into a quarantined/manual-review state visible to operations, and tolerate mutations that occurred between the original action and the reversal.
+
+### 8.7. Partial failures
+
+- **SHOULD — engineering rule:** Classify each failure-point outcome as known-commit, known-abort, or unknown/in-doubt; resolve unknown outcomes by querying authoritative state or an outcome registry — never blind retry; present honest intermediate states to users through pending semantics instead of pretending atomicity.
+- **Production failure mode:** A timed-out step is assumed failed and retried while the first attempt succeeded, charging the card twice; support later finds two orders behind one payment.
+- **Existing-codebase evidence:** Crash-inject between every pair of steps and verify convergence to one valid end state; locate the outcome-lookup path consulted before any retry acts on an ambiguous result.
 
 ### 8.8. Retry safety
 
 - **SHOULD — engineering rule:** Classify retryable outcomes, cap attempts and elapsed time, use exponential backoff with jitter, honor provider pushback, and make side effects idempotent or detect ambiguous completion.
 - **Production failure mode:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
 - **Existing-codebase evidence:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+
+### 8.9. Compensation failure
+
+- **SHOULD — engineering rule:** Treat compensation failure as expected, not exceptional: bound retries, then quarantine with an owner, an alert, and a manual runbook per compensation type; track compensation debt (count and age) and reconcile it on a schedule — never let the intent disappear into logs.
+- **Production failure mode:** An exhausted compensation leaves only a logged error while the saga reports done; the half-rolled-back state surfaces at month-end reconciliation as unrecoverable drift.
+- **Existing-codebase evidence:** Search compensation invocation paths for swallow-and-continue error handling; verify metrics and alerts fire on compensation failure with age tracking, and that a named runbook says who intervenes how.
+
+### 8.10. Consistency boundaries
+
+- **SHOULD — engineering rule:** No isolation exists across independent systems: decide explicitly what each boundary guarantees (atomic only inside one local transaction), which readers may observe intermediate states, and how divergence is detected and repaired. Prefer collapsing a boundary into one owner; where spanning is unavoidable, pick saga versus outbox by downstream reversibility — reversible steps suit sagas with compensation, irreversible appended facts suit outbox events consumed asynchronously (paper 047).
+- **Production failure mode:** A caller assumes a cross-service read reflects its own just-committed write; the UI confirms an order while payment remains pending, generating support tickets and duplicate submission attempts.
+- **Existing-codebase evidence:** Inventory invariants spanning services with no documented consistency mechanism; grep for dual-write patterns; confirm read paths near boundaries state their staleness assumptions in code or docs.
+
+### 8.11. Transaction ownership
+
+- **MUST — engineering rule:** Name one authoritative owner per datum and per workflow transition: participants own their local commits, the orchestrator owns workflow position, the ledger owns balances; nobody mutates another owner's state except through its contract with idempotency and authorization enforced.
+- **Production failure mode:** Two services write the same status column "to keep things simple"; neither owns its semantics, so conflicting transitions overwrite each other and audits cannot say which change was legitimate.
+- **Existing-codebase evidence:** For every shared table or status field, identify the owning service; search for direct cross-service database access (shared credentials, second connections to another service's schema) and reroute it through owner APIs.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 

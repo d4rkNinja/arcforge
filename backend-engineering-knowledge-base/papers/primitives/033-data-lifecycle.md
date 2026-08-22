@@ -62,7 +62,7 @@ Additional topic-specific invariants:
 
 - **SHOULD — Creation:** Define the exact semantics of **Creation** within Data Lifecycle: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **SHOULD — Archival:** Define the exact semantics of **Archival** within Data Lifecycle: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Expiration:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
+- **SHOULD - Expiration:** Treat expiration as a lifecycle transition, not deletion: active -> expired -> purge-candidate with visible timestamps; legal holds pause expiry.
 - **SHOULD — Purging:** Model deletion as explicit state with actor/reason/time, default query scoping, uniqueness behavior, reference policy, retention horizon, restoration rules, and irreversible purge workflow.
 - **SHOULD — Anonymization:** Classify fields and flows, collect the minimum, limit purpose and access, use irreversible anonymization only when re-identification risk is acceptably low, and propagate deletion/retention to derived systems and backups.
 - **SHOULD — Lifecycle jobs:** Define the exact semantics of **Lifecycle jobs** within Data Lifecycle: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
@@ -156,8 +156,8 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.5. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **SHOULD - engineering rule:** Treat expiration as a lifecycle transition, not deletion: records move active -> expired -> purge-candidate with visible timestamps, grace periods are explicit, legal holds pause the transition, and only the purge stage removes data.
+- **Production failure mode:** Expiry implemented as immediate hard delete destroys audit/recovery options and breaks legal holds, while soft-expired rows that nothing ever purges accumulate indefinitely because no job owns the second transition.
 - **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
 
 ### 7.6. Deletion
@@ -305,7 +305,7 @@ Use expand-and-contract for field additions, renames, type changes, and stronger
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
 - **MUST** — For **Creation**: Define the exact semantics of **Creation** within Data Lifecycle: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **MUST** — For **Archival**: Define the exact semantics of **Archival** within Data Lifecycle: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST** — For **Expiration**: Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
+- **MUST** — For **Expiration**: Enforce expiry as lifecycle transitions driven by retention schedules, with an explicit purge stage and legal-hold pause.
 - **MUST** — For **Purging**: Model deletion as explicit state with actor/reason/time, default query scoping, uniqueness behavior, reference policy, retention horizon, restoration rules, and irreversible purge workflow.
 
 ### SHOULD
@@ -402,7 +402,7 @@ An AI agent is especially likely to:
 - What telemetry, alert, audit event, reconciliation, cleanup job, and runbook prove the feature remains correct after release?
 - For **Creation**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for creation is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - For **Archival**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for archival is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- For **Expiration**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- For **Expiration**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: soft-expired rows never purged, or hard deletes breaking legal holds?
 - For **Purging**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Deleted rows leak through joins/caches, block legitimate reuse, or are purged while still referenced or under legal hold.
 - For **Anonymization**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Sensitive data spreads into logs, caches, search, analytics, and backups where deletion and access controls are weaker.
 - Which invalid states must the database reject even when all application validation is bypassed?

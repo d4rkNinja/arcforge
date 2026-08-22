@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Negative entries, hot keys, stampedes, and serialization upgrades can dominate production behavior.
 5. **Invariant 5:** Correctness must survive cache loss, partial outage, and eviction unless the cache is deliberately authoritative.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -121,60 +119,53 @@ A production representation commonly needs the following fields or equivalent ev
 
 Each subsection answers three questions: what rule must be implemented, what fails in production, and what an agent must inspect in an existing codebase before changing it.
 
-### Default obligations
+### 8.1. Identity and key dimensions
 
-These subtopics carry no additional domain-specific rule beyond the default obligation: for each, define owner, inputs, outputs, invariants, lifecycle, failure classification, and a compatibility contract; make the rule enforceable at the narrowest authoritative boundary; and do not accept a framework or provider default without proving it fits the domain.
+- **MUST — engineering rule:** Key primary limits on the authenticated principal/API key first; IP alone is weak — CGNAT/NAT shares thousands of users per address and mobile handoffs rotate IPs — so use coarse IP tiers only for anonymous abuse defense, and weight limits by endpoint cost tier (expensive search is not a cheap GET).
+- **Production failure mode:** IP-only caps lock out whole offices or carrier blocks while rotating abusers stay under threshold; unverified `user_id` keys give attackers unlimited fresh identities.
+- **Existing-codebase evidence:** Trace each limit key to its source (verified claim vs client-supplied value vs proxy-chain IP); flag any route where limit and measured cost diverge by orders of magnitude.
 
-- **IP limits**
-- **User limits**
-- **Token limits**
-- **Endpoint limits**
-- **Global limits**
-- **Burst handling**
-- **Rate-limit headers**
-- **Fail-open vs fail-closed**
+### 8.2. Token bucket
 
-### 8.4. Tenant limits
+- **SHOULD — engineering rule:** Capacity b, refill r tokens/sec; each request consumes token(s); refill computes tokens = min(b, tokens + r * dt) atomically at check time; allows burst b with sustained rate r — the most common choice for API limiting.
+- **Production failure mode:** Non-atomic read-compute-write loses refills under concurrency; default-copied b/r mismatch real endpoint cost.
+- **Existing-codebase evidence:** Confirm refill-and-consume is one atomic operation per key (Lua/compare-and-set/mutex); verify b and r against documented quotas.
 
-- **MUST — engineering rule:** Derive tenant context from an authenticated, authorized binding; propagate it explicitly through queries, caches, jobs, events, files, metrics, and audit records. Make unscoped access difficult or impossible.
-- **Production failure mode:** A missing filter, reused cache key, delayed job, or admin path reads or writes another tenant's data.
-- **Existing-codebase evidence:** Search for data-access methods that accept no tenant scope; run mutation and property tests that swap tenant identifiers at every boundary.
+### 8.3. Fixed and sliding windows
 
-### 8.7. Fixed window
+- **SHOULD — engineering rule:** Fixed window counter is simple but allows 2x limit at window boundaries; sliding window LOG is exact but O(requests) memory; sliding window COUNTER blends current + previous window weighted by elapsed fraction — memory-cheap approximation that overcounts (under-admits) when prior-window traffic clustered early and undercounts (over-admits) when it clustered at the boundary, worst case approaching the fixed-window 2x spike.
+- **Production failure mode:** Boundary bursts double instantaneous load at rollover; log-based variants leak memory on high-cardinality keys; counter variants quietly over-admit under skewed bursts.
+- **Existing-codebase evidence:** Drive burst-then-sustained load across boundaries and record accepted counts; identify the sliding variant shipped and measure per-key memory/pruning.
 
-- **SHOULD — engineering rule:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
-- **Production failure mode:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
-- **Existing-codebase evidence:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
+### 8.4. Leaky bucket
 
-### 8.8. Sliding window
+- **SHOULD — engineering rule:** Distinguish leaky bucket AS METER (token-bucket-equivalent constant outflow that smooths observed rate) from AS QUEUE (buffers requests in a bounded FIFO drained at constant rate — adds latency and can mask overload); choose consciously per endpoint.
+- **Production failure mode:** Queue-mode absorbs overload as growing latency instead of rejecting; memory fills and dashboards look healthy while every served request is late.
+- **Existing-codebase evidence:** Determine whether the implementation rejects or buffers; if buffers, find the queue bound, overflow behavior, and added p99 latency.
 
-- **SHOULD — engineering rule:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
-- **Production failure mode:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
-- **Existing-codebase evidence:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
+### 8.5. Distributed enforcement
 
-### 8.9. Token bucket
+- **SHOULD — engineering rule:** A centralized atomic counter store (Redis Lua check-and-decrement) is exact but costs a round-trip per request and makes the store's availability yours; periodic-sync local approximate counters over-admit between syncs — bound the error (sync interval x drift) and document it; sticky routing trades rebalancing pain for locally atomic counters.
+- **Production failure mode:** The counter store becomes a hotspot; when it slows, everything queues behind it or fail-open silently disables all limits.
+- **Existing-codebase evidence:** Identify limiter placement (edge/gateway/service) and store topology; measure limiter-store p99 and compute worst-case between-sync over-admission.
 
-- **SHOULD — engineering rule:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
-- **Production failure mode:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
-- **Existing-codebase evidence:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
+### 8.6. Tenant limits
 
-### 8.10. Leaky bucket
+- **MUST — engineering rule:** Derive the limit key from authenticated tenant identity; the purpose is fairness — stop one noisy neighbor from consuming shared capacity — via per-tier quotas with burst allowances enforced at shared infrastructure (edge/gateway/central limiter), not per-service best-effort.
+- **Production failure mode:** One tenant's bulk import degrades latency for every tenant because per-service caps never see the aggregate consumption.
+- **Existing-codebase evidence:** Find where tenant quotas are enforced and whether they cover cross-endpoint aggregates; burst one tenant to quota while measuring neighbors' latency and budgets.
 
-- **SHOULD — engineering rule:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
-- **Production failure mode:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
-- **Existing-codebase evidence:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
+### 8.7. Retry-after contract
 
-### 8.11. Distributed rate limiting
+- **MUST — engineering rule:** Rejections return 429 + Retry-After (delta-seconds or HTTP-date) computed from the key's refill time, not a constant; expose remaining-budget headers (limit, remaining, reset) consistently on successes and 429s; the limiter emits these and clients honor them — distinct from forwarding an upstream provider's values unchanged.
+- **Production failure mode:** Constant or absent Retry-After turns throttling into hammering or freezes clients past the actual refill; headers only on 429 give well-behaved clients no proactive signal.
+- **Existing-codebase evidence:** Verify every 429 carries Retry-After consistent with refill math and remaining/reset headers update mid-window; check clients parse delta-seconds and HTTP-date forms.
 
-- **SHOULD — engineering rule:** Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
-- **Production failure mode:** Window-boundary bursts, racey counters, NAT collateral damage, or fail-open behavior allow abuse; fail-closed can create an outage.
-- **Existing-codebase evidence:** Test simultaneous requests across nodes, clock skew, key eviction, backend failure, IPv6/proxy identity, and Retry-After semantics.
+### 8.8. Fail-open vs fail-closed
 
-### 8.13. Retry-after
-
-- **SHOULD — engineering rule:** Classify retryable outcomes, cap attempts and elapsed time, use exponential backoff with jitter, honor provider pushback, and make side effects idempotent or detect ambiguous completion.
-- **Production failure mode:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
-- **Existing-codebase evidence:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+- **MUST — engineering rule:** When the limiter store is down, the behavior must be documented PER ENDPOINT CLASS: auth/login endpoints usually fail closed; general read paths often fail open with alerting; record the decision matrix in reviewable config and monitor both paths.
+- **Production failure mode:** Default-fail-open middleware silently disables login throttling during a cache outage — a brute-force window exactly when defenses are down.
+- **Existing-codebase evidence:** Simulate limiter-store outage per endpoint class and observe the documented fail mode; confirm alerts fire on fail-open decisions.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 
@@ -283,7 +274,7 @@ Version serialized values and key formats. During deployment, readers should tol
 - **MUST** — Make duplicate, concurrent, timed-out, retried, and partially failed operations converge to a documented valid outcome.
 - **MUST** — Use finite deadlines and bounded resource consumption; define what happens when dependencies, caches, telemetry, or providers are unavailable.
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
-- **MUST** — For **Tenant limits**: Derive tenant context from an authenticated, authorized binding; propagate it explicitly through queries, caches, jobs, events, files, metrics, and audit records. Make unscoped access difficult or impossible.
+- **MUST** — For **Tenant limits**: Derive the limit key from authenticated tenant identity and enforce per-tier quotas with burst allowances at shared infrastructure so one noisy tenant cannot consume shared capacity at the expense of others.
 - **MUST** — For **Fixed window**: Choose identity/scope, algorithm, burst capacity, window clock, atomic update, distributed consistency, response headers, and fail behavior according to the abuse and availability threat.
 
 ### SHOULD

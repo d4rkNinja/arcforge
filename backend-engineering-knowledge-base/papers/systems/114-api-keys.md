@@ -62,15 +62,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Token and session expiry limit exposure but do not by themselves provide revocation or prevent replay.
 5. **Invariant 5:** Authentication responses must resist account enumeration while still being diagnosable internally.
 
-Additional topic-specific invariants:
-
-- **SHOULD — Generation:** Define the exact semantics of **Generation** within API Keys: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Prefixes:** Define the exact semantics of **Prefixes** within API Keys: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Scopes:** Define the exact semantics of **Scopes** within API Keys: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Rotation:** Define the exact semantics of **Rotation** within API Keys: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Last-used timestamps:** Define the exact semantics of **Last-used timestamps** within API Keys: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Leakage detection:** Define the exact semantics of **Leakage detection** within API Keys: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -173,8 +164,8 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.7. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **SHOULD — engineering rule:** Give API keys explicit expiry and rotation windows with overlapping validity: new keys issue before old ones expire, consumers migrate on their own cadence within the window, and unused keys are detected and disabled rather than left immortal.
+- **Production failure mode:** Keys without expiry accumulate in client code nobody owns, and hard cutover at expiry turns a rotation into a support incident.
 - **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
 
 ### 7.8. Rotation
@@ -386,7 +377,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - **Generation:** A framework or provider default for generation is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Prefixes:** A framework or provider default for prefixes is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Display-once behavior:** A framework or provider default for display-once behavior is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Expiration:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **Expiration:** Keys without expiry accumulate in client code nobody owns, and hard cutover at expiry turns a rotation into a support incident.
 - **Revocation:** A framework or provider default for revocation is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Last-used timestamps:** A framework or provider default for last-used timestamps is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Leakage detection:** A framework or provider default for leakage detection is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.

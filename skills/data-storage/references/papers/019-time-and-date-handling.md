@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Optionality, deletion semantics, history, and ownership must be explicit because they affect every query and migration.
 5. **Invariant 5:** Derived fields need a source of truth, recomputation rule, and divergence detection.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -145,8 +143,8 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.8. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **SHOULD - engineering rule:** Compute expiry boundaries from explicit timestamps in a stated timezone, compare with clock-skew tolerance (never exact equality against wall clocks), and decide which expiry checks use monotonic time so backward NTP steps cannot resurrect expired state.
+- **Production failure mode:** "End of day" retention computed in UTC deletes or expires at the wrong local hour, clock steps backwards past a deadline and re-opens expired grants, and exact-equality deadline checks silently never fire under skew.
 - **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
 
 ## 9. Concurrency, transactions, idempotency, and consistency

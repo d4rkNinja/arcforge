@@ -58,15 +58,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Network calls inside database transactions extend lock time and create outcomes that cannot be atomically rolled back.
 5. **Invariant 5:** Distributed locks without fencing cannot prevent a paused or partitioned former owner from writing after lease expiry.
 
-Additional topic-specific invariants:
-
-- **MUST — Local transactions:** Define the exact semantics of **Local transactions** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Sagas:** Define the exact semantics of **Sagas** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Orchestration:** Define the exact semantics of **Orchestration** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Partial failures:** Define the exact semantics of **Partial failures** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Compensation failure:** Define the exact semantics of **Compensation failure** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST — Transaction ownership:** Define the exact semantics of **Transaction ownership** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -130,45 +121,45 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.1. Local transactions
 
-- **MUST — engineering rule:** Define the exact semantics of **Local transactions** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for local transactions is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for local transactions, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Collapse boundaries before reaching for distributed machinery: if every invariant-bearing write fits in one database transaction, keep it there and emit cross-boundary effects after commit from durable intent. One authoritative local transaction plus asynchronous propagation (transactional outbox/CDC, paper 047) avoids distributed atomicity entirely; choose saga versus outbox by whether downstream steps are reversible.
+- **Production failure mode:** A handler writes its database and then calls another service's API or broker directly; the call succeeds while the local commit rolls back (or the reverse), and no mechanism detects the divergence — the classic dual write.
+- **Existing-codebase evidence:** Search for multi-resource writes lacking any protocol (database plus broker/API/email inside one handler); confirm domain commit and outbound intent share one transaction wherever an outbox exists.
 
 ### 7.2. Two-phase commit
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Two-phase commit** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for two-phase commit is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for two-phase commit, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Prepare acquires locks and persists intent at every participant; the coordinator decides commit/abort only after all prepares. THE blocking defect: if the coordinator dies between prepare and its decision, participants hold locks indefinitely on in-doubt transactions — historically resolved manually; modern coordinators persist decision logs and fail over, but participant lock retention during coordinator failover remains real, and lock duration spans the slowest participant, coupling tail latency across systems. Three-phase commit adds a pre-commit stage yet still fails network partitions (divergent sides can elect conflicting outcomes — split brain): it trades blocking for inconsistency risk, which is why production systems do not adopt it as the fix. Plain 2PC/XA is acceptable only with a coordinator on equally stable storage, low contention, short durations, and rehearsed transaction-log recovery; avoid it at high fan-out, across long interactive waits, with XA-less participants, or where compensation carries better business semantics.
+- **Production failure mode:** A coordinator crashes mid-commit and strands prepared transactions holding row locks across databases until operators intervene; unrelated requests queue behind those locks and tail latency explodes.
+- **Existing-codebase evidence:** Locate in-doubt/stuck-transaction monitoring and alerts; verify the coordinator decision log is persisted and failover has been rehearsed; check whether XA/heuristic-resolution tooling exists and has been exercised outside production defaults.
 
 ### 7.3. Sagas
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Sagas** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for sagas is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for sagas, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** A saga sequences local transactions that each commit immediately, plus compensating transactions for rollback [S062]. Classify steps — pivot (the commit point after which only forward recovery remains), compensatable (can roll back), retriable (always eventually succeeds) — and place pivots as late as safely possible. There is NO isolation between steps: intermediate states are visible to other transactions and users (money debited before the order row exists); mitigate with semantic locks and pending states presented to users ("payment processing", never "failed").
+- **Production failure mode:** An implementation treats the saga as atomic; a mid-sequence crash leaves a debit without an order, users see raw intermediate state, and nothing records which remaining steps are compensatable versus must complete forward.
+- **Existing-codebase evidence:** Find saga orchestrators and verify compensation idempotency tests exist; check that pivot/compensatable/retriable classification appears in code or runbooks rather than only in design diagrams.
 
 ### 7.4. Choreography
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Choreography** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for choreography is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for choreography, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Services react to events and emit the next step with no central coordinator; this demands reliable pub/sub, per-key ordering lanes, consumer inbox deduplication, and correlation IDs so flow state can be reconstructed from logs — observability must replace the missing orchestrator view.
+- **Production failure mode:** One dropped or unconsumed event silently ends a customer flow mid-flight; per-topic dashboards stay green because no owner tracks end-to-end completion.
+- **Existing-codebase evidence:** Map the event chains that form business processes; verify ordering lanes and inbox dedupe exist at each consumer; confirm something measures saga-level completion age and alerts on stuck flows.
 
 ### 7.5. Orchestration
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Orchestration** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for orchestration is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for orchestration, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** A central orchestrator persists workflow state durably and drives steps, retries, and compensation explicitly; commands to participants must be idempotent, outcomes recorded so retries converge, and workflow definitions versioned for instances already in flight.
+- **Production failure mode:** In-memory orchestration loses position on restart, replaying completed commands (double charges) or skipping unfinished ones until reconciliation finds phantom steps.
+- **Existing-codebase evidence:** Inspect orchestrator persistence (journal/state rows), crash-resume tests, and command idempotency keys; confirm definition versioning handles in-flight instances during deploys.
 
 ### 7.6. Compensating actions
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Compensating actions** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for compensating actions is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for compensating actions, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Compensations undo business effects, not bytes: they MUST be idempotent (retries are certain), commutative with concurrent activity to the extent possible, and designed so they CANNOT fail permanently — where permanent failure is possible (refund declined, external system retired), ship the manual-intervention fallback with quarantine and alerting up front. Prefer business-level reversal (refund, cancellation) over physical rollback; refunds usually carry better semantics than attempting to uncommit.
+- **Production failure mode:** A refund call fails once, the retry loop exhausts, and the customer keeps the money and the goods; no terminal or quarantined state exists, so nobody is alerted.
+- **Existing-codebase evidence:** Verify compensation handlers stay idempotent under replay, bound retries into a quarantined/manual-review state visible to operations, and tolerate mutations that occurred between the original action and the reversal.
 
 ### 7.7. Partial failures
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Partial failures** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for partial failures is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for partial failures, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Classify each failure-point outcome as known-commit, known-abort, or unknown/in-doubt; resolve unknown outcomes by querying authoritative state or an outcome registry — never blind retry; present honest intermediate states to users through pending semantics instead of pretending atomicity.
+- **Production failure mode:** A timed-out step is assumed failed and retried while the first attempt succeeded, charging the card twice; support later finds two orders behind one payment.
+- **Existing-codebase evidence:** Crash-inject between every pair of steps and verify convergence to one valid end state; locate the outcome-lookup path consulted before any retry acts on an ambiguous result.
 
 ### 7.8. Retry safety
 
@@ -178,21 +169,21 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.9. Compensation failure
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Compensation failure** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for compensation failure is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for compensation failure, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Treat compensation failure as expected, not exceptional: bound retries, then quarantine with an owner, an alert, and a manual runbook per compensation type; track compensation debt (count and age) and reconcile it on a schedule — never let the intent disappear into logs.
+- **Production failure mode:** An exhausted compensation leaves only a logged error while the saga reports done; the half-rolled-back state surfaces at month-end reconciliation as unrecoverable drift.
+- **Existing-codebase evidence:** Search compensation invocation paths for swallow-and-continue error handling; verify metrics and alerts fire on compensation failure with age tracking, and that a named runbook says who intervenes how.
 
 ### 7.10. Consistency boundaries
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Consistency boundaries** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for consistency boundaries is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for consistency boundaries, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** No isolation exists across independent systems: decide explicitly what each boundary guarantees (atomic only inside one local transaction), which readers may observe intermediate states, and how divergence is detected and repaired. Prefer collapsing a boundary into one owner; where spanning is unavoidable, pick saga versus outbox by downstream reversibility — reversible steps suit sagas with compensation, irreversible appended facts suit outbox events consumed asynchronously (paper 047).
+- **Production failure mode:** A caller assumes a cross-service read reflects its own just-committed write; the UI confirms an order while payment remains pending, generating support tickets and duplicate submission attempts.
+- **Existing-codebase evidence:** Inventory invariants spanning services with no documented consistency mechanism; grep for dual-write patterns; confirm read paths near boundaries state their staleness assumptions in code or docs.
 
 ### 7.11. Transaction ownership
 
-- **MUST — engineering rule:** Define the exact semantics of **Transaction ownership** within Distributed Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for transaction ownership is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for transaction ownership, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Name one authoritative owner per datum and per workflow transition: participants own their local commits, the orchestrator owns workflow position, the ledger owns balances; nobody mutates another owner's state except through its contract with idempotency and authorization enforced.
+- **Production failure mode:** Two services write the same status column "to keep things simple"; neither owns its semantics, so conflicting transitions overwrite each other and audits cannot say which change was legitimate.
+- **Existing-codebase evidence:** For every shared table or status field, identify the owning service; search for direct cross-service database access (shared credentials, second connections to another service's schema) and reroute it through owner APIs.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 

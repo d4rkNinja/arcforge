@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Default deny must include unknown actions, unknown resource types, missing attributes, policy errors, and timeout behavior.
 5. **Invariant 5:** Administrative impersonation is delegated authority with explicit scope, expiry, attribution, and audit—not a hidden identity swap.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

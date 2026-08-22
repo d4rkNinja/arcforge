@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Bulk and asynchronous operations need per-item or job-level state rather than pretending all work is synchronous and atomic.
 5. **Invariant 5:** Public error detail must help callers recover without exposing internals or sensitive state.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

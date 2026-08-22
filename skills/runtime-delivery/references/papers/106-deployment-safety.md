@@ -6,17 +6,17 @@
 
 ## 1. Executive engineering summary
 
-**Deployment Safety** exists to make process startup, steady-state execution, and termination deterministic across environments and orchestrators. A basic implementation usually handles the visible happy path; a production implementation must also preserve identity and ownership, valid state transitions, race-safe invariants, failure recovery, compatibility, and bounded operations.
+**Deployment Safety** exists so changes reach production reversibly and observably. Progressive rollout strategies — rolling, blue/green, canary — trade capacity cost against detection speed, and the choice is made deliberately per service. Health gates control every traffic shift, and automatic abort criteria are defined BEFORE the rollout starts, derived from SLO burn rates and error-rate deltas rather than manual judgment made under pressure.
 
-The composition root owns configuration parsing, dependency construction, lifecycle registration, and process-wide policy. Feature modules should receive validated dependencies rather than read environment variables, create clients, or register signal handlers themselves. Startup readiness is a contract with the orchestrator: a process may be alive while still unready, and it may be draining while health endpoints continue to answer.
+Rollback reality shapes the design: code reverts but data does not, so schema-coupled deploys follow forward-fix discipline and additive changes migrate before the deploy that needs them. Configuration and secrets stay consistent across environments, and every release pins the identity and provenance of the exact artifact deployed, so "what is running?" always has an answer and a revert path.
 
 The most important evidence base for this paper includes [S122](#s122) [S123](#s123) [S124](#s124) [S070](#s070). The source list at the end distinguishes standards, official product documentation, research, and production engineering guidance.
 
 ### What an experienced engineer notices first
 
-- The process is not ready merely because its socket is listening; readiness requires every dependency needed for the advertised request class to be usable.
-- Initialization order is a dependency graph, not a convenient list. Cycles and hidden lazy initialization create startup-only incidents.
-- Shutdown is a protocol: stop admission, drain work, finish or abandon with explicit semantics, then release resources.
+- A rollout is an experiment; traffic shifts move only as fast as the evidence gathered between stages.
+- Abort criteria are declared before the rollout and enforced by automation, not negotiated during the incident.
+- Code rolls back; data does not. Schema changes ride ahead of deploys and never require reverse migration.
 - Build identity and configuration identity are operational data. Without them, mixed-version and rollback failures are hard to diagnose.
 - Development conveniences must not silently change security or durability semantics in production.
 
@@ -32,7 +32,7 @@ The most important evidence base for this paper includes [S122](#s122) [S123](#s
 - What compatibility matrix must hold during rolling deployment, old-client use, schema/event evolution, and rollback?
 - What load shape, cardinality, skew, payload size, concurrency, and failure rate define production capacity?
 - What telemetry, alert, audit event, reconciliation, cleanup job, and runbook prove the feature remains correct after release?
-- Which dependencies are fatal for startup/readiness, which are degradable, and who owns their cleanup during partial initialization?
+- Which environments gate promotion, who approves each transition, and how quickly can the last release be reverted, including its database coupling?
 
 ## 3. Existing-codebase checks before changing anything
 
@@ -41,11 +41,11 @@ The most important evidence base for this paper includes [S122](#s122) [S123](#s
 - [ ] Identify the actual source of truth and all derived copies; record ownership, freshness, deletion propagation, and reconciliation.
 - [ ] Inspect database constraints, indexes, isolation settings, atomic update predicates, transaction wrappers, and retry behavior rather than relying on repository names.
 - [ ] Search for duplicated implementations, bypass paths, feature flags, legacy compatibility branches, TODOs, incident fixes, and environment-specific behavior.
-- [ ] Read deployment manifests, configuration schemas, secret injection, probes, resource limits, shutdown grace periods, and migration ordering.
+- [ ] Read deployment manifests, rollout strategy definitions, health-gate rules, automatic abort criteria, secret injection, probes, resource limits, and migration ordering.
 - [ ] Check existing API/event schemas and real client/consumer usage before renaming fields, changing defaults, strengthening validation, or altering errors.
 - [ ] Review telemetry and runbooks to learn current failure modes, latency, scale, and operational ownership before proposing architecture changes.
 - [ ] Run the existing suite and targeted production-like probes before edits; preserve unrelated behavior and capture a baseline for correctness and performance.
-- [ ] Locate every process-wide goroutine/thread/task, client, listener, file, and signal handler; prove ownership and cleanup ordering.
+- [ ] Locate every rollout strategy config, health gate, abort criterion, and rollback path; prove each executes via automation rather than memory.
 
 ## 4. Correctness model and production invariants
 
@@ -56,8 +56,6 @@ The primary correctness question is not “does the happy path work?” but “c
 3. **Invariant 3:** Shutdown is a protocol: stop admission, drain work, finish or abandon with explicit semantics, then release resources.
 4. **Invariant 4:** Build identity and configuration identity are operational data. Without them, mixed-version and rollback failures are hard to diagnose.
 5. **Invariant 5:** Development conveniences must not silently change security or durability semantics in production.
-
-Additional topic-specific invariants:
 
 ## 5. Architecture decisions and conflicting approaches
 
@@ -268,9 +266,9 @@ Runtime changes must work during rolling deployments where old and new processes
 
 ### SHOULD
 
-- **SHOULD** — The process is not ready merely because its socket is listening; readiness requires every dependency needed for the advertised request class to be usable.
-- **SHOULD** — Initialization order is a dependency graph, not a convenient list. Cycles and hidden lazy initialization create startup-only incidents.
-- **SHOULD** — Shutdown is a protocol: stop admission, drain work, finish or abandon with explicit semantics, then release resources.
+- **SHOULD** — Health gates evaluate release-level evidence — error-rate delta, latency, saturation against baseline — not container liveness alone; a passing probe is not a healthy release.
+- **SHOULD** — Order schema, configuration, and code changes deliberately: additive migration first, deploy second, cleanup last, with old and new versions coexisting throughout the window.
+- **SHOULD** — Rehearse rollback like rollout: drill the revert of the last release in staging, including database coupling behavior, before production ever needs it.
 - **SHOULD** — Build identity and configuration identity are operational data. Without them, mixed-version and rollback failures are hard to diagnose.
 - **SHOULD** — Development conveniences must not silently change security or durability semantics in production.
 - **SHOULD** — Prefer simple, locally enforceable invariants over coordination-heavy designs.
@@ -279,36 +277,36 @@ Runtime changes must work during rolling deployments where old and new processes
 ### MAY
 
 - **MAY** — Choose **Rolling vs blue/green/canary** according to the stated trade-off: Choose by compatibility and rollback needs; database changes must remain independently safe.
-- **MAY** — Adopt the **Eager vs lazy initialization** option that fits the workload and ownership boundary; Prefer eager initialization for mandatory dependencies; use lazy loading only for optional or high-cost capabilities with explicit degraded behavior.
-- **MAY** — Adopt the **Single process vs separate workers** option that fits the workload and ownership boundary; Split when workload, scaling, privilege, or failure characteristics differ materially.
-- **MAY** — Adopt the **Strict startup vs degraded startup** option that fits the workload and ownership boundary; Define dependency classes and expose degraded state in readiness and metrics.
+- **MAY** — Choose **progressive exposure level** (canary percentage, ring count, hold duration) according to blast-radius tolerance and metric sensitivity.
+- **MAY** — Choose **cutover style** (rolling in-place versus blue/green swap) according to capacity headroom and how quickly traffic must be able to return to the old version.
+- **MAY** — Adopt **automated analysis windows** (metric comparison against baseline for a fixed bake time) where traffic patterns are stable enough for statistical gating.
 
 ### AVOID
 
 - **AVOID** — Accepting traffic before migrations/config/dependencies are ready.
-- **AVOID** — Hanging on termination because background tasks ignore cancellation.
-- **AVOID** — Double-starting workers after reload or fork.
-- **AVOID** — Leaking pooled connections on failed startup.
+- **AVOID** — Advancing a rollout stage while its abort threshold is breached because automation waits for human judgment.
+- **AVOID** — Rebuilding artifacts per environment, which silently breaks provenance and reproducibility.
+- **AVOID** — Widening canary traffic without comparing against a matched control baseline.
 - **AVOID** — Different defaults between local and production.
-- **AVOID** — Adding another global singleton instead of using the composition root.
-- **AVOID** — Reading environment variables inside handlers or packages.
+- **AVOID** — Production changes made by console that bypass the pinned artifact and configuration pipeline.
+- **AVOID** — Coupling deploy success to schema mutation so tightly that rollback becomes impossible.
 - **AVOID** — Reporting ready before migrations/dependencies are usable.
 
 ### NEVER
 
 - **NEVER** — Never report readiness before required correctness dependencies and configuration are usable.
-- **NEVER** — Never let termination wait forever; every drain and flush needs a bounded deadline.
-- **NEVER** — Never allow feature modules to create untracked process-wide resources.
+- **NEVER** — Never advance a rollout stage without evaluating the pre-declared automatic abort criteria.
+- **NEVER** — Never deploy an artifact whose provenance cannot be verified to a reviewed commit.
 
 ## 17. Testing and verification requirements
 
 Passing unit tests is not sufficient. The release needs evidence at the storage, protocol, concurrency, deployment, and operational layers where the failure can actually occur.
 
-- [ ] Start with every required configuration value missing, malformed, out of range, and mutually inconsistent; assert a deterministic non-zero exit before readiness.
-- [ ] Inject failure and delay at each dependency-initialization step; prove already-created resources close exactly once and startup retry is bounded.
-- [ ] Send one and multiple termination signals while requests, streams, workers, and transactions are active; verify admission stops, work drains or is safely abandoned, and the process exits within the platform grace period.
-- [ ] Run mixed-version rolling deployment tests for probes, configuration, ports, worker ownership, and shutdown behavior.
-- [ ] Exercise pool exhaustion, file-descriptor limits, disk pressure, and telemetry sink failure without deadlock or misleading readiness.
+- [ ] Diff resolved configuration and secret references across dev, staging, and production; promote only when sources and shape match.
+- [ ] Deploy a deliberately unhealthy build behind the health gates in staging; prove no traffic reaches it and the rollout halts without manual intervention.
+- [ ] Trigger each automatic abort criterion mid-rollout by injecting SLO burn and error-rate deltas; verify traffic freezes or reverts and the record shows which criterion fired.
+- [ ] Run mixed-version rolling deployment tests covering probes, configuration, stored-data readability, event consumption, and rollback.
+- [ ] Verify artifact identity end to end: the digest deployed to each environment matches the single build, with signature/provenance verification at admission.
 - [ ] Verify unauthorized, cross-tenant, malformed, duplicate, concurrent, cancelled, timed-out, dependency-failed, partial-success, stale-data, large-data, and rollback paths.
 - [ ] Verify logs, metrics, traces, audit events, alerts, cleanup, reconciliation, and runbook steps using the actual deployed topology.
 

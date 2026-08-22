@@ -58,15 +58,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Async boundaries require explicit propagation of trace, message, job, tenant, and causation identifiers.
 5. **Invariant 5:** Observability is part of the interface: operators need version, configuration, dependency, and state-transition visibility.
 
-Additional topic-specific invariants:
-
-- **SHOULD — Common failure scenarios:** Define the exact semantics of **Common failure scenarios** within Operational Runbooks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Diagnosis:** Define the exact semantics of **Diagnosis** within Operational Runbooks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Mitigation:** Define the exact semantics of **Mitigation** within Operational Runbooks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST — Recovery:** Define the exact semantics of **Recovery** within Operational Runbooks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Escalation:** Define the exact semantics of **Escalation** within Operational Runbooks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST — Post-recovery validation:** Define the exact semantics of **Post-recovery validation** within Operational Runbooks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

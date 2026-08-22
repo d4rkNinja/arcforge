@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Optionality, deletion semantics, history, and ownership must be explicit because they affect every query and migration.
 5. **Invariant 5:** Derived fields need a source of truth, recomputation rule, and divergence detection.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -137,8 +135,8 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.5. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **SHOULD - Expiration:** Treat expiration as a lifecycle transition, not deletion: active -> expired -> purge-candidate with visible timestamps; legal holds pause expiry.
+- **Production failure mode:** Expiry implemented as immediate hard delete destroys audit/recovery options and breaks legal holds, while soft-expired rows that nothing ever purges accumulate indefinitely because no job owns the second transition.
 - **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
 
 ### 8.7. Purging
@@ -260,7 +258,7 @@ Use expand-and-contract for field additions, renames, type changes, and stronger
 - **MUST** — Make duplicate, concurrent, timed-out, retried, and partially failed operations converge to a documented valid outcome.
 - **MUST** — Use finite deadlines and bounded resource consumption; define what happens when dependencies, caches, telemetry, or providers are unavailable.
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
-- **MUST** — For **Expiration**: Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
+- **MUST** — For **Expiration**: Enforce expiry as lifecycle transitions driven by retention schedules, with an explicit purge stage and legal-hold pause.
 - **MUST** — For **Purging**: Model deletion as explicit state with actor/reason/time, default query scoping, uniqueness behavior, reference policy, retention horizon, restoration rules, and irreversible purge workflow.
 
 ### SHOULD

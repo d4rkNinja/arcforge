@@ -70,15 +70,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Fallbacks can return stale or lower-quality data, but they must not weaken security or silently corrupt state.
 5. **Invariant 5:** Graceful degradation requires a predefined reduced contract, not ad hoc exception swallowing.
 
-Additional topic-specific invariants:
-
-- **SHOULD — API clients:** Define the exact semantics of **API clients** within External Integrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Token refresh:** Define the exact semantics of **Token refresh** within External Integrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Retries:** Define the exact semantics of **Retries** within External Integrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Data mapping:** Define the exact semantics of **Data mapping** within External Integrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Reconciliation:** Define the exact semantics of **Reconciliation** within External Integrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Circuit breakers:** Define the exact semantics of **Circuit breakers** within External Integrations: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

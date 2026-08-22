@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Build identity and configuration identity are operational data. Without them, mixed-version and rollback failures are hard to diagnose.
 5. **Invariant 5:** Development conveniences must not silently change security or durability semantics in production.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -130,15 +128,15 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.2. Connection draining
 
-- **SHOULD — engineering rule:** On termination, mark unready/stop admission, drain connections, stop leasing new jobs, finish or safely abandon in-flight work, flush bounded telemetry, close resources in dependency order, and exit before the platform kill deadline.
-- **Production failure mode:** Requests are cut mid-commit, jobs are acknowledged but unfinished, or shutdown hangs until SIGKILL.
-- **Existing-codebase evidence:** Send termination during each critical phase and verify no new work, bounded completion, redelivery safety, and exit timing.
+- **SHOULD — engineering rule:** Stop admitting new HTTP work first: close the listener or flip readiness failing so load balancers stop routing, then finish in-flight requests within a bounded window and close keep-alive connections with `Connection: close`. Long-lived connections (WebSocket, SSE, gRPC streams) need explicit protocol-level close frames plus client reconnect/backoff semantics, not an abrupt TCP reset.
+- **Production failure mode:** Keep-alive or streamed connections outlive the closed listener, so proxies keep routing to a closing socket, clients hang on streams that never receive a close frame, or the process exits with responses cut mid-commit.
+- **Existing-codebase evidence:** Find every signal handler and verify it initiates drain rather than immediate exit; send termination with open keep-alive and streaming connections, measure time-to-unhealthy and time-to-close, and confirm clients reconnect with backoff.
 
 ### 8.4. Worker shutdown
 
-- **SHOULD — engineering rule:** On termination, mark unready/stop admission, drain connections, stop leasing new jobs, finish or safely abandon in-flight work, flush bounded telemetry, close resources in dependency order, and exit before the platform kill deadline.
-- **Production failure mode:** Requests are cut mid-commit, jobs are acknowledged but unfinished, or shutdown hangs until SIGKILL.
-- **Existing-codebase evidence:** Send termination during each critical phase and verify no new work, bounded completion, redelivery safety, and exit timing.
+- **SHOULD — engineering rule:** Worker shutdown is distinct from HTTP drain: stop claiming new jobs immediately, extend the current lease when completion will not fit the remaining grace period, and acknowledge only AFTER the durable commit — ack-before-commit loses work on a crash between the two. Unfinished leases expire and redeliver, so handlers are idempotent by design; schedulers and leaders must not double-fire during handover (fencing or leader-loss detection).
+- **Production failure mode:** Jobs are acknowledged before their durable commit lands and are lost on crash, lease expiry delivers one job to two workers concurrently, or a deposed leader fires its schedule again during handover.
+- **Existing-codebase evidence:** Confirm worker ack ordering against the transaction commit; terminate mid-lease and verify extension and redelivery lose nothing and apply nothing twice; force leader handover and prove fencing blocks stale writes.
 
 ### 8.5. Queue acknowledgments
 
@@ -154,9 +152,9 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.9. Kubernetes termination behavior
 
-- **SHOULD — engineering rule:** Persist an explicit execution state machine with step IDs, budgets, tool results, approvals, and terminal reasons. Make each side-effecting step idempotent and resumable after crash.
-- **Production failure mode:** The agent loops indefinitely, repeats a tool after retry, resumes with stale permissions, or bypasses an approval gate.
-- **Existing-codebase evidence:** Crash/restart before and after every tool call and approval; verify limits and exactly one logical side effect.
+- **SHOULD — engineering rule:** Pod deletion removes Service endpoints AND sends SIGTERM concurrently, so readiness must flip failing immediately on the shutdown signal or load balancers keep routing to a closing listener. A `preStop` hook runs BEFORE SIGTERM — a sleep there compensates endpoint-propagation lag. `terminationGracePeriodSeconds` defaults to 30s with a SIGKILL backstop; size the total drain budget to grace minus cleanup margin, because force-kill at the deadline WILL happen sometimes and every operation must survive it through transactional boundaries and idempotency.
+- **Production failure mode:** Endpoint removal lags SIGTERM delivery, so live traffic hits a dying pod for seconds; or drain overruns the grace period and SIGKILL cuts commits, flushes, and stream closes mid-flight.
+- **Existing-codebase evidence:** Measure readiness-flip latency after SIGTERM under real endpoint propagation; verify preStop-before-SIGTERM ordering in the pod spec; simulate grace-period expiry mid-request and prove the interrupted operation recovers without duplication.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 
@@ -265,7 +263,7 @@ Runtime changes must work during rolling deployments where old and new processes
 - **MUST** — Make duplicate, concurrent, timed-out, retried, and partially failed operations converge to a documented valid outcome.
 - **MUST** — Use finite deadlines and bounded resource consumption; define what happens when dependencies, caches, telemetry, or providers are unavailable.
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
-- **MUST** — For **Worker shutdown**: On termination, mark unready/stop admission, drain connections, stop leasing new jobs, finish or safely abandon in-flight work, flush bounded telemetry, close resources in dependency order, and exit before the platform kill deadline.
+- **MUST** — For **Worker shutdown**: Stop claiming new jobs on termination, extend leases that cannot finish inside grace, acknowledge only after the durable commit, and rely on lease expiry/redelivery plus leader fencing so interrupted work recovers safely.
 
 ### SHOULD
 

@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Network calls inside database transactions extend lock time and create outcomes that cannot be atomically rolled back.
 5. **Invariant 5:** Distributed locks without fencing cannot prevent a paused or partitioned former owner from writing after lease expiry.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -124,13 +122,22 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 These subtopics carry no additional domain-specific rule beyond the default obligation: for each, define owner, inputs, outputs, invariants, lifecycle, failure classification, and a compatibility contract; make the rule enforceable at the narrowest authoritative boundary; and do not accept a framework or provider default without proving it fits the domain.
 
-- **Redis locks**
-- **Database locks**
 - **Coordination services**
-- **Lock renewal**
 - **Split-brain safety**
 - **Lock ownership**
 - **Failure recovery**
+
+### 8.1. Redis locks
+
+- **MUST — engineering rule:** Single-instance acquisition `SET lockKey uniqueToken NX PX ttl` is an efficiency tool, not a correctness boundary. Release via a Lua compare-and-delete on the stored token — plain `DEL` deletes someone else's lock once yours has expired. Redlock's multi-node majority acquire still rests on timing assumptions and fails safety under long pauses (Kleppmann's critique; antirez's rebuttal exists), so use it only where fencing at the resource is impossible and approximate mutual exclusion suffices [S138] [S139].
+- **Production failure mode:** A holder's operation outlives its TTL; the next client acquires, then the first releases with bare `DEL` and removes the second holder's lock, letting a third client in — three concurrent writers on one resource.
+- **Existing-codebase evidence:** Grep release paths for `DEL` without token comparison; inventory which correctness claims rest on Redlock rather than on fencing enforced by the protected resource.
+
+### 8.2. Database locks
+
+- **MUST — engineering rule:** `SELECT ... FOR UPDATE` row locks guard data-coupled exclusion inside transactions; advisory locks (`pg_advisory_lock`) provide application-level mutexes with session-scoped semantics; `SKIP LOCKED` claims queue work without blocking. All of them live on ONE connection: pooled connections handing a mid-transaction or session-scoped lock back to the pool leak it to unrelated requests — the classic leak.
+- **Production failure mode:** An ORM returns the connection between statements, silently transferring an advisory lock to the next borrower; two workers run the exclusive job, or a leaked session lock blocks everything until someone restarts the database.
+- **Existing-codebase evidence:** Verify lock-taking statements run on the same connection that later commits or unlocks; audit pool-return paths for in-flight transactions and session-scoped locks; confirm `SKIP LOCKED` claim plus ownership mark happens atomically in one statement.
 
 ### 8.4. Lease locks
 
@@ -138,11 +145,17 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 - **Production failure mode:** A paused or partitioned former owner resumes after expiry and performs a stale write despite a new owner holding the lock.
 - **Existing-codebase evidence:** Pause the first holder past expiry, acquire with a second holder, then prove the resource rejects the first holder's later operation.
 
+### 8.5. Lock renewal
+
+- **MUST — engineering rule:** Renew only through an ownership-verified compare-and-renew on the lock token — never a blind extend; schedule the renewal loop on a jittered interval well below the TTL; stop renewing the moment ownership is lost; bump the fencing token on each renewal so resources can reject stale epochs.
+- **Production failure mode:** A blind extend keeps refreshing a lock whose token was already reissued to another owner; two renewal loops fight each other and both holders believe they own the lease indefinitely.
+- **Existing-codebase evidence:** Check renewal loops for ownership verification before extending, interval-to-TTL ratio with jitter, and a stop condition on lost ownership; confirm each renewal advances a fence epoch visible to guarded resources.
+
 ### 8.6. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
-- **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
+- **SHOULD — engineering rule:** Lock expiry ends ownership; it does not start cleanup. Renewal extends ONLY while ownership verification still passes (compare-and-renew on the token, never blind extend); anchor deadlines in monotonic time inside the holder because wall-clock expiry checks are sensitive to clock jumps; expiry during a GC pause or network partition means TWO holders — fencing at the resource is the only defense.
+- **Production failure mode:** A clock step backward leaves a holder convinced it owns the lock long past TTL while a second owner proceeds; or a renewal timer blindly extends a token that was already lost to another client.
+- **Existing-codebase evidence:** Compare every TTL check against monotonic-time deadlines; find lock TTLs shorter than worst-case operation time with no renewal loop; verify guarded resources reject operations carrying expired epochs.
 
 ### 8.7. Fencing tokens
 
@@ -257,7 +270,7 @@ Schema and workflow changes must preserve invariants across mixed versions. Add 
 - **MUST** — Make duplicate, concurrent, timed-out, retried, and partially failed operations converge to a documented valid outcome.
 - **MUST** — Use finite deadlines and bounded resource consumption; define what happens when dependencies, caches, telemetry, or providers are unavailable.
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
-- **MUST** — For **Expiration**: Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
+- **MUST** — For **Expiration**: Verify ownership on every renewal (compare-and-renew on the token), anchor deadlines in monotonic time, and enforce fencing at resources so an expired or paused holder cannot complete a stale write.
 
 ### SHOULD
 
@@ -352,6 +365,6 @@ Primary standards and official documentation are preferred. Research papers and 
 - <a id="s051"></a> **[S051] The Chubby Lock Service for Loosely-Coupled Distributed Systems.** Google Research; 2006; OSDI 2006. [https://research.google/pubs/the-chubby-lock-service-for-loosely-coupled-distributed-systems/](https://research.google/pubs/the-chubby-lock-service-for-loosely-coupled-distributed-systems/) — Tags: locks, consensus, coordination.
 - <a id="s052"></a> **[S052] Jepsen Analyses.** Jepsen; 2026; Living collection. [https://jepsen.io/analyses](https://jepsen.io/analyses) — Tags: consistency, distributed-systems, testing, failures.
 - <a id="s137"></a> **[S137] ACM Queue: Idempotence Is Not a Medical Condition.** Pat Helland / ACM; 2012; ACM Queue. [https://queue.acm.org/detail.cfm?id=2187821](https://queue.acm.org/detail.cfm?id=2187821) — Tags: idempotency, distributed-systems, retries.
-- <a id="s138"></a> **[S138] Fencing off zombies.** Martin Kleppmann; 2016; Blog / distributed locking notes. [https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html) — Tags: distributed-locks, fencing, leases.
+- <a id="s138"></a> **[S138] How to do distributed locking.** Martin Kleppmann; 2016; Blog / distributed locking notes. [https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html) — Tags: distributed-locks, fencing, leases.
 - <a id="s139"></a> **[S139] Redis distributed locks with Redis.** Redis; 2026; Current documentation. [https://redis.io/docs/latest/develop/use/patterns/distributed-locks/](https://redis.io/docs/latest/develop/use/patterns/distributed-locks/) — Tags: distributed-locks, redis, leases.
 - <a id="s053"></a> **[S053] Site Reliability Engineering.** Google; 2016; Online book. [https://sre.google/sre-book/table-of-contents/](https://sre.google/sre-book/table-of-contents/) — Tags: reliability, operations, monitoring, capacity.

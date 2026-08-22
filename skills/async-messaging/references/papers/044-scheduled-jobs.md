@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Ordering is usually scoped to a partition/key and conflicts with parallelism.
 5. **Invariant 5:** Poison messages require bounded retries, quarantine, diagnosis, and replay tooling.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -120,26 +118,71 @@ A production representation commonly needs the following fields or equivalent ev
 
 Each subsection answers three questions: what rule must be implemented, what fails in production, and what an agent must inspect in an existing codebase before changing it.
 
-### Default obligations
+### 8.1. Cron
 
-These subtopics carry no additional domain-specific rule beyond the default obligation: for each, define owner, inputs, outputs, invariants, lifecycle, failure classification, and a compatibility contract; make the rule enforceable at the narrowest authoritative boundary; and do not accept a framework or provider default without proving it fits the domain.
+- **SHOULD — engineering rule:** Compute schedules in the business timezone, never the server-default offset; pin the cron dialect explicitly (5-field vs 6-field, day-of-month/day-of-week OR semantics differ across libraries) and evaluate next-fire deterministically from persisted state so restarts don't shift schedules.
+- **Production failure mode:** Jobs defined as "02:00 local" fire at 02:00 UTC because containers default to UTC — hours early for the business; a parser library upgrade silently changes day-of-week semantics and Sunday jobs move to Monday.
+- **Existing-codebase evidence:** Compare scheduler timezone configuration against business expectations for each job class; record which library and dialect parse every expression and lock those versions in manifests.
 
-- **Cron**
-- **Recurring tasks**
-- **Delayed tasks**
-- **Missed executions**
-- **Duplicate executions**
-- **Timezone-aware scheduling**
-- **DST**
-- **Distributed schedulers**
-- **Catch-up behavior**
-- **Long-running scheduled jobs**
+### 8.2. Recurring tasks
+
+- **SHOULD — engineering rule:** Monitor recurring jobs on last-success-age staleness (`now − last_success > interval × slack`) — a dead scheduler looks healthy to process-level monitors; also track execution-duration trends and next-fire drift so slow degradation surfaces before misses occur.
+- **Production failure mode:** The scheduler process is up but its job registry failed to load after a bad deploy: nothing runs, CPU/memory dashboards stay green, nightly billing stops silently for days.
+- **Existing-codebase evidence:** Verify a staleness alert exists per job class, not just process liveness; confirm duration histograms are per-job; compare configured intervals against observed inter-success gaps.
+
+### 8.3. Delayed tasks
+
+- **SHOULD — engineering rule:** Persist delayed tasks with their due time in durable storage or broker delayed-delivery support — in-memory timers die with the process; cancellation must be an explicit durable state change; a due-but-failed delayed task follows the same retry/dead-letter path as immediate jobs.
+- **Production failure mode:** A "remind user in 24h" task held in a process-local timer vanishes on deploy; delayed retries kept only in a flushed cache never fire and nobody notices until users complain.
+- **Existing-codebase evidence:** Restart a worker mid-delay and confirm the task still fires; trace cancellation to a durable state transition rather than an in-memory abort flag.
+
+### 8.4. Missed executions
+
+- **SHOULD — engineering rule:** Choose skip-with-alert vs run-once-at-startup vs catch-up-all per job class — a BUSINESS decision, not a framework default: cleanup jobs should skip missed windows, billing/payroll jobs must catch up exactly once with idempotency keys; persist last-success timestamps so startup logic can determine what was actually missed.
+- **Production failure mode:** Default run-on-startup fires one daily billing job after a six-day outage when six cycles were owed — silent undercharging plus duplicate-charge disputes; conversely catch-up-all replays dozens of expired cleanup runs at boot and delays readiness.
+- **Existing-codebase evidence:** Simulate downtime spanning a scheduled window and record which policy each job class actually follows; verify last-success persistence survives crash recovery, not only graceful shutdown.
+
+### 8.5. Duplicate executions
+
+- **SHOULD — engineering rule:** N scheduler instances without coordination fire every job N times: claim executions through leader election or a lock-table/advisory-lock row keyed by job+fire-window (expiring, fenced), OR make each job idempotent enough that double-fire is harmless and skip locks entirely — decide deliberately per job and document it.
+- **Production failure mode:** A scaled-out Deployment runs the scheduler embedded in every replica; each hourly job fires four times, quadrupling emails and double-charging customers until reconciliation drift surfaces weeks later.
+- **Existing-codebase evidence:** Count scheduler replicas and match the count against an actual coordination mechanism; attempt concurrent acquisition of the same job+window claim and verify exactly one winner.
+
+### 8.6. Timezone-aware scheduling
+
+- **SHOULD — engineering rule:** Store the IANA timezone identifier per schedule (never fixed UTC offsets), compute fire times in that zone, and ship tz database updates with deployments — government rule changes silently move schedules otherwise; make DST edge policy explicit per schedule: spring-forward nonexistent times skip, fall-back ambiguous times fire once or twice by written decision.
+- **Production failure mode:** "08:00 America/New_York" implemented as UTC−05 fires an hour late all summer after EDT starts; a tzdata update shifts a foreign schedule overnight and nobody can explain why reports moved.
+- **Existing-codebase evidence:** Check schedules reference zone identifiers rather than offsets; verify the tz database version is pinned and updated through deployment; confirm documented policy exists for nonexistent and ambiguous local times.
+
+### 8.7. DST
+
+- **SHOULD — engineering rule:** Test every recurring schedule across both transitions annually: spring-forward creates a nonexistent local hour (02:30 never occurs), fall-back repeats one (01:30 occurs twice) — the scheduler must implement explicit skip/fire-once/fire-twice semantics instead of whatever the library defaults to; fixed-offset arithmetic around transitions produces off-by-one-hour execution.
+- **Production failure mode:** A nightly 01:30 payout job runs twice during fall-back and duplicates transfers; a 02:15 job silently doesn't run the morning spring-forward begins because the computed wall time doesn't exist.
+- **Existing-codebase evidence:** Verify DST-transition tests exist covering both directions per recurrence expression; simulate the transition instant against the scheduler and assert exact fire counts and timestamps.
+
+### 8.8. Distributed schedulers
+
+- **SHOULD — engineering rule:** Guarantee exactly one active owner per job: leader election with fencing, deterministic sharding of job IDs across instances with rebalancing on join/leave, or external claiming (atomic lease row per job+window); never rely on "instances probably won't collide."
+- **Production failure mode:** Two schedulers split-brain across a network partition both believe they lead and double-fire everything; sharding without rebalancing leaves a dead instance's jobs permanently unowned after scale-in.
+- **Existing-codebase evidence:** Kill the leader mid-window and measure takeover time while asserting zero double-fires; review shard/claim redistribution logic on instance join and leave events.
 
 ### 8.9. Leader election
 
 - **SHOULD — engineering rule:** Use a proven implementation and understand quorum membership, term/epoch, log commitment, joint configuration, disk durability, and failure detector limits. Fence old leaders at external resources.
 - **Production failure mode:** Operational changes break quorum, stale leaders serve writes, or engineers assume consensus keeps the service available through every partition.
 - **Existing-codebase evidence:** Test minority/majority partitions, membership change, disk loss, delayed messages, and recovery without manual log surgery.
+
+### 8.10. Catch-up behavior
+
+- **SHOULD — engineering rule:** Bound catch-up: define max backlog age and chunk size per job so post-outage recovery cannot fire thousands of overdue runs simultaneously; key intended occurrences as idempotent job+window IDs so replayed catch-up deduplicates; alert on skipped windows even when skipping is the correct choice.
+- **Production failure mode:** After a weekend outage, catch-up-all launches 60 overdue report runs at once and saturates the database Monday morning; unbounded billing catch-up charges a cancelled account for every missed cycle since creation.
+- **Existing-codebase evidence:** Simulate downtime spanning multiple intervals and verify the executed run count matches policy (0, 1, or bounded N); confirm occurrence IDs deduplicate replayed catch-up attempts.
+
+### 8.11. Long-running scheduled jobs
+
+- **SHOULD — engineering rule:** Overlap protection is mandatory when the previous instance may still run at next fire: skip-if-running (lock held for full duration, released on crash), queue-behind, or parallel-by-design with explicit safety proof; enforce max-duration limits so a hung run releases its slot, gets killed, and lands in the failure path.
+- **Production failure mode:** An hourly job averaging 50 minutes hits a stuck connection and runs 3+ hours; skip-if-running masks it silently while a queuing strategy piles up dozens of stale queued runs that all execute later together.
+- **Existing-codebase evidence:** Confirm overlap policy is implemented, not just intended: hold a synthetic long run past next-fire and observe actual skip/queue/parallel behavior; verify locks release on worker crash, not only on completion.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 

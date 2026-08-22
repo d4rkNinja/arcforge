@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Ordering is usually scoped to a partition/key and conflicts with parallelism.
 5. **Invariant 5:** Poison messages require bounded retries, quarantine, diagnosis, and replay tooling.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -120,22 +118,77 @@ A production representation commonly needs the following fields or equivalent ev
 
 Each subsection answers three questions: what rule must be implemented, what fails in production, and what an agent must inspect in an existing codebase before changing it.
 
-### Default obligations
+### 8.1. Multi-channel delivery
 
-These subtopics carry no additional domain-specific rule beyond the default obligation: for each, define owner, inputs, outputs, invariants, lifecycle, failure classification, and a compatibility contract; make the rule enforceable at the narrowest authoritative boundary; and do not accept a framework or provider default without proving it fits the domain.
+- **SHOULD — engineering rule:** Route one notification event across channels — email, push, SMS, in-app — each with distinct providers, costs, latency profiles, and failure modes; the notification service owns routing rules, templates, preferences, and dedupe centrally so feature teams enqueue events and never call channel providers directly.
+- **Production failure mode:** Each team wires its own push/email/SMS vendor: costs go untracked, a vendor outage pages nobody, and a user opted out of one channel is still hammered on the others because no component sees the whole delivery picture.
+- **Existing-codebase evidence:** Inventory channel providers and every direct call site; verify routing decisions happen in one owned service and that per-channel cost/volume/failure metrics exist.
 
-- **Multi-channel delivery**
-- **Dispatching**
-- **Preferences**
-- **Templates**
-- **Queueing**
-- **Retries**
-- **Deduplication**
-- **Delivery states**
-- **Priority**
-- **Quiet hours**
-- **Provider failover**
-- **Fanout**
+### 8.2. Dispatching
+
+- **SHOULD — engineering rule:** Treat push as a leased resource: device tokens rotate and expire, so prune registrations on provider invalid-token feedback (APNs `Unregistered`, FCM `UNREGISTERED`); respect payload caps (APNs ~4KB, FCM ~4KB); background delivery is best-effort, never guaranteed; badge/count semantics need server-side counters, not client-side guesses derived from push history.
+- **Production failure mode:** An unpruned token registry grows until invalid-token feedback rates degrade the app's push standing; oversized payloads are silently dropped; unread badges drift permanently after any redelivery.
+- **Existing-codebase evidence:** Simulate provider token-expiry feedback and confirm stale devices are pruned automatically; measure worst-case rendered payload size against caps; find where badge counts originate.
+
+### 8.3. Preferences
+
+- **SHOULD — engineering rule:** Store durable per-user channel opt-ins and check them AT SEND TIME, not enqueue time — a preference changed between enqueue and send must win; separate transactional from marketing consent legally: password-reset mail is NOT marketing and must flow even when marketing consent is fully revoked.
+- **Production failure mode:** Preferences snapshotted at enqueue deliver yesterday's queued digest to a user who unsubscribed an hour ago; a single global opt-out flag then also blocks security alerts the account must receive.
+- **Existing-codebase evidence:** Locate the preference read relative to the provider call (inside the send path, not the producer); verify transactional and marketing categories are distinct consent records with independent lifecycle.
+
+### 8.4. Templates
+
+- **SHOULD — engineering rule:** Version templates like code; when content matters legally (receipts, legal notices, security alerts) record the rendered output or its hash per message for audit; validate localization variables at render time so missing keys or wrong-typed variables fail loudly instead of shipping placeholders.
+- **Production failure mode:** A template edit retroactively changes what "the user was told," undefendable in disputes; a missing locale variable renders `{{amount}}` into a live payment receipt.
+- **Existing-codebase evidence:** Check whether template versions and rendered output/hash are persisted per message; submit an incomplete-variable payload to a staging render and observe whether it fails closed.
+
+### 8.5. Queueing
+
+- **SHOULD — engineering rule:** Enqueue notification events durably (outbox committed with domain state) carrying an idempotency key per event so consumer retries never double-send; route priority classes to separate queues or quota pools so bulk volume cannot delay critical notifications.
+- **Production failure mode:** One shared queue lets a promotional burst delay OTP codes behind thousands of newsletters; a redelivered event without a dedupe key texts the same user twice.
+- **Existing-codebase evidence:** Verify events are written transactionally with domain state before publishing; confirm per-class queues or weighted scheduling exist; kill a consumer mid-send and require zero duplicates on recovery.
+
+### 8.6. Retries
+
+- **SHOULD — engineering rule:** Apply per-channel retry budgets with exponential backoff and explicit fallback chains (push fails N times → email → in-app badge), re-checking preferences at each hop — a user who opted out of email does not receive the push fallback as email; dead-letter after exhaustion with alerting.
+- **Production failure mode:** A naive fallback loop converts one unreachable device into five premium-rate SMS; exhausted notifications vanish silently because nothing consumes the dead-letter queue.
+- **Existing-codebase evidence:** Map the fallback graph with its stop conditions; confirm DLQ depth alerts and redrive runbooks exist; verify preference re-check happens on fallback hops, not just the primary channel.
+
+### 8.7. Deduplication
+
+- **SHOULD — engineering rule:** Collapse identical event storms into digests via windowed batching (same user+category within N minutes → one summary); enforce idempotency keys per notification event so retries don't double-send; derive user-facing "you have N notifications" counts from the source-of-truth store, never from push history.
+- **Production failure mode:** A flaky upstream emits 40 permission-change events and the user receives 40 pushes, then disables notifications permanently; unread counts computed from delivered pushes break on every redelivery.
+- **Existing-codebase evidence:** Test digest windowing under a synthetic event storm; find where badge/unread counts are computed and verify they query authoritative state rather than delivery history.
+
+### 8.8. Delivery states
+
+- **SHOULD — engineering rule:** Model explicit states (`accepted → sent → delivered → failed/read`) driven by provider webhooks; verify webhook signatures and process them idempotently since providers redeliver; treat `accepted`/`sent` as provider acknowledgments, never proof of human receipt.
+- **Production failure mode:** Treating APNs acceptance as delivered hides a large dead-token rate for months; unauthenticated webhook endpoints let anyone mark notifications delivered, masking real outages.
+- **Existing-codebase evidence:** Check webhook signature validation and duplicate-event handling; reconcile state-distribution metrics against provider consoles to detect silent divergence.
+
+### 8.9. Priority
+
+- **SHOULD — engineering rule:** Separate security/critical traffic from promotional into distinct quota pools (ideally separate provider accounts) so marketing volume can never delay security alerts; fix the priority classification at event creation and make it immutable afterwards.
+- **Production failure mode:** One provider account hits its daily SMS cap mid-campaign and the next login OTP is rejected alongside the newsletters, locking users out during exactly the incident response that needs them.
+- **Existing-codebase evidence:** Verify separate quotas for the critical class exist as pools, accounts, or hard reservations; saturate the promotional lane in staging and measure security-alert delivery latency.
+
+### 8.10. Quiet hours
+
+- **SHOULD — engineering rule:** Apply quiet hours in each user's stored timezone (IANA identifier, never server UTC); define bypass policy explicitly per category — security/OTP may breach quiet hours, promotions never; batch non-urgent messages arriving inside the window to the next allowed slot instead of dropping them.
+- **Production failure mode:** Server-timezone quiet hours wake users three zones away at 3 AM; or quiet hours silently discard queued non-urgent messages that are never delivered once the window opens.
+- **Existing-codebase evidence:** Check whose clock defines "night"; inject a notification inside the window and verify deferred-not-dropped behavior; compare implemented bypass categories against written policy.
+
+### 8.11. Provider failover
+
+- **SHOULD — engineering rule:** Configure secondary providers per channel with failover triggered by sustained error/throttle rates, not single failures; carry the idempotency key across failover so a message already accepted by the primary is not resent via backup; map templates to each provider's format before switching.
+- **Production failure mode:** Failover fires on one timeout and both providers deliver — duplicated SMS at double cost; or failover works in staging but the backup account was never provisioned for production volume and rejects everything mid-outage.
+- **Existing-codebase evidence:** Verify the dedupe key survives a provider switch; check failover threshold tuning against transient-error rates; confirm secondary accounts have production quotas provisioned and exercised.
+
+### 8.12. Fanout
+
+- **SHOULD — engineering rule:** Bound fanout amplification: one event × N recipients × M channels explodes combinatorially — expand in bounded batches with per-recipient tracking so partial failure is resumable, and require explicit operator approval above a defined audience-size cap.
+- **Production failure mode:** An "announce to all users" job materializes ten million channel jobs in one transaction, times out, retries, and duplicates half the audience; partial completion leaves no record of who was notified.
+- **Existing-codebase evidence:** Trace fanout execution for batch checkpoints and resumability; load-test the largest legitimate audience; confirm oversized audiences cannot launch through the normal path alone.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 

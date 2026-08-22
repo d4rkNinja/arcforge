@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Cryptographic protection fails when keys, randomness, nonces, algorithms, or lifecycle management are wrong.
 5. **Invariant 5:** Security controls require abuse-case tests and operational detection, not only happy-path unit tests.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -124,19 +122,54 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 - **TLS**
 - **Certificates**
 - **Certificate chains**
-- **Certificate validation**
-- **Certificate renewal**
-- **mTLS**
-- **Private CAs**
-- **Certificate revocation**
-- **Hostname validation**
-- **Certificate pinning**
+
+### 8.1. Certificate validation
+
+- **MUST — engineering rule:** Full-chain validation on every connection: chain to a trusted root per RFC 5280 path building, validity windows, key usage extensions, hostname match (RFC 6125), and revocation status where the latency budget allows. Never ship code paths that disable validation—self-signed internal endpoints get an internal CA added to the trust store instead. TLS 1.2 minimum; prefer TLS 1.3 (RFC 8996 deprecates 1.0/1.1 entirely).
+- **Production failure mode:** `InsecureSkipVerify`/`rejectUnauthorized=false` committed for one staging endpoint becomes the global default; intermediate-certificate rotation breaks clients that pinned only the leaf or lack the new intermediate in their trust path.
+- **Existing-codebase evidence:** Grep verification-disable flags and custom trust stores; inventory which hops skip validation; confirm minimum-version floors are configured at every client, not just servers.
+
+### 8.4. Certificate renewal
+
+- **MUST — engineering rule:** Automate renewal (ACME or platform rotation) with renewal starting around two-thirds of certificate lifetime; alert at fixed offsets before expiry (e.g., T-30/T-14/T-7 days) because silent renewal failure is invisible until outage. Deployed certificates must be reloaded by long-lived processes without dropping connections—verify reload behavior under load, since many stacks keep serving an expired cert until restart.
+- **Production failure mode:** ACME HTTP-01 challenges fail silently after a load-balancer change blocks `/.well-known/acme-challenge`; the cert expires days later on a weekend. Renewed secret written to disk but process never told to reload.
+- **Existing-codebase evidence:** Identify who owns renewal per environment; simulate challenge-path failure; test that renewed certs actually reach every terminating component (LB, ingress, mesh sidecars, CDN) without restart.
+
+### 8.7. mTLS
+
+- **SHOULD — engineering rule:** mTLS gives service identity, which authorization then consumes—certificate CN/SAN/spiffe-id must map to a workload identity checked against policy per request, not merely "a valid client cert." Rotate client certificates like secrets (short-lived via mesh/workload platforms preferred over manual long-lived certs). Decide fail-open vs fail-closed for missing client certs explicitly per listener.
+- **Production failure mode:** mTLS deployed as checkbox while any client certificate from any CA still authorizes all actions; expired client certificates brick scheduled jobs that have no renewal automation.
+- **Existing-codebase evidence:** Check whether cert identity is enforced beyond handshake; inventory every non-interactive caller's renewal story; verify CRL/OCSP handling of revoked client certs.
+
+### 8.10. Private CAs
+
+- **SHOULD — engineering rule:** Internal CAs issue short-lived certificates through automated issuance (ACME/step-ca/platform integrators); root keys live offline/HSM; intermediates do daily signing. Constrain CA policy (name constraints, path length). Distributing the internal root into public trust stores is prohibited—private roots validate only internal traffic.
+- **Production failure mode:** A private root installed on developer laptops validates attacker-hosted internal-named sites outside the company network; an intermediate with no name constraints signs certificates for any domain once compromised.
+- **Existing-codebase evidence:** Inventory trust-store additions across images and devices; check intermediates for name constraints; verify offline custody and usage auditing of root material.
+
+### 8.11. Certificate revocation
+
+- **SHOULD — engineering rule:** Choose revocation strategy by failure semantics: OCSP stapling shifts availability burden to the server but fails soft when staples go stale; hard-fail OCSP checks turn a slow responder into your outage; short-lived certificates (hours-to-days) make revocation mostly moot by bounding misuse duration—often the operationally superior choice. CRLs remain the fallback for batch-aware consumers.
+- **Production failure mode:** Browsers soft-fail OCSP, so "revoked" certificates keep working—the control exists on paper only. Hard-fail configurations take a site-wide outage when the CA's responder has a bad day (the 100% failure mode revocation checking adds).
+- **Existing-codebase evidence:** Determine whether revocation is actually enforced anywhere end-to-end; measure what happens when a leaked key is marked revoked (time-to-effect); prefer documenting short-lifetime + rotation over unenforced revocation.
+
+### 8.12. Hostname validation
+
+- **MUST — engineering rule:** Match RFC 6125: compare the connection host against SAN dNSName entries (CN fallback only for legacy), wildcard rules (`*.example.com` matches one label, never sub-subdomains), and never validate against user-controlled Host headers or redirect targets without revalidation per hop. IP connections validate iPAddress SANs.
+- **Production failure mode:** Custom hostname checks using substring matching accept `evil-example.com` for `example.com`; following redirects to a different origin while reusing the first hop's verified session state.
+- **Existing-codebase evidence:** Search for hand-written hostname comparison logic; confirm redirect chains revalidate identity per hop; check SNI configuration matches intended routing.
+
+### 8.13. Certificate pinning
+
+- **AVOID — engineering rule:** Pinning (leaf or SPKI pin sets) is justified only for high-value mobile/desktop clients with a tested backup-pin rotation path. Server-side pinning (HPKP) is dead—RFC 7469 was removed by browsers precisely because operators kept bricking their properties. Prefer CT monitoring + short-lived certs; if pinning exists, document the emergency-replacement runbook and expiry of pins themselves.
+- **Production failure mode:** CA rotates intermediates, pinned SPKI set doesn't include the new chain, every client refuses to connect; the backup pin was never tested and turns out to be malformed.
+- **Existing-codebase evidence:** Find pinning configs (mobile bundles, curl `--pinnedpubkey`, custom trust managers); verify a rotation rehearsal exists and pins have owners and expiry dates.
 
 ### 8.6. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
-- **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
+- **SHOULD — engineering rule:** Treat certificate expiry as a monitored lifecycle, not a surprise: automated renewal at ~two-thirds lifetime, alerts at T-30/T-14/T-7, and an inventory that maps every terminating endpoint (including jobs calling third parties and expiring SDK trust stores) to its renewal owner. Distinguish logical expiry (validation starts failing) from physical cleanup (files rotated on disk)—processes may need explicit reload signals.
+- **Production failure mode:** Expired intermediate inside a bundle nobody regenerates; a long-running worker holding the old trust store rejects the renewed upstream certificate after everyone else migrated.
+- **Existing-codebase evidence:** Test exact boundary times with controlled clocks; verify alert firing on synthetic expiry; enumerate every consumer of each certificate including offline/batch consumers.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 

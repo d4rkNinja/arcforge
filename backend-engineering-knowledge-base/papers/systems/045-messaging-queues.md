@@ -181,9 +181,9 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.10. Ordering
 
-- **SHOULD — engineering rule:** Define deterministic ordering, null placement, collation, and a unique tie-breaker. Treat user-selected sort fields as an allowlisted query plan, not arbitrary SQL/expressions.
-- **Production failure mode:** Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
-- **Existing-codebase evidence:** Inspect explain plans for every allowed sort/filter combination and test ties, nulls, Unicode, and concurrent writes.
+- **SHOULD — engineering rule:** State order guarantees per lane — Kafka preserves order per partition (producers key related messages onto the same partition), SQS FIFO per message group, standard queues guarantee none; request only the narrowest scope needed because global ordering costs all throughput (a single consumer lane); treat exactly-once claims as broker-consumer dedup scope, not end-to-end effects, keeping handlers idempotent.
+- **Production failure mode:** Redelivery after failure delivers N+1 before N, and consumers without gap detection (sequence numbers) or version-based last-writer-wins apply stale state; head-of-line blocking on one poison message stalls everything behind it until a DLQ threshold unblocks the lane; a handler exceeding the visibility timeout lets another consumer process the same message concurrently.
+- **Existing-codebase evidence:** Identify the producer partition-key strategy and whether related messages share a key; inject out-of-order and duplicate redelivery and verify consumer handling; compare visibility-timeout settings against worst-case handler duration including heartbeat extension.
 
 ### 7.11. Partitioning
 
@@ -413,7 +413,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - **Queues:** A framework or provider default for queues is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Streams:** A framework or provider default for streams is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Consumers:** A framework or provider default for consumers is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Ordering:** Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
+- **Ordering:** Retries deliver N+1 before N after a failure, or one poison head-of-line message stalls every ordered consumer behind it until a DLQ threshold unblocks the lane.
 - **At-most-once:** A framework or provider default for at-most-once is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Dead-letter queues:** Bad messages block a partition or cycle forever; operators replay them without fixing cause and duplicate side effects.
 - **Consumer lag:** A framework or provider default for consumer lag is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.

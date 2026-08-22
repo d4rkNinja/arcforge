@@ -125,39 +125,39 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.1. Partial failure
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Partial failure** within Distributed Systems Fundamentals: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for partial failure is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for partial failure, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Treat any node, process, link, or dependency as able to fail independently while everything else keeps running; every operation spanning components must define its behavior for each partial outcome — degraded result, retryable ambiguity, compensating action — because partial success is the normal production state, not an exception.
+- **Production failure mode:** A code path assumes all-or-nothing execution across services: one dependency times out after another has committed, leaving half-applied state with no owner, no reconciliation job, and no runbook entry.
+- **Existing-codebase evidence:** For each cross-service call, determine what happens when a later step fails after an earlier one committed: locate the durable intent record, reconciliation pass, or compensation trigger; if none exists, that path cannot survive partial failure.
 
 ### 7.2. Network partitions
 
-- **SHOULD — engineering rule:** Choose a key from access patterns, cardinality, locality, tenant size, growth, and rebalancing needs; design routing metadata and cross-shard operations before scale forces migration.
-- **Production failure mode:** Monotonic or celebrity keys overload one shard, cross-shard queries become the norm, or resharding blocks writes.
-- **Existing-codebase evidence:** Replay skewed production-like distributions and rehearse split/move/failover with concurrent reads and writes.
+- **MUST — engineering rule:** Classify failures before choosing behavior: a crashed node is detectable (connection refused, failed health checks); message loss, reordering, and duplication require stable IDs and idempotent handling; a network cut is indistinguishable from slow nodes by timeouts alone. During a partition, quorum systems choose consistency over availability — the unreachable minority refuses writes rather than fork history — while AP systems accept divergence and own a reconciliation path. Name which operations prefer C and which prefer A from business meaning: payment capture prefers C; presence indicators and view counts prefer A.
+- **Production failure mode:** A minority side keeps accepting writes during a cut, producing two divergent truths whose merge silently drops data; or aggressive timeouts declare healthy-but-slow peers dead during a GC pause and trigger cascading failovers.
+- **Existing-codebase evidence:** Identify every timeout assumption in code paths that decide liveness — what does this component conclude about a peer when its timer fires? Check whether unreachable instances refuse writes or keep serving them, and confirm a tested reconciliation job exists wherever availability was chosen over consistency.
 
 ### 7.3. Message delays
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Message delays** within Distributed Systems Fundamentals: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for message delays is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for message delays, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Treat delivery latency as unbounded and variable: messages arrive late, out of order, duplicated, or never, and a delayed response is indistinguishable from a lost one until a deadline fires — so pair every request with a stable ID, a finite deadline, and duplicate-safe handling instead of assuming prompt delivery.
+- **Production failure mode:** A delayed reply arrives after the caller already retried, and both paths execute: the shipment ships twice, the charge posts twice, or a cancellation races a late success and corrupts aggregate state.
+- **Existing-codebase evidence:** Locate logic keyed off arrival order or send-time proximity rather than event versions or sequence numbers, and verify delayed-delivery tests exist alongside duplicate-delivery tests.
 
 ### 7.4. Clock skew
 
-- **MUST — engineering rule:** Define the exact semantics of **Clock skew** within Distributed Systems Fundamentals: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for clock skew is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for clock skew, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** NTP corrections can step clocks backward, so measure elapsed durations with monotonic clocks only inside one process; order events across machines with logical or hybrid logical clocks; bounded-uncertainty designs such as TrueTime-style commit-wait trade latency for external consistency. Never treat wall-clock comparison of two hosts' timestamps as proof of ordering.
+- **Production failure mode:** A scheduler computes `now - lastRun` with a wall clock, goes negative after an NTP step-back, and skips runs; last-write-wins merges compare timestamps written on different hosts and silently discard the newer update.
+- **Existing-codebase evidence:** Check whether any correctness decision depends on cross-host timestamp comparison (ordering, dedupe windows, lease expiry across machines), and confirm duration math uses monotonic clock APIs (`CLOCK_MONOTONIC`, `time.monotonic`, `Stopwatch`) rather than wall time.
 
 ### 7.5. Consistency
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Consistency** within Distributed Systems Fundamentals: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for consistency is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for consistency, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Name the consistency model per read/write path — linearizable, read-your-writes, monotonic reads, bounded staleness, eventual — derive it from user-visible promises, and route critical decisions (authorization, balances, limits) to storage that actually provides it; eventual is not an acceptable answer for a decision whose reversal would be invisible.
+- **Production failure mode:** A user saves a change, the next request hits a lagging replica, and the UI shows the old value or rejects the new one as invalid; or an authorization check reads a pre-revocation session from a lagging store and honors a revoked credential.
+- **Existing-codebase evidence:** For each critical decision, trace which store serves the read, what freshness bound it provides, and whether the code compensates with authoritative re-reads, version checks, or sticky routing.
 
 ### 7.6. Availability
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Availability** within Distributed Systems Fundamentals: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for availability is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for availability, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Define availability per user-visible flow rather than one system-wide number, including explicit degraded behavior under dependency loss — serve stale, queue, shed, hard-fail — tied to an SLO and error budget; load shedding beats unbounded queuing.
+- **Production failure mode:** Every feature hard-depends on one shared component (session store, feature-flag service, identity provider), so its outage takes down unrelated flows that could otherwise serve traffic.
+- **Existing-codebase evidence:** Map dependencies per critical flow, find single points whose outage breaks flows that do not logically need them, and verify documented degraded modes are configured and tested rather than merely written down.
 
 ### 7.7. Quorums
 
@@ -173,33 +173,33 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.9. Leader election
 
-- **SHOULD — engineering rule:** Use a proven implementation and understand quorum membership, term/epoch, log commitment, joint configuration, disk durability, and failure detector limits. Fence old leaders at external resources.
-- **Production failure mode:** Operational changes break quorum, stale leaders serve writes, or engineers assume consensus keeps the service available through every partition.
-- **Existing-codebase evidence:** Test minority/majority partitions, membership change, disk loss, delayed messages, and recovery without manual log surgery.
+- **MUST — engineering rule:** Separate safety from liveness: safety means at most one effective leader per term/epoch, enforced by quorum voting plus fencing tokens consumed by external resources; liveness means progress requires a stable majority and reliable failure detection. Add randomized backoff before re-candidacy because flapping networks cause election storms that starve progress even when every individual election succeeds.
+- **Production failure mode:** A flapping link triggers repeated elections while clients see alternating leadership and throughput collapses; or a deposed leader keeps serving writes because nothing at the storage layer ever checks its expired epoch.
+- **Existing-codebase evidence:** Find fencing usage wherever locks or leases guard external resources, verify leadership transitions bump a monotonically visible epoch there, and alert on election frequency so storm conditions are visible before they page someone.
 
 ### 7.10. Split brain
 
-- **SHOULD — engineering rule:** Use a proven implementation and understand quorum membership, term/epoch, log commitment, joint configuration, disk durability, and failure detector limits. Fence old leaders at external resources.
-- **Production failure mode:** Operational changes break quorum, stale leaders serve writes, or engineers assume consensus keeps the service available through every partition.
-- **Existing-codebase evidence:** Test minority/majority partitions, membership change, disk loss, delayed messages, and recovery without manual log surgery.
+- **MUST — engineering rule:** Two leaders can both believe they are active across a partition and after it heals; stack defenses: leader leases with fencing tokens consumed by external resources (storage refuses a stale epoch), pre-vote/check-quorum gates before a rejoining node disrupts the group, and quorum-based failover so at most one side can ever commit.
+- **Production failure mode:** After a heal, the old leader keeps serving cached sessions and writes with a stale epoch; storage accepts both histories because no resource validates fence tokens, and the divergence surfaces days later in reconciliation.
+- **Existing-codebase evidence:** Confirm guarded external resources actually reject stale epochs — not merely that tokens are issued — and rehearse partition-heal scenarios where the minority promoted itself during isolation.
 
 ### 7.11. Coordination
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Coordination** within Distributed Systems Fundamentals: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for coordination is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for coordination, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Minimize the coordination surface: every lock, barrier, or leader adds an availability dependency and serializes throughput at its scope; scope coordination to the narrowest boundary (per key or shard, never global) and treat coordinator unavailability as an explicit, documented degradation decision — never silent proceed-and-hope.
+- **Production failure mode:** One global coordinator turns a single slow participant into a fleet-wide stall; or coordinator maintenance silently splits workers between proceed and wait, producing partially applied work.
+- **Existing-codebase evidence:** Inventory globally serialized paths (single lock row, singleton worker, shared rate-limit bucket) and their documented fail-open/fail-closed behavior; verify work that proceeded without coordination resumes idempotently.
 
 ### 7.12. Consensus
 
-- **SHOULD — engineering rule:** Use a proven implementation and understand quorum membership, term/epoch, log commitment, joint configuration, disk durability, and failure detector limits. Fence old leaders at external resources.
-- **Production failure mode:** Operational changes break quorum, stale leaders serve writes, or engineers assume consensus keeps the service available through every partition.
-- **Existing-codebase evidence:** Test minority/majority partitions, membership change, disk loss, delayed messages, and recovery without manual log surgery.
+- **SHOULD — engineering rule:** FLP impossibility: in an asynchronous system, no deterministic consensus algorithm tolerates even one crash fault while guaranteeing termination — this is why practical protocols adopt timeouts and failure detectors (partial synchrony) or randomization. Use proven implementations (Raft/Paxos/Zab families); understand term/epoch, log commitment, joint configuration, disk durability, and failure-detector limits; fence old leaders at external resources.
+- **Production failure mode:** Teams tune consensus timers as performance knobs and destabilize liveness, or assume consensus keeps the service available through every partition although deciding requires a reachable majority; hand-rolled variants resurrect decided values after restart.
+- **Existing-codebase evidence:** Test minority/majority partitions, membership change, disk loss, delayed messages, and recovery without manual log surgery; verify decided entries are durably persisted before acknowledgment.
 
 ### 7.13. Failure detection
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Failure detection** within Distributed Systems Fundamentals: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for failure detection is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for failure detection, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** A failure detector produces suspicion, never proof: a missed heartbeat means slow, partitioned, or crashed. Prefer accrual-style detectors with configurable suspicion levels over fixed thresholds, and make every downstream action (evict, failover, stop routing) survivable when the suspicion is wrong in either direction.
+- **Production failure mode:** A fixed five-second heartbeat timeout evicts healthy but loaded nodes during a traffic spike, causing membership churn and cascading failovers that amplify the original overload.
+- **Existing-codebase evidence:** Locate thresholds that decide liveness, compare them against worst-case GC pauses and request latencies, and confirm a wrong eviction is recoverable through a rejoin protocol without data loss.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 

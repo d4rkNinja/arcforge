@@ -162,9 +162,9 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.6. Network partition
 
-- **SHOULD — engineering rule:** Choose a key from access patterns, cardinality, locality, tenant size, growth, and rebalancing needs; design routing metadata and cross-shard operations before scale forces migration.
-- **Production failure mode:** Monotonic or celebrity keys overload one shard, cross-shard queries become the norm, or resharding blocks writes.
-- **Existing-codebase evidence:** Replay skewed production-like distributions and rehearse split/move/failover with concurrent reads and writes.
+- **SHOULD — engineering rule:** Inject cuts of different shapes—full partitions between service pairs, lossy links with a packet-drop percentage, asymmetric partitions where A sees B but B cannot reply—and observe timeout, retry, and breaker behavior at each boundary; verify quorum-store behavior (the minority side must refuse writes rather than fork state), client exposure to stale reads during the cut, and heal behavior—no duplicate processing bursts beyond designed redelivery, no split-brain writes, and reconciliation that converges.
+- **Production failure mode:** Tests stop at fault onset while the heal phase goes unobserved; recovery then produces duplicate processing bursts beyond designed redelivery, split-brain writes, or reconciliation that never converges.
+- **Existing-codebase evidence:** Identify the fault-injection tooling (network emulation, dependency stubs); verify partition tests cover the heal phase and that breaker open/half-open/closed transitions were observed during tests rather than assumed.
 
 ### 7.7. Disk full
 

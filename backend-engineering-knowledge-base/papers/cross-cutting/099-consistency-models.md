@@ -54,15 +54,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Network calls inside database transactions extend lock time and create outcomes that cannot be atomically rolled back.
 5. **Invariant 5:** Distributed locks without fencing cannot prevent a paused or partitioned former owner from writing after lease expiry.
 
-Additional topic-specific invariants:
-
-- **SHOULD — Strong consistency:** Define the exact semantics of **Strong consistency** within Consistency Models: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Causal consistency:** Define the exact semantics of **Causal consistency** within Consistency Models: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Read-your-writes:** Define the exact semantics of **Read-your-writes** within Consistency Models: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Linearizability:** Define the exact semantics of **Linearizability** within Consistency Models: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Sequential consistency:** Define the exact semantics of **Sequential consistency** within Consistency Models: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Consistency trade-offs:** Define the exact semantics of **Consistency trade-offs** within Consistency Models: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

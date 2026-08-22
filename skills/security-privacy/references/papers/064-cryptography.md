@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Cryptographic protection fails when keys, randomness, nonces, algorithms, or lifecycle management are wrong.
 5. **Invariant 5:** Security controls require abuse-case tests and operational detection, not only happy-path unit tests.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -125,73 +123,72 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 - **Salting**
 - **Key derivation**
 - **Verification**
-- **Avoiding custom crypto**
 
 ### 8.1. Hashing
 
-- **SHOULD — engineering rule:** Use well-reviewed libraries and current algorithms; define key purpose, scope, version, generation, storage, rotation, revocation, nonce uniqueness, and authenticated context.
-- **Production failure mode:** Custom crypto, nonce reuse, weak randomness, key/algorithm confusion, or unauthenticated encryption destroys the intended guarantee.
-- **Existing-codebase evidence:** Review against a cryptographic design document and test key rotation, corruption, wrong context/key, entropy failure, and legacy ciphertext.
+- **MUST — engineering rule:** Match algorithm to job: SHA-256/SHA-3/BLAKE3 for integrity; HMAC-SHA-256 for anything secret-bearing or unforgeable (token lookup indices, API signatures); password-hash functions only for credentials. Never build MACs as `hash(secret || message)`—length extension breaks raw MD5/SHA-1/SHA-256 constructions; use HMAC.
+- **Production failure mode:** Raw `sha256(secret+payload)` "signatures" are forgeable via length extension. Digests stored without algorithm/version cannot be safely migrated later.
+- **Existing-codebase evidence:** Grep for `md5|sha1`, secret-concatenation digests, and `==` comparisons on hashes.
 
 ### 8.2. Password hashing
 
-- **SHOULD — engineering rule:** Use a modern password hashing function with per-record salt and centrally versioned work factors; compare in constant-time libraries, throttle attempts, and support transparent rehash after successful authentication.
-- **Production failure mode:** Fast hashes, global salts, insecure reset flows, or unbounded attempts turn a database leak or credential stuffing campaign into account takeover.
-- **Existing-codebase evidence:** Inspect stored format and parameters, benchmark work factors, test legacy-hash upgrade, enumeration resistance, and reset-token invalidation.
+- **MUST — engineering rule:** Argon2id at OWASP-floor parameters (m=19 MiB, t=2, p=1 minimum; target ~50–100 ms verify on production hardware). Fallbacks: scrypt (N=2^17, r=8, p=1), bcrypt (cost ≥10, 72-byte input limit), PBKDF2-HMAC-SHA-256 ≥600,000 iterations for FIPS-140. Store PHC-format strings so parameters travel with the hash. Enforce NIST SP 800-63B-4 verifier policy: 15-character minimum single-factor, allow ≥64 chars, no composition rules, no periodic rotation, breached-password blocklist.
+- **Production failure mode:** Fast hashes convert leaks into cracked credentials; bcrypt silently truncates at 72 bytes; composition rules and forced rotation produce predictable passwords—the exact patterns SP 800-63B-4 prohibits.
+- **Existing-codebase evidence:** Inspect stored format for parameter visibility; benchmark verify under concurrent load (memory-hard × concurrency exhausts RAM); test rehash-on-login and enumeration-resistant reset flows.
 
 ### 8.4. Encryption at rest
 
-- **MUST — engineering rule:** Use well-reviewed libraries and current algorithms; define key purpose, scope, version, generation, storage, rotation, revocation, nonce uniqueness, and authenticated context.
-- **Production failure mode:** Custom crypto, nonce reuse, weak randomness, key/algorithm confusion, or unauthenticated encryption destroys the intended guarantee.
-- **Existing-codebase evidence:** Review against a cryptographic design document and test key rotation, corruption, wrong context/key, entropy failure, and legacy ciphertext.
+- **MUST — engineering rule:** Layer deliberately: storage/TDE encryption protects media only—it does not constrain a DBA, SQL injection, or compromised application process. Field-level envelope encryption (DEK per record/tenant wrapped by KMS-held KEK) protects against anyone lacking key access; accept that it breaks range queries and requires blind indexes for equality lookup.
+- **Production failure mode:** Disk encryption marked as PII protection while SQL injection exfiltrates plaintext; deterministic field encryption leaking equality patterns without a recorded decision.
+- **Existing-codebase evidence:** Map which layer encrypts what; check encrypted columns are not indexed/logged in plaintext; verify key access is separate from database access.
 
 ### 8.5. Encryption in transit
 
-- **MUST — engineering rule:** Use well-reviewed libraries and current algorithms; define key purpose, scope, version, generation, storage, rotation, revocation, nonce uniqueness, and authenticated context.
-- **Production failure mode:** Custom crypto, nonce reuse, weak randomness, key/algorithm confusion, or unauthenticated encryption destroys the intended guarantee.
-- **Existing-codebase evidence:** Review against a cryptographic design document and test key rotation, corruption, wrong context/key, entropy failure, and legacy ciphertext.
+- **MUST — engineering rule:** TLS 1.2 minimum, 1.3 preferred (RFC 9325); never disable certificate/hostname validation—use an internal CA for self-signed endpoints instead. Internal/service-to-service traffic still uses TLS: network position is not trust. mTLS where workload identity platforms are unavailable.
+- **Production failure mode:** `rejectUnauthorized: false` committed for staging ships to production; TLS terminated at the LB with plaintext internal hops exposes all traffic to internal compromise.
+- **Existing-codebase evidence:** Grep verification-disable flags and custom trust stores; inventory plaintext hops; check cert rotation automation (see paper 065).
 
 ### 8.6. Symmetric encryption
 
-- **MUST — engineering rule:** Define metric type, unit, monotonicity, aggregation, label allowlist, and ownership. Use histograms suitable for required percentiles and keep user/resource IDs out of labels.
-- **Production failure mode:** Resets and gauges are misinterpreted, buckets hide tail latency, or high-cardinality labels overwhelm the backend.
-- **Existing-codebase evidence:** Estimate label cardinality from production dimensions and test dashboards/alerts through restart, scale-out, and missing-data conditions.
+- **MUST — engineering rule:** AES-256-GCM or ChaCha20-Poly1305 via platform AEAD APIs. GCM nonces (96-bit) unique per key: random draws stay under SP 800-38D's 2^32-per-key bound; counter-based schemes need crash-safe, cross-replica allocation; prefer XChaCha20-Poly1305 when only random nonces are feasible. Never ECB; never unauthenticated CBC/CTR output.
+- **Production failure mode:** Nonce reuse is silent catastrophe: repeated (key, nonce) pairs expose plaintext XOR relationships and enable GHASH forgery. Unauthenticated encryption invites bit-flipping on payment/authorization fields.
+- **Existing-codebase evidence:** Search for ECB/DES/RC4, CBC-without-MAC, manual nonce counters that reset on restart, and decryption paths that distinguish padding errors (padding oracle).
 
 ### 8.7. Asymmetric encryption
 
-- **MUST — engineering rule:** Define metric type, unit, monotonicity, aggregation, label allowlist, and ownership. Use histograms suitable for required percentiles and keep user/resource IDs out of labels.
-- **Production failure mode:** Resets and gauges are misinterpreted, buckets hide tail latency, or high-cardinality labels overwhelm the backend.
-- **Existing-codebase evidence:** Estimate label cardinality from production dimensions and test dashboards/alerts through restart, scale-out, and missing-data conditions.
+- **MUST — engineering rule:** RSA encryption only with OAEP padding (≥2048-bit keys); PKCS#1 v1.5 encryption prohibited except unavoidable legacy interop (Bleichenbacher oracles). Signatures: RSA-PSS, Ed25519, or ECDSA P-256. Track hybrid post-quantum key exchange for long-confidentiality data; do not deploy standalone PQ primitives ahead of standards maturity.
+- **Production failure mode:** ECDSA nonce reuse recovers the private key algebraically—Ed25519 deterministic signing removes the class. Java's default `RSA/ECB/PKCS1Padding` is padding-oracle vulnerable.
+- **Existing-codebase evidence:** Identify transformation strings; confirm pinned verification algorithms; find hand-managed ECDSA nonces; check key-size floors.
 
 ### 8.9. Signing
 
-- **SHOULD — engineering rule:** Use well-reviewed libraries and current algorithms; define key purpose, scope, version, generation, storage, rotation, revocation, nonce uniqueness, and authenticated context.
-- **Production failure mode:** Custom crypto, nonce reuse, weak randomness, key/algorithm confusion, or unauthenticated encryption destroys the intended guarantee.
-- **Existing-codebase evidence:** Review against a cryptographic design document and test key rotation, corruption, wrong context/key, entropy failure, and legacy ciphertext.
+- **SHOULD — engineering rule:** Canonicalize bytes before signing (JSON canonicalization, fixed encodings); include algorithm, key id, timestamp, audience inside the signed payload; pin accepted algorithms at verification—JWT `alg` headers are attacker input (`alg:none` and HS/RS confusion were exploitable classes).
+- **Production failure mode:** Signing one serialization and transmitting another invalidates signatures nondeterministically; accepting multiple algorithms enables downgrade.
+- **Existing-codebase evidence:** Check canonicalization ordering, webhook signature binding of method/path/timestamp/body, JWT library algorithm pinning.
 
 ### 8.11. Randomness
 
-- **MUST — engineering rule:** Use well-reviewed libraries and current algorithms; define key purpose, scope, version, generation, storage, rotation, revocation, nonce uniqueness, and authenticated context.
-- **Production failure mode:** Custom crypto, nonce reuse, weak randomness, key/algorithm confusion, or unauthenticated encryption destroys the intended guarantee.
-- **Existing-codebase evidence:** Review against a cryptographic design document and test key rotation, corruption, wrong context/key, entropy failure, and legacy ciphertext.
+- **MUST — engineering rule:** Security randomness only from OS CSPRNG (`crypto/rand`, `os.urandom`, `getRandomValues`, `SecureRandom`). Session IDs, API keys, reset tokens, nonces need ≥128 bits entropy. No time/PID/user-derived seeds.
+- **Production failure mode:** `Math.random()` tokens are enumerable; truncated UUIDs/base64 drop entropy below brute-force floors; `rand() % n` introduces modulo bias.
+- **Existing-codebase evidence:** Trace token generation to its entropy source; compute actual identifier entropy; look for truncation steps.
 
 ### 8.12. Nonces
 
-- **SHOULD — engineering rule:** Use well-reviewed libraries and current algorithms; define key purpose, scope, version, generation, storage, rotation, revocation, nonce uniqueness, and authenticated context.
-- **Production failure mode:** Custom crypto, nonce reuse, weak randomness, key/algorithm confusion, or unauthenticated encryption destroys the intended guarantee.
-- **Existing-codebase evidence:** Review against a cryptographic design document and test key rotation, corruption, wrong context/key, entropy failure, and legacy ciphertext.
+- **MUST — engineering rule:** Each construction defines its own discipline: GCM uniqueness per key (counters must survive restarts and coordinate replicas), challenge-response needs server-generated unpredictable challenges with expiring replay caches, OIDC `nonce` binds ID tokens to sessions (RFC 9700).
+- **Production failure mode:** In-memory counters reset on restart and collide across replicas; replay caches without expiry grow unbounded; request-ID-keyed caches miss redeliveries with fresh IDs.
+- **Existing-codebase evidence:** Determine generation strategy per cipher instance; verify persistence across restarts; check replay-cache TTL and growth bounds.
 
 ### 8.13. Key rotation
 
-- **SHOULD — engineering rule:** Store secrets in a managed secret boundary, grant workload-specific access, avoid process arguments/logs/images, support overlapping rotation, audit reads, and define emergency revocation.
-- **Production failure mode:** A leaked environment dump or long-lived credential grants broad access, or rotation breaks live processes because only one version is accepted.
-- **Existing-codebase evidence:** Scan artifacts/logs, rotate under load, revoke the old value, and verify every consumer refreshes without restart assumptions.
+- **SHOULD — engineering rule:** Version everything: key ids in ciphertext/token headers, overlapping windows (new signs immediately, old verifies until consumer lag expires), rehearsed rotation. KEK rotation is cheap rewrap; data-key rotation is a tracked backfill job.
+- **Production failure mode:** Single-version acceptance kills all outstanding sessions at cutover; revocation propagation slower than cache TTL leaves revoked keys trusted.
+- **Existing-codebase evidence:** Confirm stored artifacts carry key versions; rotate under load; measure revocation propagation; audit key reads via KMS logs.
 
 ### 8.14. Envelope encryption
 
-- **MUST — engineering rule:** Use well-reviewed libraries and current algorithms; define key purpose, scope, version, generation, storage, rotation, revocation, nonce uniqueness, and authenticated context.
-- **Production failure mode:** Custom crypto, nonce reuse, weak randomness, key/algorithm confusion, or unauthenticated encryption destroys the intended guarantee.
-- **Existing-codebase evidence:** Review against a cryptographic design document and test key rotation, corruption, wrong context/key, entropy failure, and legacy ciphertext.
+- **MUST — engineering rule:** DEKs encrypt data locally; KEKs in KMS/HSM wrap DEKs; wrapped DEKs travel with ciphertext. Cache plaintext DEKs bounded-TTL, memory-only. Define KMS-outage behavior: writes fail closed; reads may use DEK cache with stated staleness contract. Per-tenant KEKs cap cross-tenant blast radius at scale/key-management cost.
+- **Production failure mode:** Plaintext DEKs persisted beside ciphertext nullify the scheme; bulk decrypt fan-outs hit KMS quotas; deleted KMS keys make backups unrecoverable.
+- **Existing-codebase evidence:** Verify DEKs never reach disk/logs; measure peak KMS QPS vs quota; confirm ciphertexts carry key ids; test backup restore against current key state.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 
@@ -300,8 +297,10 @@ Security migrations—new keys, ciphers, headers, policies, scopes, token format
 - **MUST** — Make duplicate, concurrent, timed-out, retried, and partially failed operations converge to a documented valid outcome.
 - **MUST** — Use finite deadlines and bounded resource consumption; define what happens when dependencies, caches, telemetry, or providers are unavailable.
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
-- **MUST** — For **Hashing**: Use well-reviewed libraries and current algorithms; define key purpose, scope, version, generation, storage, rotation, revocation, nonce uniqueness, and authenticated context.
-- **MUST** — For **Asymmetric encryption**: Define metric type, unit, monotonicity, aggregation, label allowlist, and ownership. Use histograms suitable for required percentiles and keep user/resource IDs out of labels.
+- **MUST** — For **Hashing**: HMAC for secret-bearing digests; no length-extension-vulnerable constructions; algorithm/version recorded with stored digests.
+- **MUST** — For **Password hashing**: Argon2id at OWASP-floor parameters (or documented fallback) with PHC-format parameters stored alongside; SP 800-63B-4 verifier policy enforced.
+- **MUST** — For **Symmetric encryption**: AEAD only, with a nonce-uniqueness regime that survives restarts and concurrency.
+- **MUST** — For **Asymmetric encryption**: RSA-OAEP (≥2048-bit) for encryption; PSS/Ed25519/P-256 signatures with pinned verification algorithms.
 
 ### SHOULD
 

@@ -58,15 +58,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Composition roots should make infrastructure choices visible and testable.
 5. **Invariant 5:** Abstractions should encode stable policy or variability, not conceal every framework primitive.
 
-Additional topic-specific invariants:
-
-- **SHOULD — Abstraction boundaries:** Define the exact semantics of **Abstraction boundaries** within Abstraction Design: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Interface size:** Define the exact semantics of **Interface size** within Abstraction Design: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Premature abstraction:** Define the exact semantics of **Premature abstraction** within Abstraction Design: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Generic repositories:** Define the exact semantics of **Generic repositories** within Abstraction Design: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Framework wrappers:** Define the exact semantics of **Framework wrappers** within Abstraction Design: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Removing abstractions:** Define the exact semantics of **Removing abstractions** within Abstraction Design: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

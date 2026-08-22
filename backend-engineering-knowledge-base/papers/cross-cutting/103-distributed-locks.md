@@ -71,7 +71,7 @@ Additional topic-specific invariants:
 - **MUST — Redis locks:** Define the exact semantics of **Redis locks** within Distributed Locks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **SHOULD — Coordination services:** Define the exact semantics of **Coordination services** within Distributed Locks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **MUST — Lock renewal:** Define the exact semantics of **Lock renewal** within Distributed Locks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Expiration:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
+- **SHOULD — Expiration:** Treat expiry as loss of ownership: renew only via verified compare-and-renew on the token, anchor deadlines in monotonic time inside the holder, and rely on resource-side fencing whenever expiry can leave two holders.
 - **SHOULD — Split-brain safety:** Define the exact semantics of **Split-brain safety** within Distributed Locks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **MUST — Failure recovery:** Define the exact semantics of **Failure recovery** within Distributed Locks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 
@@ -138,15 +138,15 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.1. Redis locks
 
-- **MUST — engineering rule:** Define the exact semantics of **Redis locks** within Distributed Locks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for redis locks is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for redis locks, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Single-instance acquisition `SET lockKey uniqueToken NX PX ttl` is an efficiency tool, not a correctness boundary. Release via a Lua compare-and-delete on the stored token — plain `DEL` deletes someone else's lock once yours has expired. Redlock's multi-node majority acquire still rests on timing assumptions and fails safety under long pauses (Kleppmann's critique; antirez's rebuttal exists), so use it only where fencing at the resource is impossible and approximate mutual exclusion suffices [S138] [S139].
+- **Production failure mode:** A holder's operation outlives its TTL; the next client acquires, then the first releases with bare `DEL` and removes the second holder's lock, letting a third client in — three concurrent writers on one resource.
+- **Existing-codebase evidence:** Grep release paths for `DEL` without token comparison; inventory which correctness claims rest on Redlock rather than on fencing enforced by the protected resource.
 
 ### 7.2. Database locks
 
-- **MUST — engineering rule:** Define the exact semantics of **Database locks** within Distributed Locks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for database locks is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for database locks, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** `SELECT ... FOR UPDATE` row locks guard data-coupled exclusion inside transactions; advisory locks (`pg_advisory_lock`) provide application-level mutexes with session-scoped semantics; `SKIP LOCKED` claims queue work without blocking. All of them live on ONE connection: pooled connections handing a mid-transaction or session-scoped lock back to the pool leak it to unrelated requests — the classic leak.
+- **Production failure mode:** An ORM returns the connection between statements, silently transferring an advisory lock to the next borrower; two workers run the exclusive job, or a leaked session lock blocks everything until someone restarts the database.
+- **Existing-codebase evidence:** Verify lock-taking statements run on the same connection that later commits or unlocks; audit pool-return paths for in-flight transactions and session-scoped locks; confirm `SKIP LOCKED` claim plus ownership mark happens atomically in one statement.
 
 ### 7.3. Coordination services
 
@@ -162,15 +162,15 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.5. Lock renewal
 
-- **MUST — engineering rule:** Define the exact semantics of **Lock renewal** within Distributed Locks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for lock renewal is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for lock renewal, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Renew only through an ownership-verified compare-and-renew on the lock token — never a blind extend; schedule the renewal loop on a jittered interval well below the TTL; stop renewing the moment ownership is lost; bump the fencing token on each renewal so resources can reject stale epochs.
+- **Production failure mode:** A blind extend keeps refreshing a lock whose token was already reissued to another owner; two renewal loops fight each other and both holders believe they own the lease indefinitely.
+- **Existing-codebase evidence:** Check renewal loops for ownership verification before extending, interval-to-TTL ratio with jitter, and a stop condition on lost ownership; confirm each renewal advances a fence epoch visible to guarded resources.
 
 ### 7.6. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
-- **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
+- **SHOULD — engineering rule:** Lock expiry ends ownership; it does not start cleanup. Renewal extends ONLY while ownership verification still passes (compare-and-renew on the token, never blind extend); anchor deadlines in monotonic time inside the holder because wall-clock expiry checks are sensitive to clock jumps; expiry during a GC pause or network partition means TWO holders — fencing at the resource is the only defense.
+- **Production failure mode:** A clock step backward leaves a holder convinced it owns the lock long past TTL while a second owner proceeds; or a renewal timer blindly extends a token that was already lost to another client.
+- **Existing-codebase evidence:** Compare every TTL check against monotonic-time deadlines; find lock TTLs shorter than worst-case operation time with no renewal loop; verify guarded resources reject operations carrying expired epochs.
 
 ### 7.7. Fencing tokens
 
@@ -306,7 +306,7 @@ Schema and workflow changes must preserve invariants across mixed versions. Add 
 - **MUST** — For **Redis locks**: Define the exact semantics of **Redis locks** within Distributed Locks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **MUST** — For **Coordination services**: Define the exact semantics of **Coordination services** within Distributed Locks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **MUST** — For **Lock renewal**: Define the exact semantics of **Lock renewal** within Distributed Locks: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST** — For **Expiration**: Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
+- **MUST** — For **Expiration**: Verify ownership on every renewal (compare-and-renew on the token), anchor deadlines in monotonic time, and enforce fencing at resources so an expired or paused holder cannot complete a stale write.
 
 ### SHOULD
 
@@ -354,7 +354,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - [ ] **Redis locks:** Locate every implementation path for redis locks, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Coordination services:** Locate every implementation path for coordination services, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Lock renewal:** Locate every implementation path for lock renewal, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **Expiration:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
+- [ ] **Expiration:** Expire a lock mid-operation (pause or GC past TTL), acquire with a second holder, and prove the resource rejects the first holder's post-expiry writes.
 - [ ] **Split-brain safety:** Locate every implementation path for split-brain safety, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Failure recovery:** Locate every implementation path for failure recovery, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] Verify unauthorized, cross-tenant, malformed, duplicate, concurrent, cancelled, timed-out, dependency-failed, partial-success, stale-data, large-data, and rollback paths.
@@ -404,7 +404,7 @@ An AI agent is especially likely to:
 - For **Redis locks**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for redis locks is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - For **Coordination services**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for coordination services is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - For **Lock renewal**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for lock renewal is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- For **Expiration**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- For **Expiration**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Two holders act concurrently after one lease expires during a GC pause and no resource rejects the stale holder's writes.
 - For **Split-brain safety**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for split-brain safety is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - Which anomaly would violate the invariant under the deployed database isolation level?
 
@@ -464,7 +464,7 @@ Primary standards and official documentation are preferred. Research papers and 
 - <a id="s051"></a> **[S051] The Chubby Lock Service for Loosely-Coupled Distributed Systems.** Google Research; 2006; OSDI 2006. [https://research.google/pubs/the-chubby-lock-service-for-loosely-coupled-distributed-systems/](https://research.google/pubs/the-chubby-lock-service-for-loosely-coupled-distributed-systems/) — Tags: locks, consensus, coordination.
 - <a id="s052"></a> **[S052] Jepsen Analyses.** Jepsen; 2026; Living collection. [https://jepsen.io/analyses](https://jepsen.io/analyses) — Tags: consistency, distributed-systems, testing, failures.
 - <a id="s137"></a> **[S137] ACM Queue: Idempotence Is Not a Medical Condition.** Pat Helland / ACM; 2012; ACM Queue. [https://queue.acm.org/detail.cfm?id=2187821](https://queue.acm.org/detail.cfm?id=2187821) — Tags: idempotency, distributed-systems, retries.
-- <a id="s138"></a> **[S138] Fencing off zombies.** Martin Kleppmann; 2016; Blog / distributed locking notes. [https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html) — Tags: distributed-locks, fencing, leases.
+- <a id="s138"></a> **[S138] How to do distributed locking.** Martin Kleppmann; 2016; Blog / distributed locking notes. [https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html) — Tags: distributed-locks, fencing, leases.
 - <a id="s139"></a> **[S139] Redis distributed locks with Redis.** Redis; 2026; Current documentation. [https://redis.io/docs/latest/develop/use/patterns/distributed-locks/](https://redis.io/docs/latest/develop/use/patterns/distributed-locks/) — Tags: distributed-locks, redis, leases.
 - <a id="s053"></a> **[S053] Site Reliability Engineering.** Google; 2016; Online book. [https://sre.google/sre-book/table-of-contents/](https://sre.google/sre-book/table-of-contents/) — Tags: reliability, operations, monitoring, capacity.
 

@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Ordering is usually scoped to a partition/key and conflicts with parallelism.
 5. **Invariant 5:** Poison messages require bounded retries, quarantine, diagnosis, and replay tooling.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -162,8 +160,8 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.11. Ordering
 
-- **SHOULD — engineering rule:** Define deterministic ordering, null placement, collation, and a unique tie-breaker. Treat user-selected sort fields as an allowlisted query plan, not arbitrary SQL/expressions.
-- **Production failure mode:** Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
+- **SHOULD - engineering rule:** Make every batch resumable and idempotent: chunk by keyset pagination over a stable unique key (never OFFSET into live data), commit checkpoints after durable effect, and let natural-key detection collapse reruns instead of duplicating outputs.
+- **Production failure mode:** OFFSET-based chunking skips or repeats rows when data mutates mid-run, checkpoints committed before their effects lose work on crash, and un-keyed reruns double-process everything already shipped.
 - **Existing-codebase evidence:** Inspect explain plans for every allowed sort/filter combination and test ties, nulls, Unicode, and concurrent writes.
 
 ## 9. Concurrency, transactions, idempotency, and consistency

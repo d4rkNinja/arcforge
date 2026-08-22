@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Agent loops need hard limits on time, steps, cost, tool scope, and side effects.
 5. **Invariant 5:** Memory and RAG must enforce the same authorization, deletion, provenance, and tenant boundaries as the source data.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -166,8 +164,8 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.7. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **SHOULD — engineering rule:** Give memory entries explicit freshness semantics: episodic entries carry timestamps and decay or refresh by policy, working-session state expires with the session, and durable knowledge states what keeps it valid so stale facts can be superseded instead of silently outvoting current context.
+- **Production failure mode:** Undated memories let obsolete facts outrank fresh retrieval, and never-expiring session scratch data turns the memory store into an unbounded liability.
 - **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
 
 ### 8.8. Provenance

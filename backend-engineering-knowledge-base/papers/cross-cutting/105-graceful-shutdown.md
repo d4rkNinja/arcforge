@@ -74,10 +74,10 @@ Additional topic-specific invariants:
 
 - **SHOULD — Stop accepting traffic:** Define the exact semantics of **Stop accepting traffic** within Graceful Shutdown: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **SHOULD — Active request completion:** Define the exact semantics of **Active request completion** within Graceful Shutdown: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Worker shutdown:** On termination, mark unready/stop admission, drain connections, stop leasing new jobs, finish or safely abandon in-flight work, flush bounded telemetry, close resources in dependency order, and exit before the platform kill deadline.
+- **SHOULD — Worker shutdown:** Stop claiming new jobs on termination, extend leases that cannot finish inside the grace period, and acknowledge only after the durable commit; unfinished leases expire and redeliver, so handlers are idempotent and leaders are fenced during handover.
 - **MUST — Transaction completion:** Define the exact semantics of **Transaction completion** within Graceful Shutdown: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **MUST — Resource cleanup:** Define the exact semantics of **Resource cleanup** within Graceful Shutdown: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Kubernetes termination behavior:** Persist an explicit execution state machine with step IDs, budgets, tool results, approvals, and terminal reasons. Make each side-effecting step idempotent and resumable after crash.
+- **SHOULD — Kubernetes termination behavior:** Endpoint removal and SIGTERM arrive concurrently on pod deletion, so readiness flips failing on the signal; preStop sleeps compensate endpoint-propagation lag, and the drain budget fits terminationGracePeriodSeconds minus a cleanup margin before SIGKILL.
 
 ## 4. Architecture decisions and conflicting approaches
 
@@ -147,9 +147,9 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.2. Connection draining
 
-- **SHOULD — engineering rule:** On termination, mark unready/stop admission, drain connections, stop leasing new jobs, finish or safely abandon in-flight work, flush bounded telemetry, close resources in dependency order, and exit before the platform kill deadline.
-- **Production failure mode:** Requests are cut mid-commit, jobs are acknowledged but unfinished, or shutdown hangs until SIGKILL.
-- **Existing-codebase evidence:** Send termination during each critical phase and verify no new work, bounded completion, redelivery safety, and exit timing.
+- **SHOULD — engineering rule:** Stop admitting new HTTP work first: close the listener or flip readiness failing so load balancers stop routing, then finish in-flight requests within a bounded window and close keep-alive connections with `Connection: close`. Long-lived connections (WebSocket, SSE, gRPC streams) need explicit protocol-level close frames plus client reconnect/backoff semantics, not an abrupt TCP reset.
+- **Production failure mode:** Keep-alive or streamed connections outlive the closed listener, so proxies keep routing to a closing socket, clients hang on streams that never receive a close frame, or the process exits with responses cut mid-commit.
+- **Existing-codebase evidence:** Find every signal handler and verify it initiates drain rather than immediate exit; send termination with open keep-alive and streaming connections, measure time-to-unhealthy and time-to-close, and confirm clients reconnect with backoff.
 
 ### 7.3. Active request completion
 
@@ -159,9 +159,9 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.4. Worker shutdown
 
-- **SHOULD — engineering rule:** On termination, mark unready/stop admission, drain connections, stop leasing new jobs, finish or safely abandon in-flight work, flush bounded telemetry, close resources in dependency order, and exit before the platform kill deadline.
-- **Production failure mode:** Requests are cut mid-commit, jobs are acknowledged but unfinished, or shutdown hangs until SIGKILL.
-- **Existing-codebase evidence:** Send termination during each critical phase and verify no new work, bounded completion, redelivery safety, and exit timing.
+- **SHOULD — engineering rule:** Worker shutdown is distinct from HTTP drain: stop claiming new jobs immediately, extend the current lease when completion will not fit the remaining grace period, and acknowledge only AFTER the durable commit — ack-after-commit discipline, because ack-before-commit loses work on a crash between the two. Unfinished leases expire and redeliver, so handlers are idempotent by design; schedulers and leaders must not double-fire during handover (fencing or leader-loss detection).
+- **Production failure mode:** Jobs are acknowledged before their durable commit lands and are lost on crash, lease expiry delivers one job to two workers concurrently, or a deposed leader fires its schedule again during handover.
+- **Existing-codebase evidence:** Confirm worker ack ordering against the transaction commit; terminate mid-lease and verify extension and redelivery lose nothing and apply nothing twice; force leader handover and prove fencing blocks stale writes.
 
 ### 7.5. Queue acknowledgments
 
@@ -189,9 +189,9 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.9. Kubernetes termination behavior
 
-- **SHOULD — engineering rule:** Persist an explicit execution state machine with step IDs, budgets, tool results, approvals, and terminal reasons. Make each side-effecting step idempotent and resumable after crash.
-- **Production failure mode:** The agent loops indefinitely, repeats a tool after retry, resumes with stale permissions, or bypasses an approval gate.
-- **Existing-codebase evidence:** Crash/restart before and after every tool call and approval; verify limits and exactly one logical side effect.
+- **SHOULD — engineering rule:** Pod deletion removes Service endpoints AND sends SIGTERM concurrently, so readiness must flip failing immediately on the shutdown signal or load balancers keep routing to a closing listener. A `preStop` hook runs BEFORE SIGTERM — a sleep there compensates endpoint-propagation lag. `terminationGracePeriodSeconds` defaults to 30s with a SIGKILL backstop; size the total drain budget to grace minus cleanup margin, because force-kill at the deadline WILL happen sometimes and every operation must survive it through transactional boundaries and idempotency.
+- **Production failure mode:** Endpoint removal lags SIGTERM delivery, so live traffic hits a dying pod for seconds; or drain overruns the grace period and SIGKILL cuts commits, flushes, and stream closes mid-flight.
+- **Existing-codebase evidence:** Measure readiness-flip latency after SIGTERM under real endpoint propagation; verify preStop-before-SIGTERM ordering in the pod spec; simulate grace-period expiry mid-request and prove the interrupted operation recovers without duplication.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 
@@ -302,7 +302,7 @@ Runtime changes must work during rolling deployments where old and new processes
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
 - **MUST** — For **Stop accepting traffic**: Define the exact semantics of **Stop accepting traffic** within Graceful Shutdown: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **MUST** — For **Active request completion**: Define the exact semantics of **Active request completion** within Graceful Shutdown: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST** — For **Worker shutdown**: On termination, mark unready/stop admission, drain connections, stop leasing new jobs, finish or safely abandon in-flight work, flush bounded telemetry, close resources in dependency order, and exit before the platform kill deadline.
+- **MUST** — For **Worker shutdown**: Stop claiming new jobs on termination, extend leases that cannot finish inside grace, acknowledge only after the durable commit, and rely on lease expiry/redelivery plus leader fencing so interrupted work recovers safely.
 - **MUST** — For **Transaction completion**: Define the exact semantics of **Transaction completion** within Graceful Shutdown: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 
 ### SHOULD
@@ -349,10 +349,10 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - [ ] Exercise pool exhaustion, file-descriptor limits, disk pressure, and telemetry sink failure without deadlock or misleading readiness.
 - [ ] **Stop accepting traffic:** Locate every implementation path for stop accepting traffic, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Active request completion:** Locate every implementation path for active request completion, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **Worker shutdown:** Send termination during each critical phase and verify no new work, bounded completion, redelivery safety, and exit timing.
+- [ ] **Worker shutdown:** Confirm acks follow durable commits, terminate mid-lease to verify redelivery applies nothing twice, and fence the old leader during handover.
 - [ ] **Transaction completion:** Locate every implementation path for transaction completion, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Resource cleanup:** Locate every implementation path for resource cleanup, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **Kubernetes termination behavior:** Crash/restart before and after every tool call and approval; verify limits and exactly one logical side effect.
+- [ ] **Kubernetes termination behavior:** Measure readiness-flip latency after SIGTERM, verify preStop ordering in the manifest, and simulate grace-period expiry mid-request.
 - [ ] Verify unauthorized, cross-tenant, malformed, duplicate, concurrent, cancelled, timed-out, dependency-failed, partial-success, stale-data, large-data, and rollback paths.
 - [ ] Verify logs, metrics, traces, audit events, alerts, cleanup, reconciliation, and runbook steps using the actual deployed topology.
 
@@ -364,12 +364,12 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - Leaking pooled connections on failed startup.
 - Different defaults between local and production.
 - **Stop accepting traffic:** A framework or provider default for stop accepting traffic is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Connection draining:** Requests are cut mid-commit, jobs are acknowledged but unfinished, or shutdown hangs until SIGKILL.
-- **Worker shutdown:** Requests are cut mid-commit, jobs are acknowledged but unfinished, or shutdown hangs until SIGKILL.
+- **Connection draining:** Keep-alive and streamed connections outlive the closed listener, so proxies route new requests to a dead socket and clients hang on streams that never receive a close frame.
+- **Worker shutdown:** Jobs are acknowledged before their durable commit lands, or lease expiry hands one job to two workers and the effect applies twice.
 - **Queue acknowledgments:** Worker crashes after ack lose work; crashes before ack duplicate effects; lease expiry creates concurrent processing.
 - **Transaction completion:** A framework or provider default for transaction completion is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Shutdown timeout:** Requests wait indefinitely, downstream work continues after callers leave, or nested timeouts exceed the original budget.
-- **Kubernetes termination behavior:** The agent loops indefinitely, repeats a tool after retry, resumes with stale permissions, or bypasses an approval gate.
+- **Kubernetes termination behavior:** Endpoint removal lags SIGTERM, so a dying pod keeps receiving traffic; or drain overruns terminationGracePeriodSeconds and SIGKILL interrupts work mid-flight.
 
 ## 18. AI coding-agent failure modes
 
@@ -399,7 +399,7 @@ An AI agent is especially likely to:
 - What telemetry, alert, audit event, reconciliation, cleanup job, and runbook prove the feature remains correct after release?
 - For **Stop accepting traffic**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for stop accepting traffic is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - For **Active request completion**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for active request completion is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- For **Worker shutdown**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Requests are cut mid-commit, jobs are acknowledged but unfinished, or shutdown hangs until SIGKILL.
+- For **Worker shutdown**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Jobs are acknowledged before their durable commit lands, or expired leases deliver the same job to a second worker.
 - For **Transaction completion**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for transaction completion is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - For **Resource cleanup**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for resource cleanup is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - Which dependencies are fatal for startup/readiness, which are degradable, and who owns their cleanup during partial initialization?
@@ -416,12 +416,12 @@ An AI agent is especially likely to:
 - [ ] Review telemetry and runbooks to learn current failure modes, latency, scale, and operational ownership before proposing architecture changes.
 - [ ] Run the existing suite and targeted production-like probes before edits; preserve unrelated behavior and capture a baseline for correctness and performance.
 - [ ] **Stop accepting traffic:** Locate every implementation path for stop accepting traffic, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **Connection draining:** Send termination during each critical phase and verify no new work, bounded completion, redelivery safety, and exit timing.
-- [ ] **Worker shutdown:** Send termination during each critical phase and verify no new work, bounded completion, redelivery safety, and exit timing.
+- [ ] **Connection draining:** Terminate with open keep-alive and streaming connections; measure time-to-close, verify `Connection: close`, and confirm long-lived clients reconnect with backoff.
+- [ ] **Worker shutdown:** Confirm ack ordering versus commit, stop claiming mid-lease and verify redelivery is safe, and simulate leader handover under fencing.
 - [ ] **Queue acknowledgments:** Terminate workers before/after commit and pause them past the lease to verify duplicate containment.
 - [ ] **Transaction completion:** Locate every implementation path for transaction completion, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Shutdown timeout:** Inject slow dependencies at each hop and verify cancellation reaches database, network calls, streams, and workers.
-- [ ] **Kubernetes termination behavior:** Crash/restart before and after every tool call and approval; verify limits and exactly one logical side effect.
+- [ ] **Kubernetes termination behavior:** Kill a pod at each drain phase under real endpoint propagation; verify no lost traffic after readiness flips and recovery without duplication after SIGKILL.
 - [ ] Locate every process-wide goroutine/thread/task, client, listener, file, and signal handler; prove ownership and cleanup ordering.
 
 ## 21. Knowledge graph relationships

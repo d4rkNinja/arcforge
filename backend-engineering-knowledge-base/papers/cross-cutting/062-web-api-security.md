@@ -62,15 +62,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Cryptographic protection fails when keys, randomness, nonces, algorithms, or lifecycle management are wrong.
 5. **Invariant 5:** Security controls require abuse-case tests and operational detection, not only happy-path unit tests.
 
-Additional topic-specific invariants:
-
-- **SHOULD — SQL injection:** Define the exact semantics of **SQL injection** within Web/API Security: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — XSS:** Define the exact semantics of **XSS** within Web/API Security: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — XXE:** Define the exact semantics of **XXE** within Web/API Security: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Host-header attacks:** Define the exact semantics of **Host-header attacks** within Web/API Security: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — CSP:** Define the exact semantics of **CSP** within Web/API Security: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST — Broken object authorization:** Define the exact semantics of **Broken object authorization** within Web/API Security: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

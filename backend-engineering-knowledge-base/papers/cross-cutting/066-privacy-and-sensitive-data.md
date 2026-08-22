@@ -18,19 +18,19 @@ status: production-engineering-reference
 
 ## 1. Executive engineering summary
 
-**Privacy & Sensitive Data** exists to reduce exploitable trust, privilege, and data exposure across inputs, components, operators, and dependencies. A basic implementation usually handles the visible happy path; a production implementation must also preserve identity and ownership, valid state transitions, race-safe invariants, failure recovery, compatibility, and bounded operations.
+**Privacy & Sensitive Data** exists to ensure personal data is classified, minimized, lawfully processed, and fully erasable across every store that holds it. A basic implementation usually protects only the primary database; a production implementation must also track every derived copy — caches, search indexes, analytics stores, logs, ML training sets, and backups — while preserving lawful-basis linkage, subject rights, race-safe erasure, and bounded retention.
 
-Map trust boundaries, assets, attackers, privileges, data flows, and failure modes before selecting controls. Enforce least privilege in the component that owns the resource; edge filtering, WAFs, and gateways are supplementary. Treat every external, model-generated, cached, imported, or administrator-supplied value as untrusted at its use context.
+Classify fields before selecting controls, map every store and pipeline that replicates them, and name the lawful basis and purpose for each processing activity. Enforce minimization at intake design review rather than retrofit; access rules, masking, retention schedules, and export controls are supplementary to knowing exactly which fields are direct identifiers, quasi-identifiers, sensitive attributes, or behavioral data.
 
 The most important evidence base for this paper includes [S021](#s021) [S022](#s022) [S023](#s023) [S077](#s077). The source list at the end distinguishes standards, official product documentation, research, and production engineering guidance.
 
 ### What an experienced engineer notices first
 
-- Every external input—including data from trusted providers, queues, files, and internal services—crosses a trust boundary.
-- Least privilege applies to identities, data fields, network paths, secrets, and administrative tooling.
-- Secure defaults must remain safe when configuration is missing, stale, or partially deployed.
-- Cryptographic protection fails when keys, randomness, nonces, algorithms, or lifecycle management are wrong.
-- Security controls require abuse-case tests and operational detection, not only happy-path unit tests.
+- Every field is either classified or unclassified, and unclassified defaults to sensitive until proven otherwise.
+- Pseudonymization is not anonymization: reversible transforms leave the data inside GDPR scope with every obligation intact.
+- Erasure must reach replicas, caches, search indexes, analytics stores, logs, training sets, and backups — or be crypto-shredded there.
+- Consent is stateful per purpose: granted purposes can be withdrawn, and withdrawal propagates like deletion.
+- Privacy compliance requires DSR rehearsals and derived-store audits, not only happy-path unit tests on the primary table.
 
 ## 2. Scope and terminology map
 
@@ -52,20 +52,20 @@ This paper treats **Privacy & Sensitive Data** as a production subsystem or reus
 
 The primary correctness question is not “does the happy path work?” but “can every accepted operation be explained as a legal transition that preserves the authoritative invariants under duplication, concurrency, timeout, crash, and mixed versions?” [S021](#s021) [S022](#s022) [S023](#s023) [S077](#s077)
 
-1. **Invariant 1:** Every external input—including data from trusted providers, queues, files, and internal services—crosses a trust boundary.
-2. **Invariant 2:** Least privilege applies to identities, data fields, network paths, secrets, and administrative tooling.
-3. **Invariant 3:** Secure defaults must remain safe when configuration is missing, stale, or partially deployed.
-4. **Invariant 4:** Cryptographic protection fails when keys, randomness, nonces, algorithms, or lifecycle management are wrong.
-5. **Invariant 5:** Security controls require abuse-case tests and operational detection, not only happy-path unit tests.
+1. **Invariant 1:** Every field carrying personal data is classified — direct identifier, quasi-identifier, sensitive attribute, or behavioral — before controls are chosen for it.
+2. **Invariant 2:** Pseudonymized data remains personal data; only demonstrably irreversible anonymization leaves GDPR scope.
+3. **Invariant 3:** Erasure requests propagate to every derived store within a documented, bounded window; backups are handled by crypto-shredding or an explicit restore-window policy.
+4. **Invariant 4:** Consent binds processing to recorded purposes per activity; withdrawal propagates with the same fan-out surface as deletion.
+5. **Invariant 5:** Retention schedules are enforced by jobs against every store class — including derived stores — not kept as policy documents.
 
 Additional topic-specific invariants:
 
-- **SHOULD — PII classification:** Classify fields and flows, collect the minimum, limit purpose and access, use irreversible anonymization only when re-identification risk is acceptably low, and propagate deletion/retention to derived systems and backups.
-- **SHOULD — Data minimization:** Classify fields and flows, collect the minimum, limit purpose and access, use irreversible anonymization only when re-identification risk is acceptably low, and propagate deletion/retention to derived systems and backups.
-- **SHOULD — Pseudonymization:** Classify fields and flows, collect the minimum, limit purpose and access, use irreversible anonymization only when re-identification risk is acceptably low, and propagate deletion/retention to derived systems and backups.
-- **MUST — Deletion:** Define the exact semantics of **Deletion** within Privacy & Sensitive Data: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Access controls:** Define the exact semantics of **Access controls** within Privacy & Sensitive Data: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Backups containing deleted data:** Define the exact semantics of **Backups containing deleted data** within Privacy & Sensitive Data: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
+- **SHOULD — PII classification:** Classify every field as direct identifier, quasi-identifier, sensitive attribute, or behavioral data, and let that classification drive access, masking, retention, and export decisions everywhere the field lands.
+- **SHOULD — Data minimization:** Enforce collect-the-minimum at intake design review; every collected field needs a named purpose, lawful basis, and retention class before the schema lands.
+- **SHOULD — Pseudonymization:** Hold pseudonymization mappings separately from pseudonymized data with restricted key custody, and treat the records as personal data under GDPR Art. 4(5) in every downstream workflow.
+- **MUST — Deletion:** Propagate erasure to replicas, caches, search indexes, analytics stores, logs, ML training sets, and backups — using crypto-shredding where physical deletion is impossible — under a documented restore-window policy.
+- **SHOULD — Access controls:** Gate classified fields behind field-level authorization so support tooling, exports, and admin paths cannot bypass row-and-column rules.
+- **SHOULD — Backups containing deleted data:** Encrypt backups so destroying per-user/per-batch key-encryption keys makes restored data irrecoverable, and record how long restores may still contain erased data and why that is acceptable.
 
 ## 4. Architecture decisions and conflicting approaches
 
@@ -87,20 +87,24 @@ There is no universally correct mechanism. The design must select an option from
 
 ## 5. Ownership, state, and lifecycle
 
-Security-sensitive objects—secrets, keys, grants, tokens, certificates, exceptions, and incident indicators—need issuance, activation, rotation, suspension, revocation, expiry, destruction, and audit states. Threats also evolve; controls need detection, review, and retirement rather than one-time setup.
+Data-subject records and consent grants need explicit lifecycle states rather than implicit rows: records move from collected to active to erasure-requested to erased/anonymized, and consents move through granted, withdrawn, and expired per processing purpose. Each transition has an owner and an audit trail; retention clocks and legal holds evolve as regulations, purposes, and processing activities change.
 
 ```mermaid
 stateDiagram-v2
-    untrusted_input --> canonicalized_and_validated --> authenticated --> authorized --> least_privilege_execution --> encoded_or_protected_output --> audited
-    any_stage --> denied_or_contained
+    collected --> active
+    active --> erasure_requested
+    erasure_requested --> erased_or_anonymized
+    active --> consent_withdrawn
+    consent_withdrawn --> processing_halted
+    erasure_requested --> legal_hold_paused
 ```
 
 ### Lifecycle rules
 
-- Every state and transition needs an owner, entry preconditions, atomic persistence rule, emitted side effects, audit requirement, timeout/expiry behavior, and recovery path.
-- Terminal states must be explicit. “Failed” is rarely sufficient; distinguish retryable, permanently rejected, cancelled, expired, compensated, quarantined, and manual-review outcomes where relevant.
-- Transition side effects should be driven from durable state or an outbox, not from best-effort callbacks that can be lost.
-- Concurrent transitions must use an expected source state and version/condition so two valid requests cannot produce an impossible combined state.
+- Every state and transition needs an owner, entry preconditions (for DSRs: verified subject identity), atomic persistence, emitted side effects such as downstream purge events, an audit record, the regulatory deadline on the clock, and a recovery path.
+- Terminal states must be explicit: distinguish erased, irreversibly anonymized, retained-under-legal-hold, and partially fulfilled with documented carve-outs — "deleted" alone hides which obligations were met.
+- Downstream purge side effects are driven from durable state or an outbox, not best-effort callbacks that can be lost between the primary store and replicas, indexes, warehouses, and partners.
+- Concurrent transitions — an export racing an erasure, two DSRs for one subject, a restore colliding with a purge — use expected source state and version conditions so impossible combined states cannot occur.
 
 ## 6. Data model and API implications
 
@@ -127,81 +131,81 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.1. PII classification
 
-- **SHOULD — engineering rule:** Classify fields and flows, collect the minimum, limit purpose and access, use irreversible anonymization only when re-identification risk is acceptably low, and propagate deletion/retention to derived systems and backups.
-- **Production failure mode:** Sensitive data spreads into logs, caches, search, analytics, and backups where deletion and access controls are weaker.
-- **Existing-codebase evidence:** Build a data-flow inventory and verify each copy's lawful purpose, encryption, access, retention, export, and deletion behavior.
+- **SHOULD — engineering rule:** Classify every field before controls are chosen: direct identifiers (name, email, government ID), quasi-identifiers (ZIP code, birthdate, device fingerprint), sensitive attributes (health, finances, precise location), and behavioral data; the classification drives access, masking, retention, and export for that field everywhere it lands.
+- **Production failure mode:** Unclassified fields flow into analytics, logs, and ML features carrying none of the controls the primary store applies; classification lives in a policy document but not in schema metadata, so every new store skips it.
+- **Existing-codebase evidence:** Map every store holding classified fields including derived/analytics/logs/backups, and check that schema annotations or a data catalog actually mark classification per column rather than per table.
 
 ### 7.2. Sensitive fields
 
-- **SHOULD — engineering rule:** Classify fields and flows, collect the minimum, limit purpose and access, use irreversible anonymization only when re-identification risk is acceptably low, and propagate deletion/retention to derived systems and backups.
-- **Production failure mode:** Sensitive data spreads into logs, caches, search, analytics, and backups where deletion and access controls are weaker.
-- **Existing-codebase evidence:** Build a data-flow inventory and verify each copy's lawful purpose, encryption, access, retention, export, and deletion behavior.
+- **SHOULD — engineering rule:** Restrict sensitive fields behind field-level authorization and mask at display (show-last-4, partial redaction); serialization layers decide exposure per audience and purpose, never per convenience of a shared DTO.
+- **Production failure mode:** A public API serializer returns the full object; support tooling queries raw columns; a "harmless" debug endpoint leaks nested sensitive attributes nobody classified.
+- **Existing-codebase evidence:** Enumerate serializers, templates, and export paths touching each sensitive field and verify each masks or omits it; confirm admin/support tooling passes the same field-level rules as public paths.
 
 ### 7.3. Data minimization
 
-- **SHOULD — engineering rule:** Classify fields and flows, collect the minimum, limit purpose and access, use irreversible anonymization only when re-identification risk is acceptably low, and propagate deletion/retention to derived systems and backups.
-- **Production failure mode:** Sensitive data spreads into logs, caches, search, analytics, and backups where deletion and access controls are weaker.
-- **Existing-codebase evidence:** Build a data-flow inventory and verify each copy's lawful purpose, encryption, access, retention, export, and deletion behavior.
+- **SHOULD — engineering rule:** Enforce collect-the-minimum at intake design review: every collected field needs a named purpose, lawful basis, and retention class before the schema merges; minimization retrofitted after collection is compliance debt that compounds with every copy made.
+- **Production failure mode:** Forms accumulate optional fields "for later," analytics captures everything by default, and years later the team can neither justify nor safely delete half of what it holds.
+- **Existing-codebase evidence:** Trace each intake form/event schema back to a purpose and lawful basis; flag fields no consumer reads or that no documented processing purpose justifies.
 
 ### 7.4. Data masking
 
-- **SHOULD — engineering rule:** Classify fields and flows, collect the minimum, limit purpose and access, use irreversible anonymization only when re-identification risk is acceptably low, and propagate deletion/retention to derived systems and backups.
-- **Production failure mode:** Sensitive data spreads into logs, caches, search, analytics, and backups where deletion and access controls are weaker.
-- **Existing-codebase evidence:** Build a data-flow inventory and verify each copy's lawful purpose, encryption, access, retention, export, and deletion behavior.
+- **SHOULD — engineering rule:** Mask deterministically where cross-record correlation must survive (same input yields same masked value) but treat deterministic masks as linkable; use format-preserving tokenization for fields that must remain joinable and one-way redaction where they must not, applying one policy consistently across every service and environment.
+- **Production failure mode:** Inconsistent masking across services lets one unmasked path re-link records; a reversible "encoding" gets treated as masking until someone with query access decodes it.
+- **Existing-codebase evidence:** Compare masked representations of the same field across services and database dumps for consistency, and verify no environment below production receives unmasked production values.
 
 ### 7.5. Anonymization
 
-- **SHOULD — engineering rule:** Classify fields and flows, collect the minimum, limit purpose and access, use irreversible anonymization only when re-identification risk is acceptably low, and propagate deletion/retention to derived systems and backups.
-- **Production failure mode:** Sensitive data spreads into logs, caches, search, analytics, and backups where deletion and access controls are weaker.
-- **Existing-codebase evidence:** Build a data-flow inventory and verify each copy's lawful purpose, encryption, access, retention, export, and deletion behavior.
+- **SHOULD — engineering rule:** Label data anonymous ONLY when re-identification is not reasonably likely by ANY party using reasonably available means (GDPR Recital 26); quantify auxiliary-information assumptions explicitly, prefer releasing aggregates with small-cell suppression thresholds over microdata, and never accept k-anonymity alone — homogeneity attacks (all k members share the sensitive value) and background-knowledge attacks defeat it, which is what l-diversity and t-closeness refine against.
+- **Production failure mode:** A dataset passes k≥10 on its quasi-identifiers yet every member of some cell shares one diagnosis; an "anonymized" release joins cleanly with an external dataset the assessor never considered.
+- **Existing-codebase evidence:** Locate the anonymity assessment for each released dataset — which quasi-identifiers were measured, what k/l values hold, what auxiliary data was assumed unavailable — then challenge those assumptions against currently available data brokers.
 
 ### 7.6. Pseudonymization
 
-- **SHOULD — engineering rule:** Classify fields and flows, collect the minimum, limit purpose and access, use irreversible anonymization only when re-identification risk is acceptably low, and propagate deletion/retention to derived systems and backups.
-- **Production failure mode:** Sensitive data spreads into logs, caches, search, analytics, and backups where deletion and access controls are weaker.
-- **Existing-codebase evidence:** Build a data-flow inventory and verify each copy's lawful purpose, encryption, access, retention, export, and deletion behavior.
+- **SHOULD — engineering rule:** Pseudonymization is reversible through a separately-held mapping, so the data REMAINS personal data under GDPR Art. 4(5): it is an endorsed safeguard (Art. 25, Art. 32(1)(a)) that reduces risk but removes NO GDPR obligation; record where mappings live, who may hold them, and how mapping-key custody separates from the pseudonymized store — and remember a "hashed email" is pseudonymization, not anonymization, because dictionary attacks reverse common values instantly.
+- **Production failure mode:** Teams treat salted-hash identifiers as anonymous, share them freely with third parties, and skip erasure duties — until the mapping table leaks or the dictionary attack re-identifies everyone.
+- **Existing-codebase evidence:** Locate pseudonymization mapping storage and key/salt custody; verify mappings sit in restricted-access storage separate from the pseudonymized data and that DSR workflows still treat pseudonymized records as personal data.
 
 ### 7.7. Retention
 
-- **MUST — engineering rule:** Define the exact semantics of **Retention** within Privacy & Sensitive Data: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for retention is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for retention, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Implement retention as a schedule per data class WITH an enforcement job — expired-data purge must hit derived stores (aggregates, search indexes, feature stores) too — not as a policy document; record the clock origin per class (event time vs account closure vs contract end).
+- **Production failure mode:** Policy says 24 months; the purge job covers only the primary table; warehouse copies, exports, and log archives retain indefinitely and surface during discovery years later.
+- **Existing-codebase evidence:** For each data class find the enforcing job, check its coverage of derived stores, monitor its backlog, and sample the oldest retained records against the stated schedule.
 
 ### 7.8. Deletion
 
-- **MUST — engineering rule:** Define the exact semantics of **Deletion** within Privacy & Sensitive Data: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for deletion is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for deletion, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Operationalize erasure (GDPR Art. 17) as fan-out to replicas, caches, search indexes, analytics stores, logs, ML training sets, AND backups; apply crypto-shredding — destroy the per-user/per-batch key-encryption key — where media is immutable so backup-restored data stays irrecoverable; define a restore-window policy stating how long post-deletion restores may reintroduce data and why that is acceptable and documented; resolve legal-hold conflicts with explicit carve-outs recorded per obligation.
+- **Production failure mode:** Erasure completes in the primary database while the search index, warehouse, and nightly backups keep serving the deleted profile; an ML model retrains on records that were legally erased.
+- **Existing-codebase evidence:** Trace an Art. 17 request end-to-end in staging: enumerate every touched store, verify tombstone/purge/crypto-shred behavior per store, confirm the restore-window policy is written down, and check legal-hold conflicts have a documented resolution path.
 
 ### 7.9. Export
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Export** within Privacy & Sensitive Data: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for export is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for export, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Make exports (GDPR Art. 20) machine-readable and COMPLETE — including derived data the user influenced such as preferences and computed profiles — and treat the authenticated export channel as an attack target: account takeover converts it into full-profile exfiltration, so rate-limit exports, notify the user on every export, and require step-up authentication.
+- **Production failure mode:** An attacker with a stolen session silently pulls the complete profile archive; or the export omits derived data, forcing repeated subject requests and regulator complaints.
+- **Existing-codebase evidence:** Run an export in staging and check completeness against every store holding classified fields; verify rate limiting and user notification fire and that export artifacts expire encrypted rather than living as permanent URLs.
 
 ### 7.10. Consent
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Consent** within Privacy & Sensitive Data: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for consent is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for consent, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Record purpose-binding per processing activity (what the consent covers, when, under which UI copy), issue consent receipts, model consent state as granted/withdrawn/expired PER PURPOSE — never one global bit — and make withdrawal propagate exactly like deletion across the same fan-out surface: pipelines, partners, models, caches.
+- **Production failure mode:** Withdrawal flips one flag in the profile service while nightly ETL keeps shipping the withdrawn-away fields to the ad partner for months.
+- **Existing-codebase evidence:** Check consent-withdrawal propagation by flipping a consent in staging and following the data to every consumer named on the receipt; verify receipts capture copy version, timestamp, and scope.
 
 ### 7.11. Access controls
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Access controls** within Privacy & Sensitive Data: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for access controls is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for access controls, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Authorize classified fields at column/field level, not just row level: dashboards, bulk exporters, admin impersonation, and BI replicas go through the same field gates as APIs; break-glass access is time-boxed, justified up front, and audited after.
+- **Production failure mode:** Row-level security passes the audit while a BI replica or CSV export path serves full sensitive columns to anyone holding dashboard access.
+- **Existing-codebase evidence:** Attempt cross-field access with ordinary roles in staging via dashboards, exports, and support tooling; verify every path enforces field gates and break-glass usage writes an auditable justification.
 
 ### 7.12. Logs containing PII
 
-- **SHOULD — engineering rule:** Classify fields and flows, collect the minimum, limit purpose and access, use irreversible anonymization only when re-identification risk is acceptably low, and propagate deletion/retention to derived systems and backups.
-- **Production failure mode:** Sensitive data spreads into logs, caches, search, analytics, and backups where deletion and access controls are weaker.
-- **Existing-codebase evidence:** Build a data-flow inventory and verify each copy's lawful purpose, encryption, access, retention, export, and deletion behavior.
+- **SHOULD — engineering rule:** Redact or pseudonymize identifiers at emission time through structured-log field policies, align log retention with the source data's retention class, and treat debug/verbose modes as temporary classified-data hazards that auto-expire.
+- **Production failure mode:** A verbose flag left on during an incident ships full request bodies to the log vendor for weeks; log-derived dashboards become personal-data troves no deletion job reaches.
+- **Existing-codebase evidence:** Sample production log indices for direct and quasi-identifiers, verify redaction rules at each emitter, and compare index retention settings against the classification of what they contain.
 
 ### 7.13. Backups containing deleted data
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Backups containing deleted data** within Privacy & Sensitive Data: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for backups containing deleted data is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for backups containing deleted data, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Encrypt backups so that destroying per-user/per-batch key-encryption keys makes erased data irrecoverable (crypto-shredding), document the restore window — how long restores may reintroduce deleted records and why that is acceptable — and never claim backup erasure you have not tested by restoring.
+- **Production failure mode:** A disaster-recovery restore resurrects users deleted months earlier, including their revoked consents, silently re-violating completed erasure obligations.
+- **Existing-codebase evidence:** Restore a backup containing an erased user in staging and observe exactly what returns; verify the KEK-per-batch scheme exists and that destroying a KEK is a rehearsed, verified operation.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 

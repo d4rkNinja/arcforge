@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Ordering is usually scoped to a partition/key and conflicts with parallelism.
 5. **Invariant 5:** Poison messages require bounded retries, quarantine, diagnosis, and replay tooling.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -153,9 +151,9 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.10. Ordering
 
-- **SHOULD — engineering rule:** Define deterministic ordering, null placement, collation, and a unique tie-breaker. Treat user-selected sort fields as an allowlisted query plan, not arbitrary SQL/expressions.
-- **Production failure mode:** Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
-- **Existing-codebase evidence:** Inspect explain plans for every allowed sort/filter combination and test ties, nulls, Unicode, and concurrent writes.
+- **SHOULD — engineering rule:** State order guarantees per lane — Kafka preserves order per partition (producers key related messages onto the same partition), SQS FIFO per message group, standard queues guarantee none; request only the narrowest scope needed because global ordering costs all throughput (a single consumer lane); treat exactly-once claims as broker-consumer dedup scope, not end-to-end effects, keeping handlers idempotent.
+- **Production failure mode:** Redelivery after failure delivers N+1 before N, and consumers without gap detection (sequence numbers) or version-based last-writer-wins apply stale state; head-of-line blocking on one poison message stalls everything behind it until a DLQ threshold unblocks the lane; a handler exceeding the visibility timeout lets another consumer process the same message concurrently.
+- **Existing-codebase evidence:** Identify the producer partition-key strategy and whether related messages share a key; inject out-of-order and duplicate redelivery and verify consumer handling; compare visibility-timeout settings against worst-case handler duration including heartbeat extension.
 
 ### 8.11. Partitioning
 

@@ -131,69 +131,69 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.1. Retryable operations
 
-- **SHOULD — engineering rule:** Classify retryable outcomes, cap attempts and elapsed time, use exponential backoff with jitter, honor provider pushback, and make side effects idempotent or detect ambiguous completion.
-- **Production failure mode:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
-- **Existing-codebase evidence:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+- **MUST — engineering rule:** Classify outcomes before any retry logic exists: connection-refused and pre-send failures are retryable; a timeout after the request was sent is an AMBIGUOUS outcome (the operation may have succeeded), so retrying it requires an idempotency mechanism ([036. Idempotency](036-idempotency.md)); HTTP 5xx is generally retryable except non-idempotent side effects without idempotency keys; 408 is retryable; 429 is retried only while honoring Retry-After; every other 4xx is non-retryable; DNS/network-unreachable is retryable with an attempt cap.
+- **Production failure mode:** A blanket retry-on-any-error path loops forever on validation and authorization failures, and a timeout treated as plain failure duplicates a payment that actually committed.
+- **Existing-codebase evidence:** Extract the error classes each client maps today (connect, TLS, timeout, 5xx, 429, 408, other 4xx) and inject one of each; verify every class lands in an explicit retryable/ambiguous/non-retryable terminal path.
 
 ### 7.2. Non-retryable operations
 
-- **SHOULD — engineering rule:** Classify retryable outcomes, cap attempts and elapsed time, use exponential backoff with jitter, honor provider pushback, and make side effects idempotent or detect ambiguous completion.
-- **Production failure mode:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
-- **Existing-codebase evidence:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+- **MUST — engineering rule:** Fail fast on non-retryable classes — all 4xx except 408 and 429, authentication/authorization rejections, validation failures, and business-rule refusals — routing them to the caller or dead-letter path on the first attempt; never map them onto a backoff schedule because a client error repeats identically.
+- **Production failure mode:** Retrying a 403/422 burns the attempt budget and the deadline, delays the real error to the caller, and multiplies load against a dependency that answered correctly the first time.
+- **Existing-codebase evidence:** List the exception types and status codes each retry wrapper treats as retryable; confirm non-retryable classes short-circuit before any sleep and that no broad catch-all re-enqueues them.
 
 ### 7.3. Retry count
 
-- **SHOULD — engineering rule:** Classify retryable outcomes, cap attempts and elapsed time, use exponential backoff with jitter, honor provider pushback, and make side effects idempotent or detect ambiguous completion.
-- **Production failure mode:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
-- **Existing-codebase evidence:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+- **MUST — engineering rule:** Cap attempts (typically 2-3 retries after the initial try) and total elapsed time; on exhaustion, surface the final error with full context (attempt count, last outcome class, correlation ID); park asynchronous work in a DLQ/dead-letter state; alert on retry-rate spikes and exhaustion counters; never swallow-and-continue silently.
+- **Production failure mode:** Uncapped retry loops pin threads, connections, and in-flight money-moving operations, while the final failure is logged at DEBUG or swallowed after the last attempt, so nothing alerts and orders silently disappear.
+- **Existing-codebase evidence:** Find retry loops without caps (bare while loops, recursive self-invocation, default library policies); confirm an exhaustion metric and alert exist and the surfaced error preserves root cause and attempt metadata.
 
 ### 7.4. Exponential backoff
 
-- **SHOULD — engineering rule:** Classify retryable outcomes, cap attempts and elapsed time, use exponential backoff with jitter, honor provider pushback, and make side effects idempotent or detect ambiguous completion.
-- **Production failure mode:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
-- **Existing-codebase evidence:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+- **SHOULD — engineering rule:** Space attempts with sleep = min(cap, base * 2^attempt); choose base and cap from the dependency's realistic recovery horizon and keep the total retry window inside the caller's remaining deadline.
+- **Production failure mode:** Plain exponential backoff WITHOUT jitter synchronizes failed callers into waves (thundering herd): everyone fails together, sleeps on the identical schedule, and reconnects together, repeatedly re-overloading the recovering service.
+- **Existing-codebase evidence:** Recompute the delay sequence from configured base and cap and confirm doubling, capping, and deadline fit; flag any fixed-interval retry schedule.
 
 ### 7.5. Jitter
 
-- **SHOULD — engineering rule:** Classify retryable outcomes, cap attempts and elapsed time, use exponential backoff with jitter, honor provider pushback, and make side effects idempotent or detect ambiguous completion.
-- **Production failure mode:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
-- **Existing-codebase evidence:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+- **SHOULD — engineering rule:** Randomize every backoff sleep. Full jitter — sleep = random_between(0, min(cap, base * 2^attempt)) — is the AWS-recommended default with the best tail behavior ([S055](#s055)); equal jitter — min(cap, base * 2^attempt)/2 + random(0, min(cap, base * 2^attempt)/2) — when the delay needs a floor; decorrelated jitter — sleep = min(cap, random(base, prev_sleep * 3)) — when fleets restart in waves.
+- **Production failure mode:** Missing jitter reproduces synchronized retry waves with growing amplitude: thousands of clients hit the dependency in lockstep each interval and recovery never converges despite backoff.
+- **Existing-codebase evidence:** Locate the delay computation and verify a per-attempt random component exists (many generated clients ship deterministic backoff by default); simulate N concurrently failed callers and measure retry arrival spread.
 
 ### 7.6. Retry budgets
 
-- **SHOULD — engineering rule:** Classify retryable outcomes, cap attempts and elapsed time, use exponential backoff with jitter, honor provider pushback, and make side effects idempotent or detect ambiguous completion.
-- **Production failure mode:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
-- **Existing-codebase evidence:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+- **SHOULD — engineering rule:** Cap total retries as a share of traffic with a token bucket (for example, retries <= 10% of requests per minute window); when the budget is empty, fail fast instead of retrying; track the retry ratio as an SLO signal because a rising ratio marks the transition from partial outage toward total outage.
+- **Production failure mode:** Unbudgeted retries multiply a 20% dependency failure rate into multiples of the original load; retry traffic crowds out fresh successful work so the dependency never drains and recovers.
+- **Existing-codebase evidence:** Check for a per-dependency retry-budget/token-bucket setting (hand-rolled loops almost never have one); export retry attempts separately from first attempts so monitoring can compute the ratio.
 
 ### 7.7. Duplicate side effects
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Duplicate side effects** within Retry Engineering: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for duplicate side effects is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for duplicate side effects, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Idempotency precondition: non-idempotent operations (payment POST, resource creation, message publish) need idempotency keys issued and durably stored BEFORE any retry logic exists; retries reuse the same key so replays converge on the first outcome (paper 036).
+- **Production failure mode:** A lost response after commit triggers a keyless retry; the provider charges twice or the message publishes twice, and reconciliation finds the duplicate days later.
+- **Existing-codebase evidence:** Search for retries around non-idempotent calls without keys (charge APIs, POST submits, publishes); verify one key per logical operation — generated once and reused across attempts, not one per attempt.
 
 ### 7.8. Retry storms
 
-- **SHOULD — engineering rule:** Classify retryable outcomes, cap attempts and elapsed time, use exponential backoff with jitter, honor provider pushback, and make side effects idempotent or detect ambiguous completion.
-- **Production failure mode:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
-- **Existing-codebase evidence:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+- **MUST — engineering rule:** Bound amplification by construction: 3 layers x 3 attempts each = up to 27 calls per user action; assign exactly one retry owner per layer, propagate deadlines so child retries cannot outlive the parent deadline, and gate aggregate retries behind the retry budget.
+- **Production failure mode:** During a dependency outage every layer retries independently; multiplicative amplification stacks synchronized waves on top of each other and turns a brownout into a total outage.
+- **Existing-codebase evidence:** Draw the call graph and multiply retry counts and deadlines across client, gateway, service, SDK, and worker layers; flag any path whose worst-case attempts exceed the parent deadline or that lacks a single retry owner.
 
 ### 7.9. Nested retries
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Nested retries** within Retry Engineering: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for nested retries is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for nested retries, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Never stack invisible retry policies: an inner SDK retry inside an outer service retry multiplies attempts; pin inner/library defaults to zero or one retry, keep semantic policy at one layer, and make any deliberate nesting explicit and deadline-aware.
+- **Production failure mode:** A library default (often 3 attempts, no jitter) hides beneath the outer policy; measured p99 explodes and the outage amplifies by the hidden multiplier exactly when the dependency is weakest.
+- **Existing-codebase evidence:** Grep for nested retry configurations across client/gateway/service layers (SDK defaults, mesh retry policy, database driver retry, HTTP middleware) and reconcile them under one declared owner.
 
 ### 7.10. Client + server retries
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Client + server retries** within Retry Engineering: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for client + server retries is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for client + server retries, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Assign ownership explicitly: the client owns operation-semantics retries (idempotent replay with keys); server and mesh retries handle only transport-level, provably-safe classes; when both exist, combine budgets so the same failure is never retried independently by both sides.
+- **Production failure mode:** The server retries successfully after the client already gave up; the client retries again, so one logical operation executes twice against a non-idempotent endpoint.
+- **Existing-codebase evidence:** Inventory mesh/gateway retry policies alongside client-library policies for the same route; verify combined worst-case attempts stay inside budget and response-lost-after-commit resolves via idempotency/outcome lookup rather than blind retry.
 
 ### 7.11. Retry-after handling
 
-- **SHOULD — engineering rule:** Classify retryable outcomes, cap attempts and elapsed time, use exponential backoff with jitter, honor provider pushback, and make side effects idempotent or detect ambiguous completion.
-- **Production failure mode:** Permanent failures loop forever, retries synchronize into a storm, or a timed-out successful operation is duplicated.
-- **Existing-codebase evidence:** Inject each error class and verify attempt count, schedule, deadline budget, duplicate behavior, and terminal routing.
+- **MUST — engineering rule:** Retry-After precedence: a server-provided delay (delta-seconds or HTTP-date on 429/503) overrides the locally computed backoff; if the header is absent on 429/503, fall back to exponential backoff with jitter anyway; clamp the honored delay to the remaining deadline and budget, and scope it to the affected credential, not the whole process.
+- **Production failure mode:** Ignoring Retry-After converts temporary throttling into bans and blacklists; honoring it process-wide freezes unrelated background work that merely shares the scheduler with the throttled endpoint.
+- **Existing-codebase evidence:** Check the 429/503 handler reads Retry-After before computing a local delay; verify both header forms parse, values are clamped to deadline/budget, and ignored-or-clamped events are counted.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 

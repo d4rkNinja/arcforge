@@ -62,15 +62,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Optionality, deletion semantics, history, and ownership must be explicit because they affect every query and migration.
 5. **Invariant 5:** Derived fields need a source of truth, recomputation rule, and divergence detection.
 
-Additional topic-specific invariants:
-
-- **SHOULD — Auto-increment IDs:** Define the exact semantics of **Auto-increment IDs** within Identifiers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — ULID:** Define the exact semantics of **ULID** within Identifiers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Public IDs:** Define the exact semantics of **Public IDs** within Identifiers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Sequential IDs:** Define the exact semantics of **Sequential IDs** within Identifiers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Collision handling:** Define the exact semantics of **Collision handling** within Identifiers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — ID migration:** Define the exact semantics of **ID migration** within Identifiers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

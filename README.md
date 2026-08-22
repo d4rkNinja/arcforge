@@ -2,7 +2,7 @@
 
 > Production architecture decisions your AI coding agent can explain, challenge, and prove.
 
-**v0.4.1 · 17 portable Agent Skills · Claude Code, Codex, and compatible runtimes · MIT**
+**v0.4.2 · 17 portable Agent Skills · Claude Code, Codex, and compatible runtimes · MIT**
 
 ArcForge gives your agent the part it usually skips: invariants, failure modes,
 trust boundaries, recovery, rollout safety, and evidence. Describe what you want

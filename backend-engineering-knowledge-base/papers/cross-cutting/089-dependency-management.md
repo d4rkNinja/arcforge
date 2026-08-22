@@ -66,15 +66,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Composition roots should make infrastructure choices visible and testable.
 5. **Invariant 5:** Abstractions should encode stable policy or variability, not conceal every framework primitive.
 
-Additional topic-specific invariants:
-
-- **SHOULD — Direct dependencies:** Define the exact semantics of **Direct dependencies** within Dependency Management: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Version pinning:** Define the exact semantics of **Version pinning** within Dependency Management: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Updates:** Define the exact semantics of **Updates** within Dependency Management: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Abandoned libraries:** Define the exact semantics of **Abandoned libraries** within Dependency Management: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Supply-chain risk:** Define the exact semantics of **Supply-chain risk** within Dependency Management: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Minimal dependency strategy:** Define the exact semantics of **Minimal dependency strategy** within Dependency Management: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

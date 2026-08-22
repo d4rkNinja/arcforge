@@ -311,7 +311,6 @@ The most important production insight is that Git is not fundamentally a sequenc
 A simplified repository model is:
 
 text
-Copy
                     object database
                         |
                         v
@@ -337,7 +336,6 @@ The four states an agent must keep separate
 Most everyday Git mistakes come from confusing the working tree, index, HEAD/current commit, and remote state.
 
 text
-Copy
 Working tree
     |
     | git add
@@ -383,7 +381,6 @@ MUST — model commit identity as the complete object ID, not as a fixed seven-c
 A robust external model is conceptually:
 
 text
-Copy
 CommitIdentity {
     repository_id
     hash_algorithm
@@ -392,17 +389,14 @@ CommitIdentity {
 rather than:
 
 text
-Copy
 commit_sha CHAR(7)
 or even blindly:
 
 text
-Copy
 commit_sha CHAR(40)
 SHOULD — store ref identity separately from commit identity.
 
 text
-Copy
 RefState {
     repository_id
     ref_name       # refs/heads/main
@@ -426,7 +420,6 @@ MUST — use ancestry tests when asking ancestry questions. Timestamp comparison
 SHOULD — define precisely what “changes in this branch” means. Possible interpretations include:
 
 text
-Copy
 A..B        commits reachable from B but not A
 A...B       symmetric relationship based around merge history
 merge-base  comparison against the common ancestor
@@ -439,7 +432,6 @@ A branch is cheap because creating one primarily creates another ref pointing in
 The useful lifecycle is:
 
 text
-Copy
 nonexistent
     |
     | create ref
@@ -480,7 +472,6 @@ MUST — test repository changes on the filesystem classes used by production de
 Typical cross-platform failures include:
 
 text
-Copy
 Linux:
   UserService.go
   userservice.go
@@ -491,7 +482,6 @@ case-insensitive developer filesystem:
 and:
 
 text
-Copy
 repository normalized to LF
 developer editor emits CRLF
 generator rewrites whole file
@@ -522,7 +512,6 @@ The Git index means the staging area; it is not the same concept as a database i
 An AI agent must never confuse these three meanings:
 
 text
-Copy
 Git index             = proposed next tree / staging state
 commit-graph          = history traversal acceleration
 multi-pack-index      = object lookup acceleration across packs
@@ -558,7 +547,6 @@ AVOID — creating develop, release, staging, qa, uat, and production branches m
 A healthier deployment model is commonly:
 
 text
-Copy
 main commit A
    |
    +--> artifact A
@@ -569,7 +557,6 @@ main commit A
 rather than rebuilding successively unrelated branch states:
 
 text
-Copy
 dev -> qa -> staging -> prod branches
 The former promotes an immutable artifact; the latter can accidentally test one source state and deploy another.
 
@@ -579,7 +566,6 @@ Classical Gitflow distinguishes a production branch, a development integration b
 That has real value when:
 
 text
-Copy
 customers on v3.x need critical fixes
 customers on v4.x need different fixes
 v5 is under active development
@@ -587,7 +573,6 @@ release certification takes weeks
 It is excessive when:
 
 text
-Copy
 one SaaS backend
 one supported production state
 multiple deployments every day
@@ -655,7 +640,6 @@ A conflict is not itself an error. It means Git could not automatically determin
 A correct conflict workflow is:
 
 text
-Copy
 discover conflict
        |
        v
@@ -695,7 +679,6 @@ Pull requests and merge requests are state machines
 A production PR should be understood approximately as:
 
 text
-Copy
 Draft
   |
   v
@@ -729,7 +712,6 @@ The stale-base race
 Consider:
 
 text
-Copy
 main = A
 
 PR1: A -> B       tests pass
@@ -769,7 +751,6 @@ Ref updates are compare-and-swap problems
 Suppose two developers fetch:
 
 text
-Copy
 origin/main = A
 
 Developer 1 creates:
@@ -780,7 +761,6 @@ A -> C
 Developer 1 pushes first:
 
 text
-Copy
 remote main: A -> B
 Developer 2’s ordinary push of C would discard the advancement to B, so Git rejects a non-fast-forward update by default.
 
@@ -791,7 +771,6 @@ MUST — treat a non-fast-forward rejection as “the precondition changed,” n
 Correct response:
 
 text
-Copy
 refresh
 understand B
 integrate/rebase C with B
@@ -800,7 +779,6 @@ attempt update again
 Incorrect response:
 
 text
-Copy
 git push --force
 Force-with-lease
 When history rewriting is intentionally allowed, --force-with-lease is safer than unconditional force because it can require that the remote ref still have an expected value. This is analogous to optimistic locking / compare-and-swap.
@@ -808,7 +786,6 @@ When history rewriting is intentionally allowed, --force-with-lease is safer tha
 Conceptually:
 
 text
-Copy
 UPDATE ref
 SET target = NEW
 WHERE target = EXPECTED_OLD
@@ -821,7 +798,6 @@ A particularly non-obvious Git edge case is that the convenient implicit lease o
 For highly sensitive automation, explicit expected state is preferable:
 
 text
-Copy
 expected old OID known from workflow state
                  |
                  v
@@ -829,7 +805,6 @@ conditional ref update
 rather than:
 
 text
-Copy
 whatever origin/main currently says locally
 Local ref transactions
 Git’s update-ref supports ref transactions. Updates can be prepared, locks acquired, and the transaction aborted if necessary rather than silently modifying only whichever refs happened to succeed first.
@@ -839,7 +814,6 @@ MUST — use transactional ref primitives when multiple local refs form one logi
 For example:
 
 text
-Copy
 release branch -> commit X
 release tag    -> commit X
 If policy says both must transition together, independently writing them introduces an intermediate invalid state.
@@ -859,7 +833,6 @@ Git’s content-addressed storage has naturally idempotent properties at the obj
 Production automation should define mutations in terms of desired ref state:
 
 text
-Copy
 desired:
 refs/heads/main = X
 
@@ -882,7 +855,6 @@ The ambiguous push problem
 A classic distributed failure is:
 
 text
-Copy
 client sends push
 server updates ref successfully
 network drops before client receives response
@@ -911,7 +883,6 @@ Consistency model
 Git clones are intentionally capable of diverging.
 
 text
-Copy
 clone A                    canonical remote                   clone B
 main=A                     main=A                            main=A
 
@@ -942,7 +913,6 @@ Recovery hierarchy
 A disciplined recovery order is:
 
 text
-Copy
 Understand current state
         |
         v
@@ -992,7 +962,6 @@ Security, authorization, CI/CD, and software supply chain
 Production Git security has at least six distinct trust layers:
 
 text
-Copy
 human / workload identity
         |
         v
@@ -1036,7 +1005,6 @@ MUST — apply least privilege separately to repository write, package publishin
 A CI job needing read access to source does not automatically need permission to:
 
 text
-Copy
 push main
 delete tags
 publish packages
@@ -1060,14 +1028,12 @@ NEVER — rely solely on developer-side hooks to enforce security, authorization
 Client hooks are appropriate for rapid feedback:
 
 text
-Copy
 formatting
 simple lint
 commit-message assistance
 Server/host policy must own:
 
 text
-Copy
 protected-ref rules
 required approval
 mandatory CI
@@ -1089,7 +1055,6 @@ CI executes potentially hostile code
 A pull request may modify:
 
 text
-Copy
 build scripts
 test scripts
 package-manager hooks
@@ -1110,7 +1075,6 @@ SHOULD — separate unprivileged validation from privileged release/deployment s
 A secure conceptual pipeline is:
 
 text
-Copy
 untrusted candidate
       |
       v
@@ -1137,7 +1101,6 @@ AVOID — floating references such as mutable branches for privileged CI depende
 This same principle applies beyond GitHub Actions:
 
 text
-Copy
 bad trust anchor:
 some-tool@main
 
@@ -1168,7 +1131,6 @@ Modern supply-chain assurance goes beyond signing individual commits. SLSA’s S
 This is a more complete production model:
 
 text
-Copy
 commit cryptographic identity
            +
 protected branch acceptance
@@ -1194,7 +1156,6 @@ A normal revert leaves the secret in earlier Git history. GitHub explicitly warn
 Correct incident thinking is:
 
 text
-Copy
 secret exposed
     |
     +--> credential compromise response / revoke or rotate
@@ -1218,7 +1179,6 @@ Audit
 Git object history answers many questions about source evolution, but enterprise audit often needs additional events:
 
 text
-Copy
 who authenticated
 who changed permissions
 who bypassed protection
@@ -1234,7 +1194,6 @@ MUST — retain administrative audit records separately when compliance or foren
 SHOULD — correlate ref-update events using:
 
 text
-Copy
 actor identity
 authentication mechanism
 repository
@@ -1271,7 +1230,6 @@ Release identity
 A release needs an immutable answer to:
 
 text
-Copy
 What exact source produced this?
 Git tags are common release anchors. Git documentation recommends annotated tags for releases, while lightweight tags are better suited to temporary/private labeling. Git also strongly discourages silently replacing an already published tag with a different object because consumers can otherwise have different source content associated with “the same” version.
 
@@ -1284,7 +1242,6 @@ SHOULD — use signed annotated tags when release authenticity requires it.
 A robust release relationship is:
 
 text
-Copy
 version 3.8.2
       |
       v
@@ -1307,7 +1264,6 @@ MUST — define what constitutes the public compatibility contract before claimi
 For backend systems that can include:
 
 text
-Copy
 HTTP APIs
 event schemas
 database integration contracts
@@ -1336,7 +1292,6 @@ Release branches are justified when a released line must remain independently se
 Example:
 
 text
-Copy
 main
   |
   +---- 6.0 development
@@ -1354,7 +1309,6 @@ Large repositories
 Repository scale appears in several dimensions:
 
 text
-Copy
 number of files
 total historical blob size
 number of commits
@@ -1379,7 +1333,6 @@ NEVER — run destructive pruning as a first response to “repository uses too 
 Useful operational metrics include:
 
 text
-Copy
 repository/object-store size
 packfile count
 ref count
@@ -1423,7 +1376,6 @@ MUST — determine whether history-dependent operations are running in a shallow
 Potentially affected logic includes:
 
 text
-Copy
 version calculation from historical tags
 merge-base calculations across old ancestry
 full changelog generation
@@ -1447,7 +1399,6 @@ Git LFS stores small pointer files in Git while large content is managed separat
 This creates a second object lifecycle.
 
 text
-Copy
 Git commit
    |
    v
@@ -1474,7 +1425,6 @@ Git does not decide architecture ownership boundaries for you.
 A monorepo can simplify:
 
 text
-Copy
 atomic cross-component source changes
 global refactoring
 single review graph
@@ -1482,7 +1432,6 @@ dependency visibility
 while increasing:
 
 text
-Copy
 checkout/index scale
 CI selection complexity
 authorization granularity
@@ -1494,7 +1443,6 @@ MUST — recognize that two repositories cannot be atomically committed together
 For cross-repository migrations, design compatibility windows:
 
 text
-Copy
 repo A publishes backward-compatible contract
         |
 repo B migrates
@@ -1510,7 +1458,6 @@ MUST — treat repository-wide history rewriting as a migration, not cleanup.
 A migration plan should cover:
 
 text
-Copy
 freeze or coordinate writes
 backup canonical repository
 define exact rewrite
@@ -1561,7 +1508,6 @@ Renaming the default branch is not just a git branch -m operation in a productio
 An agent should inspect:
 
 text
-Copy
 remote default HEAD
 branch protections/rulesets
 CI triggers
@@ -1582,7 +1528,6 @@ Changing from Gitflow to trunk, changing merge method, enforcing signing, switch
 SHOULD — separate policy migration into phases:
 
 text
-Copy
 observe existing behavior
         |
 introduce tooling compatible with both models
@@ -1637,7 +1582,6 @@ Existing-codebase checks before touching anything
 An agent should build a repository inventory approximately equivalent to:
 
 text
-Copy
 Repository state
   current HEAD + detached status
   clean/dirty working tree
@@ -1783,7 +1727,6 @@ A Git platform or engineering organization SHOULD measure enough to distinguish 
 Useful metrics include:
 
 text
-Copy
 pull/merge request lead time
 time waiting for review
 time waiting for CI
@@ -1811,7 +1754,6 @@ A safe agent execution contract
 Before an AI agent changes repository history or workflow, its decision path SHOULD resemble:
 
 text
-Copy
 Inspect
   |
   +--> repository state clean/safe?
@@ -1891,7 +1833,6 @@ Git correctness is graph correctness plus distributed-state correctness plus pol
 A basic implementation thinks in commands:
 
 text
-Copy
 checkout
 pull
 commit
@@ -1900,7 +1841,6 @@ merge
 An experienced backend engineer thinks in invariants:
 
 text
-Copy
 Which immutable object represents the candidate?
 
 Which mutable ref currently points where?

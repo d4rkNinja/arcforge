@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Network calls inside database transactions extend lock time and create outcomes that cannot be atomically rolled back.
 5. **Invariant 5:** Distributed locks without fencing cannot prevent a paused or partitioned former owner from writing after lease expiry.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -175,12 +173,11 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 - **Production failure mode:** Workers hang, retry only the failed statement, or create a synchronized retry storm.
 - **Existing-codebase evidence:** Force reversed lock order in tests and verify classification, rollback, retry, metrics, and user-visible outcome.
 
-### 8.12. Lock timeouts
+### Lock timeouts
 
-- **MUST — engineering rule:** Establish an end-to-end deadline, allocate smaller downstream budgets, propagate cancellation, and stop expensive or side-effecting work when the result is no longer useful unless explicitly designed otherwise.
-- **Production failure mode:** Requests wait indefinitely, downstream work continues after callers leave, or nested timeouts exceed the original budget.
-- **Existing-codebase evidence:** Inject slow dependencies at each hop and verify cancellation reaches database, network calls, streams, and workers.
-
+- **MUST - engineering rule:** Configure engine-specific lock-wait limits per deployment and know what a timeout actually undoes: PostgreSQL `lock_timeout` aborts only the statement that was waiting; MySQL `innodb_lock_wait_timeout` rolls back only the failed statement when `innodb_rollback_on_timeout=OFF` (the default), leaving the transaction open with earlier statements still applied. A lock-timeout error therefore requires explicit transaction-level handling (retry whole transaction or roll back deliberately), never an assumption that the transaction ended.
+- **Production failure mode:** Code treats a lock-wait timeout as full rollback, continues issuing further statements on the half-applied transaction, and commits partial state; or long blocking chains have no timeout at all and requests pile on a held lock until connection pools exhaust.
+- **Existing-codebase evidence:** Find where lock/wait timeouts are configured versus defaults; check handlers of lock-timeout errors for transaction retry-vs-abort decisions; verify no code path continues after a timeout without rolling back explicitly.
 ### 8.16. Transaction scope
 
 - **MUST — engineering rule:** Draw the boundary around the invariant and authoritative writes, keep it short, and keep unbounded network/user work outside. Make commit outcome and post-commit side effects explicit.

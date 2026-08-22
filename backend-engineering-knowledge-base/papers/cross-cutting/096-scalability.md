@@ -150,9 +150,9 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.4. Partitioning
 
-- **SHOULD — engineering rule:** State the ordering scope, assign monotonic per-aggregate/version metadata where needed, and make consumers reject, buffer, or reconcile stale/out-of-order items.
-- **Production failure mode:** Parallel partitions or retries apply an older event after a newer one and regress state.
-- **Existing-codebase evidence:** Deliver permutations, duplicates, gaps, and partition rebalances; verify deterministic final state.
+- **SHOULD — engineering rule:** Choose partition keys from access patterns, cardinality, and skew analysis; avoid monotonically increasing keys (timestamps, sequential IDs) because they funnel writes into one trailing partition; design the resharding strategy—consistent hashing, slot-based rebalancing—before scale forces it, because retrofitted resharding becomes a double-write migration; and inventory which operations fan out across shards, because cross-shard queries and transactions carry multiplicative cost.
+- **Production failure mode:** Time-ordered keys concentrate writes on the trailing partition, resharding is improvised retroactively under load as a double-write migration, and one logical query fans out into unbounded cross-shard work.
+- **Existing-codebase evidence:** Review partition-key choices against measured skew; check monitoring granularity reaches per-partition level; find the resharding runbook or flag its absence before growth forces the choice.
 
 ### 7.5. Sharding
 
@@ -186,9 +186,9 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.10. Hot partitions
 
-- **SHOULD — engineering rule:** Choose a key from access patterns, cardinality, locality, tenant size, growth, and rebalancing needs; design routing metadata and cross-shard operations before scale forces migration.
-- **Production failure mode:** Monotonic or celebrity keys overload one shard, cross-shard queries become the norm, or resharding blocks writes.
-- **Existing-codebase evidence:** Replay skewed production-like distributions and rehearse split/move/failover with concurrent reads and writes.
+- **SHOULD — engineering rule:** Detect skew with per-partition load metrics before users report it; mitigate with key splitting and salting, hot-tenant isolation onto dedicated partitions, caching hot entities, and request coalescing; recognize that celebrity-key patterns need product-level answers—fan-out-on-write limits, async materialization—not just technical ones.
+- **Production failure mode:** One partition saturates while aggregate dashboards look healthy; salting destroys point-read locality without removing the heat; a celebrity account outgrows every technical mitigation because fan-out grows with audience size.
+- **Existing-codebase evidence:** Confirm per-partition load metrics exist and alert on imbalance; locate salting, hot-tenant isolation, or request-coalescing logic; check whether fan-out-on-write limits exist for celebrity accounts.
 
 ### 7.11. Hot keys
 

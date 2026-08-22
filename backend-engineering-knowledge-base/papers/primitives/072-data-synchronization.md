@@ -66,15 +66,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Dual-write creates two possible truths unless conflict resolution and reconciliation are explicit.
 5. **Invariant 5:** Rollback may mean rolling application code forward with a fix rather than reversing an irreversible data transformation.
 
-Additional topic-specific invariants:
-
-- **SHOULD — Incremental sync:** Define the exact semantics of **Incremental sync** within Data Synchronization: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Change tokens:** Define the exact semantics of **Change tokens** within Data Synchronization: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Last-write-wins:** Define the exact semantics of **Last-write-wins** within Data Synchronization: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Offline writes:** Define the exact semantics of **Offline writes** within Data Synchronization: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST — Deletion sync:** Define the exact semantics of **Deletion sync** within Data Synchronization: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Resumable sync:** Define the exact semantics of **Resumable sync** within Data Synchronization: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

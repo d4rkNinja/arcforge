@@ -170,8 +170,8 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.7. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **SHOULD — engineering rule:** Give memory entries explicit freshness semantics: episodic entries carry timestamps and decay or refresh by policy, working-session state expires with the session, and durable knowledge states what keeps it valid so stale facts can be superseded instead of silently outvoting current context.
+- **Production failure mode:** Undated memories let obsolete facts outrank fresh retrieval, and never-expiring session scratch data turns the memory store into an unbounded liability.
 - **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
 
 ### 7.8. Provenance
@@ -378,7 +378,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - **Short-term memory:** A micro-optimization shifts pressure to memory, database, or network and worsens production tails.
 - **User memory:** A micro-optimization shifts pressure to memory, database, or network and worsens production tails.
 - **Retrieval:** A stale or cross-user memory influences behavior, deleted data remains retrievable, or an untrusted statement becomes a durable profile.
-- **Expiration:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **Expiration:** Undated memories let obsolete facts outrank fresh retrieval, and never-expiring session scratch data turns the memory store into an unbounded liability.
 - **Provenance:** A stale or cross-user memory influences behavior, deleted data remains retrievable, or an untrusted statement becomes a durable profile.
 - **Permission-aware memory:** An authenticated caller accesses another object, hidden field, or state transition because lookup and authorization are separated or policy inputs are incomplete.
 - **Privacy:** A framework or provider default for privacy is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.

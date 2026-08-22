@@ -65,7 +65,7 @@ Additional topic-specific invariants:
 - **SHOULD — Retries:** Define the exact semantics of **Retries** within Batch Processing: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **MUST — Idempotency:** Scope keys to caller and operation, bind them to a canonical request fingerprint, reserve atomically, persist terminal outcome, and distinguish in-progress, succeeded, retryable-failed, and permanently-failed states.
 - **SHOULD — Resume support:** Process bounded deterministic chunks with checkpoints after durable commit, idempotent writes, rate/resource limits, pause/resume, version guards, and validation samples plus full reconciliation.
-- **SHOULD — Ordering:** Define deterministic ordering, null placement, collation, and a unique tie-breaker. Treat user-selected sort fields as an allowlisted query plan, not arbitrary SQL/expressions.
+- **Production failure mode:** OFFSET chunks skip or repeat rows when data mutates mid-run, checkpoints committed before their effects lose work on crash, and reruns without key-based dedupe double-send every output.
 
 ## 4. Architecture decisions and conflicting approaches
 
@@ -190,8 +190,8 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.11. Ordering
 
-- **SHOULD — engineering rule:** Define deterministic ordering, null placement, collation, and a unique tie-breaker. Treat user-selected sort fields as an allowlisted query plan, not arbitrary SQL/expressions.
-- **Production failure mode:** Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
+- **SHOULD - engineering rule:** Make every batch resumable and idempotent: chunk by keyset pagination over a stable unique key (never OFFSET into live data), commit checkpoints after durable effect, and let natural-key detection collapse reruns instead of duplicating outputs.
+- **Production failure mode:** OFFSET-based chunking skips or repeats rows when data mutates mid-run, checkpoints committed before their effects lose work on crash, and un-keyed reruns double-process everything already shipped.
 - **Existing-codebase evidence:** Inspect explain plans for every allowed sort/filter combination and test ties, nulls, Unicode, and concurrent writes.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
@@ -370,7 +370,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - **Partial failures:** A framework or provider default for partial failures is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Resource limits:** A framework or provider default for resource limits is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Resume support:** Restart repeats or skips rows, live writes are overwritten by stale data, or the job saturates production.
-- **Ordering:** Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
+- **Ordering:** Checkpoints committed before their effects, OFFSET chunks over mutating data, or un-keyed reruns reprocess shipped work and double-send outputs.
 
 ## 18. AI coding-agent failure modes
 

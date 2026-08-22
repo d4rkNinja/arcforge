@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Ordering is usually scoped to a partition/key and conflicts with parallelism.
 5. **Invariant 5:** Poison messages require bounded retries, quarantine, diagnosis, and replay tooling.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -120,23 +118,83 @@ A production representation commonly needs the following fields or equivalent ev
 
 Each subsection answers three questions: what rule must be implemented, what fails in production, and what an agent must inspect in an existing codebase before changing it.
 
-### Default obligations
+### 8.1. Transactional delivery
 
-These subtopics carry no additional domain-specific rule beyond the default obligation: for each, define owner, inputs, outputs, invariants, lifecycle, failure classification, and a compatibility contract; make the rule enforceable at the narrowest authoritative boundary; and do not accept a framework or provider default without proving it fits the domain.
+- **MUST — engineering rule:** Make send intent durable before any provider call: persist recipient, template/version, idempotency key, tenant, and causal event in an outbox/send-record committed in the same transaction as the triggering domain state, then hand off to the queue. A provider API call is never transactional with the database.
+- **Production failure mode:** Code calls the provider after commit without durable intent; a crash between commit and send silently loses password resets and receipts, while a pre-commit call mails users about data that rolls back.
+- **Existing-codebase evidence:** Find every provider SDK call site; verify each consumes intent written transactionally with domain state, and that no path invokes the provider before the domain commit lands.
 
-- **Transactional delivery**
-- **Queuing**
-- **Templates**
-- **Provider failures**
-- **Retries**
-- **Bounce handling**
-- **Complaint handling**
-- **Suppression lists**
-- **SPF**
-- **DKIM**
-- **DMARC**
-- **Idempotent sending**
-- **Duplicate-email prevention**
+### 8.2. Queuing
+
+- **SHOULD — engineering rule:** Send exclusively through a queue, not request handlers: provider throttling becomes backpressure instead of request latency, bursts are smoothed, retries and dead-lettering have a home, and sending capacity is isolated from web capacity.
+- **Production failure mode:** A campaign blast saturates provider rate limits from request threads — user requests time out, and password resets queue behind newsletters with no isolation between traffic classes.
+- **Existing-codebase evidence:** Verify sends originate only from queue consumers; compare consumer concurrency against the provider's documented send-rate quota; confirm dead-lettered send jobs alert instead of expiring silently.
+
+### 8.3. Templates
+
+- **SHOULD — engineering rule:** Version templates like code; render subject/body from named variables validated at render time — a missing variable fails loudly, never ships literal placeholders; record which template version produced each message so support can reproduce exactly what a user received.
+- **Production failure mode:** Editing a live template instantly changes legal text and unsubscribe links for all queued messages, unreproducibly; a renamed variable ships `{{firstName}}` to customers.
+- **Existing-codebase evidence:** Identify where templates live (code, database, or provider console) and who can edit them in production; confirm rendered output or template version is stored per message.
+
+### 8.4. Provider failures
+
+- **SHOULD — engineering rule:** Integrate delivery/bounce/complaint webhooks to drive message state transitions (provider `250 Accepted` is not delivery): verify webhook signatures and handle them idempotently; treat deliverability reputation as live state on IP+domain — ramp volume to warm new dedicated IPs over weeks, expect shared-pool variance to couple your inbox placement to neighbors' behavior, and treat volume spikes as reputation damage.
+- **Production failure mode:** Unsigned webhook endpoints let anyone mark arbitrary messages delivered, masking black holes; duplicate webhook deliveries double-count bounces; a cold dedicated IP launched at full volume lands mail in spam everywhere while API-success dashboards stay green.
+- **Existing-codebase evidence:** Check webhook signature validation and dedupe handling at the receiver; identify dedicated-vs-shared sending IPs and the warm-up plan; confirm bounce/complaint-rate alarms exist at provider-recommended thresholds, not just API-error alerts.
+
+### 8.5. Retries
+
+- **SHOULD — engineering rule:** Retry transient failures (timeouts, 5xx, throttling) with exponential backoff and bounded attempts; never retry permanent rejections (invalid address, suppressed recipient); re-check the suppression list before every retry attempt, not only at enqueue time.
+- **Production failure mode:** A retry loop hammers hard-bounced addresses until bounce/complaint rates trigger provider suspension; a retry bypasses a suppression added between attempts and mails a user seconds after they opted out.
+- **Existing-codebase evidence:** Classify each retry trigger transient-vs-permanent in code; count max attempts per message; trace whether the suppression check executes inside the retry path or only once at dispatch.
+
+### 8.6. Bounce handling
+
+- **SHOULD — engineering rule:** Accept bounces as asynchronous reality: classify them on arrival — hard bounce (invalid mailbox) suppresses the address permanently; soft bounce (mailbox full, greylisting) gets a bounded retry window then suppression; auto-responses and vacation replies are not bounces and must never trigger suppression.
+- **Production failure mode:** Mailing invalid addresses forever pushes bounce rate past provider thresholds and suspends the sending domain; conversely, treating out-of-office autoreplies as hard bounces silently deletes real users from the audience.
+- **Existing-codebase evidence:** Stage known-hard, known-soft, and auto-response samples against the bounce classifier; verify each class maps to a distinct outcome and that the soft-bounce window is bounded and observable.
+
+### 8.7. Complaint handling
+
+- **SHOULD — engineering rule:** Feedback-loop spam complaints feed the suppression list automatically and immediately; publish List-Unsubscribe headers with RFC 8058 one-click support and honor unsubscribes promptly — CAN-SPAM/GDPR make timely honoring a legal requirement, and the transactional-mail exemption is narrow (password resets yes, marketing never).
+- **Production failure mode:** Complaints pile up in an unread dashboard while the campaign keeps sending; complaint rate crosses ~0.1% and the provider throttles or suspends the account mid-launch.
+- **Existing-codebase evidence:** Trace the complaint-event path end-to-end from webhook to suppression row; confirm List-Unsubscribe/List-Unsubscribe-Post headers on bulk templates and that the unsubscribe endpoint actually suppresses future sends.
+
+### 8.8. Suppression lists
+
+- **SHOULD — engineering rule:** Maintain durable do-not-send state keyed by address+reason (hard bounce, complaint, unsubscribe), checked BEFORE every send attempt and authoritative over retries and scheduled campaigns; complaint/spam-report events insert rows automatically; entries added by support must survive provider-side list clears and re-syncs.
+- **Production failure mode:** Suppression enforced only inside the campaign tool while transactional paths send directly — an unsubscribed user still receives mail, complains again, and repeat complaints weigh heavier with receivers.
+- **Existing-codebase evidence:** Enumerate every send path (transactional, campaign, retry worker) and confirm each consults suppression first; suppress an address mid-flight and verify the retry worker skips it, not just the initial dispatcher.
+
+### 8.9. SPF
+
+- **SHOULD — engineering rule:** Publish a DNS TXT record authorizing exactly the IPs allowed to send for the domain (`v=spf1 include:<provider> -all`); choose `-all` (hard fail) vs `~all` (soft fail) deliberately; stay under the 10-DNS-lookup evaluation limit — naive include chains exceed it, receivers return permerror, and authentication silently stops working; note SPF aligns on the envelope sender, so DMARC alignment additionally needs the visible From: domain covered.
+- **Production failure mode:** Every vendor ever used remains in the record until lookups exceed 10 and validation fails for all receivers; or a third-party vendor sends from its own infrastructure outside the record and legitimate mail fails SPF.
+- **Existing-codebase evidence:** Enumerate the DNS records actually published (apex TXT plus resolved include chains, counting DNS-lookup mechanisms); reconcile every service that sends email as the domain against the record.
+
+### 8.10. DKIM
+
+- **SHOULD — engineering rule:** Sign every outbound message; publish public keys at `selector._domainkey.<domain>`; use 2048-bit keys; rotate by publishing a second simultaneous selector, switching signers, observing, then retiring the old selector — never leave a gap with unsigned mail; prefer relaxed/relaxed canonicalization so forwarding is less likely to break signatures.
+- **Production failure mode:** Rotation deletes the old DNS selector while messages signed with it are still in flight or archived, producing spurious `dkim=fail`; legacy 1024-bit keys fail modern receiver policy minimums.
+- **Existing-codebase evidence:** List published selectors and key sizes; identify which component signs (provider vs own MTA) and which headers are covered; rehearse rotation: add selector B, flip signers, observe, then remove selector A.
+
+### 8.11. DMARC
+
+- **SHOULD — engineering rule:** Publish policy at `_dmarc.<From-domain>`; DMARC requires identifier alignment — SPF's envelope domain or DKIM's signing domain must match the visible From: domain; roll out `p=none` (monitor via rua aggregate reports) → `p=quarantine` → `p=reject`; skipping the monitoring phase produces false-positive rejections of legitimate mail nobody inventoried.
+- **Production failure mode:** Jumping straight to `p=reject` silently drops invoices, CRM campaigns, and password resets sent by unaligned third parties for days before anyone notices.
+- **Existing-codebase evidence:** Read the live `_dmarc` record and rua report destination; inventory every service sending From: the domain and verify each passes alignment; review aggregate reports for unaligned legitimate sources before escalating policy.
+
+### 8.12. Idempotent sending
+
+- **MUST — engineering rule:** Attach a stable idempotency/dedupe key to every logical message event (event ID, not attempt ID) so retries and redeliveries converge on one actual email; use provider idempotency features where offered, otherwise enforce a unique constraint on a sent-record keyed by event ID checked within the send flow.
+- **Production failure mode:** Queue redelivery after an ambiguous provider timeout double-sends password resets — harmless once, but the same gap duplicates invoice emails to finance or doubles SMS spend at scale.
+- **Existing-codebase evidence:** Kill a sender worker mid-provider-call and restart; require exactly one resulting message. Search for send paths reachable from more than one queue/retry route sharing the same logical event without a shared dedupe key.
+
+### 8.13. Duplicate-email prevention
+
+- **SHOULD — engineering rule:** Dedupe at enqueue on (recipient, template, causal-event) tuples within a business-defined window so multi-path fanout or replayed batches cannot mail a user twice; distinguish legitimately repeated mail (monthly statement) by causal ID rather than blanket per-user rate limits.
+- **Production failure mode:** A replayed import or double-published event triggers two welcome flows; blanket rate limiting then masks the bug by dropping a legitimate receipt instead of the actual duplicate.
+- **Existing-codebase evidence:** Look for a unique constraint or dedupe table on user+template+source event; replay a processed event end-to-end and confirm zero additional sends.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 

@@ -62,15 +62,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Cryptographic protection fails when keys, randomness, nonces, algorithms, or lifecycle management are wrong.
 5. **Invariant 5:** Security controls require abuse-case tests and operational detection, not only happy-path unit tests.
 
-Additional topic-specific invariants:
-
-- **SHOULD — TLS:** Define the exact semantics of **TLS** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Certificate chains:** Define the exact semantics of **Certificate chains** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Certificate renewal:** Define the exact semantics of **Certificate renewal** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — mTLS:** Define the exact semantics of **mTLS** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST — Certificate revocation:** Define the exact semantics of **Certificate revocation** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MAY — Certificate pinning:** Define the exact semantics of **Certificate pinning** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -129,73 +120,63 @@ A production representation commonly needs the following fields or equivalent ev
 
 Each subsection answers three questions: what rule must be implemented, what fails in production, and what an agent must inspect in an existing codebase before changing it.
 
-### 7.1. TLS
+### Default obligations
 
-- **SHOULD — engineering rule:** Define the exact semantics of **TLS** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for tls is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for tls, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+These subtopics carry no additional domain-specific rule beyond the default obligation: for each, define owner, inputs, outputs, invariants, lifecycle, failure classification, and a compatibility contract; make the rule enforceable at the narrowest authoritative boundary; and do not accept a framework or provider default without proving it fits the domain.
 
-### 7.2. Certificates
+- **TLS**
+- **Certificates**
+- **Certificate chains**
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Certificates** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for certificates is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for certificates, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+### 8.1. Certificate validation
 
-### 7.3. Certificate chains
+- **MUST — engineering rule:** Full-chain validation on every connection: chain to a trusted root per RFC 5280 path building, validity windows, key usage extensions, hostname match (RFC 6125), and revocation status where the latency budget allows. Never ship code paths that disable validation—self-signed internal endpoints get an internal CA added to the trust store instead. TLS 1.2 minimum; prefer TLS 1.3 (RFC 8996 deprecates 1.0/1.1 entirely).
+- **Production failure mode:** `InsecureSkipVerify`/`rejectUnauthorized=false` committed for one staging endpoint becomes the global default; intermediate-certificate rotation breaks clients that pinned only the leaf or lack the new intermediate in their trust path.
+- **Existing-codebase evidence:** Grep verification-disable flags and custom trust stores; inventory which hops skip validation; confirm minimum-version floors are configured at every client, not just servers.
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Certificate chains** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for certificate chains is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for certificate chains, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+### 8.4. Certificate renewal
 
-### 7.4. Certificate validation
+- **MUST — engineering rule:** Automate renewal (ACME or platform rotation) with renewal starting around two-thirds of certificate lifetime; alert at fixed offsets before expiry (e.g., T-30/T-14/T-7 days) because silent renewal failure is invisible until outage. Deployed certificates must be reloaded by long-lived processes without dropping connections—verify reload behavior under load, since many stacks keep serving an expired cert until restart.
+- **Production failure mode:** ACME HTTP-01 challenges fail silently after a load-balancer change blocks `/.well-known/acme-challenge`; the cert expires days later on a weekend. Renewed secret written to disk but process never told to reload.
+- **Existing-codebase evidence:** Identify who owns renewal per environment; simulate challenge-path failure; test that renewed certs actually reach every terminating component (LB, ingress, mesh sidecars, CDN) without restart.
 
-- **MUST — engineering rule:** Define the exact semantics of **Certificate validation** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for certificate validation is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for certificate validation, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+### 8.7. mTLS
 
-### 7.5. Certificate renewal
+- **SHOULD — engineering rule:** mTLS gives service identity, which authorization then consumes—certificate CN/SAN/spiffe-id must map to a workload identity checked against policy per request, not merely "a valid client cert." Rotate client certificates like secrets (short-lived via mesh/workload platforms preferred over manual long-lived certs). Decide fail-open vs fail-closed for missing client certs explicitly per listener.
+- **Production failure mode:** mTLS deployed as checkbox while any client certificate from any CA still authorizes all actions; expired client certificates brick scheduled jobs that have no renewal automation.
+- **Existing-codebase evidence:** Check whether cert identity is enforced beyond handshake; inventory every non-interactive caller's renewal story; verify CRL/OCSP handling of revoked client certs.
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Certificate renewal** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for certificate renewal is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for certificate renewal, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+### 8.10. Private CAs
 
-### 7.6. Expiration
+- **SHOULD — engineering rule:** Internal CAs issue short-lived certificates through automated issuance (ACME/step-ca/platform integrators); root keys live offline/HSM; intermediates do daily signing. Constrain CA policy (name constraints, path length). Distributing the internal root into public trust stores is prohibited—private roots validate only internal traffic.
+- **Production failure mode:** A private root installed on developer laptops validates attacker-hosted internal-named sites outside the company network; an intermediate with no name constraints signs certificates for any domain once compromised.
+- **Existing-codebase evidence:** Inventory trust-store additions across images and devices; check intermediates for name constraints; verify offline custody and usage auditing of root material.
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
-- **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
+### 8.11. Certificate revocation
 
-### 7.7. mTLS
+- **SHOULD — engineering rule:** Choose revocation strategy by failure semantics: OCSP stapling shifts availability burden to the server but fails soft when staples go stale; hard-fail OCSP checks turn a slow responder into your outage; short-lived certificates (hours-to-days) make revocation mostly moot by bounding misuse duration—often the operationally superior choice. CRLs remain the fallback for batch-aware consumers.
+- **Production failure mode:** Browsers soft-fail OCSP, so "revoked" certificates keep working—the control exists on paper only. Hard-fail configurations take a site-wide outage when the CA's responder has a bad day (the 100% failure mode revocation checking adds).
+- **Existing-codebase evidence:** Determine whether revocation is actually enforced anywhere end-to-end; measure what happens when a leaked key is marked revoked (time-to-effect); prefer documenting short-lifetime + rotation over unenforced revocation.
 
-- **SHOULD — engineering rule:** Define the exact semantics of **mTLS** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for mtls is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for mtls, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+### 8.12. Hostname validation
 
-### 7.8. Private CAs
+- **MUST — engineering rule:** Match RFC 6125: compare the connection host against SAN dNSName entries (CN fallback only for legacy), wildcard rules (`*.example.com` matches one label, never sub-subdomains), and never validate against user-controlled Host headers or redirect targets without revalidation per hop. IP connections validate iPAddress SANs.
+- **Production failure mode:** Custom hostname checks using substring matching accept `evil-example.com` for `example.com`; following redirects to a different origin while reusing the first hop's verified session state.
+- **Existing-codebase evidence:** Search for hand-written hostname comparison logic; confirm redirect chains revalidate identity per hop; check SNI configuration matches intended routing.
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Private CAs** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for private cas is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for private cas, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+### 8.13. Certificate pinning
 
-### 7.9. Certificate revocation
+- **AVOID — engineering rule:** Pinning (leaf or SPKI pin sets) is justified only for high-value mobile/desktop clients with a tested backup-pin rotation path. Server-side pinning (HPKP) is dead—RFC 7469 was removed by browsers precisely because operators kept bricking their properties. Prefer CT monitoring + short-lived certs; if pinning exists, document the emergency-replacement runbook and expiry of pins themselves.
+- **Production failure mode:** CA rotates intermediates, pinned SPKI set doesn't include the new chain, every client refuses to connect; the backup pin was never tested and turns out to be malformed.
+- **Existing-codebase evidence:** Find pinning configs (mobile bundles, curl `--pinnedpubkey`, custom trust managers); verify a rotation rehearsal exists and pins have owners and expiry dates.
 
-- **MUST — engineering rule:** Define the exact semantics of **Certificate revocation** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for certificate revocation is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for certificate revocation, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+### 8.6. Expiration
 
-### 7.10. Hostname validation
+- **SHOULD — engineering rule:** Treat certificate expiry as a monitored lifecycle, not a surprise: automated renewal at ~two-thirds lifetime, alerts at T-30/T-14/T-7, and an inventory that maps every terminating endpoint (including jobs calling third parties and expiring SDK trust stores) to its renewal owner. Distinguish logical expiry (validation starts failing) from physical cleanup (files rotated on disk)—processes may need explicit reload signals.
+- **Production failure mode:** Expired intermediate inside a bundle nobody regenerates; a long-running worker holding the old trust store rejects the renewed upstream certificate after everyone else migrated.
+- **Existing-codebase evidence:** Test exact boundary times with controlled clocks; verify alert firing on synthetic expiry; enumerate every consumer of each certificate including offline/batch consumers.
 
-- **MUST — engineering rule:** Define the exact semantics of **Hostname validation** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for hostname validation is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for hostname validation, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-
-### 7.11. Certificate pinning
-
-- **MAY — engineering rule:** Define the exact semantics of **Certificate pinning** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for certificate pinning is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for certificate pinning, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-
-## 8. Concurrency, transactions, idempotency, and consistency
+## 9. Concurrency, transactions, idempotency, and consistency## 8. Concurrency, transactions, idempotency, and consistency
 
 Authorization and validation must be tied to the operation that uses them; check-then-act gaps enable races. Key/secret rotation needs overlap and versioning. Revocation and policy changes require bounded propagation. Security controls that depend on distributed stores need explicit partition behavior.
 
@@ -302,10 +283,10 @@ Security migrations—new keys, ciphers, headers, policies, scopes, token format
 - **MUST** — Make duplicate, concurrent, timed-out, retried, and partially failed operations converge to a documented valid outcome.
 - **MUST** — Use finite deadlines and bounded resource consumption; define what happens when dependencies, caches, telemetry, or providers are unavailable.
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
-- **MUST** — For **TLS**: Define the exact semantics of **TLS** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST** — For **Certificate chains**: Define the exact semantics of **Certificate chains** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST** — For **Certificate renewal**: Define the exact semantics of **Certificate renewal** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST** — For **mTLS**: Define the exact semantics of **mTLS** within TLS / PKI: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
+- **MUST** — For **TLS**: Enforce TLS 1.2 minimum (prefer 1.3 per RFC 9325; RFC 8996 deprecates 1.0/1.1) and full certificate validation on every client connection; validation is never disabled, including internal hops.
+- **MUST** — For **Certificate chains**: Build and validate the full chain to a trusted root with hostname matching (RFC 6125); deploy intermediates alongside leaves so clients never fetch them.
+- **MUST** — For **Certificate renewal**: Automate renewal from ~two-thirds of lifetime with expiry alerts at fixed offsets; long-lived processes reload renewed certificates without restart.
+- **MUST** — For **mTLS**: Map client-certificate identity to workload authorization checked per request; a valid client certificate alone authorizes nothing.
 
 ### SHOULD
 
@@ -368,7 +349,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - **TLS:** A framework or provider default for tls is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Certificate chains:** A framework or provider default for certificate chains is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Certificate validation:** A framework or provider default for certificate validation is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Expiration:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **Expiration:** Renewal automation fails silently (ACME challenge path blocked, secret reloaded but process never told), long-lived workers keep serving an expired certificate until restart, or expiry alerts fire after the outage instead of at T-30/T-14/T-7.
 - **Private CAs:** A framework or provider default for private cas is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Certificate revocation:** A framework or provider default for certificate revocation is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Certificate pinning:** A framework or provider default for certificate pinning is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.

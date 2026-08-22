@@ -86,15 +86,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Verification must cover concurrent, duplicate, timed-out, unauthorized, stale, partial, and rollback paths.
 5. **Invariant 5:** A checklist is effective only when items produce evidence, owners, and release gates.
 
-Additional topic-specific invariants:
-
-- **MUST — Authentication:** Define the exact semantics of **Authentication** within Cross-Cutting Implementation Checklist: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Concurrency:** Define the exact semantics of **Concurrency** within Cross-Cutting Implementation Checklist: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Data consistency:** Define the exact semantics of **Data consistency** within Cross-Cutting Implementation Checklist: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Logging:** Define the exact semantics of **Logging** within Cross-Cutting Implementation Checklist: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST — Cleanup:** Define the exact semantics of **Cleanup** within Cross-Cutting Implementation Checklist: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Operational cost:** Define the exact semantics of **Operational cost** within Cross-Cutting Implementation Checklist: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

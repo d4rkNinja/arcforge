@@ -68,7 +68,7 @@ Additional topic-specific invariants:
 - **SHOULD — Polling:** Define the exact semantics of **Polling** within Transactional Outbox / Inbox: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **SHOULD — Duplicate publication:** Define the exact semantics of **Duplicate publication** within Transactional Outbox / Inbox: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **SHOULD — Delivery state:** Define the exact semantics of **Delivery state** within Transactional Outbox / Inbox: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Ordering:** Define deterministic ordering, null placement, collation, and a unique tie-breaker. Treat user-selected sort fields as an allowlisted query plan, not arbitrary SQL/expressions.
+- **SHOULD — Ordering:** Define per-key event ordering end to end: sequence numbers assigned in the producer's transaction, preserved per key by relay lanes, enforced by consumers through gap detection or version comparison.
 - **MUST — Transaction atomicity:** Define the exact semantics of **Transaction atomicity** within Transactional Outbox / Inbox: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 
 ## 4. Architecture decisions and conflicting approaches
@@ -153,9 +153,9 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.4. CDC-based publishing
 
-- **SHOULD — engineering rule:** Write domain state and outbox record in one local transaction; publish asynchronously with stable event IDs and consumer inbox deduplication. Track watermark, retries, ordering, and cleanup.
-- **Production failure mode:** State commits without an event, event publishes before rollback, or duplicate publication repeats effects.
-- **Existing-codebase evidence:** Crash after each boundary—before commit, after commit, after publish, before mark-sent—and verify eventual single logical effect.
+- **SHOULD — engineering rule:** A log-based CDC connector (Debezium-style) streams committed outbox rows from the write-ahead log; there are NO publisher watermarks or mark-sent flags — offsets live in connector/Kafka state, and the sink deduplicates at-least-once redelivery. Handle tombstones for cleanup events, evolve payload schemas through a schema registry, and monitor connector lag instead of unpublished-row counts [S061].
+- **Production failure mode:** An operator adds a mark-sent flag or cleanup job that races the connector and deletes rows before the log is read; events vanish silently while the database looks perfectly healthy.
+- **Existing-codebase evidence:** Confirm offsets are managed by connector state rather than application tables, sink-side idempotency absorbs redelivery, and alerting tracks connector lag rather than unpublished-row counts.
 
 ### 7.5. Duplicate publication
 
@@ -165,9 +165,9 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.6. Inbox deduplication
 
-- **SHOULD — engineering rule:** Write domain state and outbox record in one local transaction; publish asynchronously with stable event IDs and consumer inbox deduplication. Track watermark, retries, ordering, and cleanup.
-- **Production failure mode:** State commits without an event, event publishes before rollback, or duplicate publication repeats effects.
-- **Existing-codebase evidence:** Crash after each boundary—before commit, after commit, after publish, before mark-sent—and verify eventual single logical effect.
+- **SHOULD — engineering rule:** Consumer side: an inbox table keyed by message/event ID with a UNIQUE constraint, inserted-or-skipped inside the SAME local transaction as the business effect; duplicate delivery converges because the second insert loses the race atomically. Purge processed inbox rows on a retention window sized beyond the maximum redelivery horizon.
+- **Production failure mode:** Deduplication checks-then-inserts without the unique constraint or outside the effect transaction; two concurrent deliveries both pass the check and the effect executes twice.
+- **Existing-codebase evidence:** Verify the inbox unique constraint exists in schema rather than only in code, that inbox insert and effect share one transaction, and that purge jobs cannot run ahead of the redelivery horizon.
 
 ### 7.7. Delivery state
 
@@ -183,15 +183,15 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.9. Ordering
 
-- **SHOULD — engineering rule:** Define deterministic ordering, null placement, collation, and a unique tie-breaker. Treat user-selected sort fields as an allowlisted query plan, not arbitrary SQL/expressions.
-- **Production failure mode:** Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
-- **Existing-codebase evidence:** Inspect explain plans for every allowed sort/filter combination and test ties, nulls, Unicode, and concurrent writes.
+- **SHOULD — engineering rule:** Assign per-aggregate sequence numbers in the same transaction as the domain write; the relay preserves per-key order through single-threaded lanes per partition/key; parallel consumers reorder across keys, so consumers needing cross-key order must buffer by sequence. Retries can deliver event N+1 before N — detect gaps or converge last-write-wins by version instead of trusting arrival order.
+- **Production failure mode:** A retry lane delivers an older event after a newer one already applied, reverting aggregate state that had moved forward.
+- **Existing-codebase evidence:** Find where sequence numbers are minted relative to the domain commit, verify relay and consumer lanes preserve per-key order, and check consumers handle gaps and late retries explicitly.
 
 ### 7.10. Cleanup
 
-- **MUST — engineering rule:** Define the exact semantics of **Cleanup** within Transactional Outbox / Inbox: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for cleanup is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for cleanup, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Delete published outbox rows only after confirmed delivery — delete-after-confirm for pollers, archive-by-age once CDC has captured them; NEVER truncate blindly ahead of delivery confirmation, and size retention beyond the maximum redelivery/replay horizon.
+- **Production failure mode:** A nightly cleanup removes rows the poller selected but has not yet published (or the connector has not yet read); events are lost permanently with no error anywhere.
+- **Existing-codebase evidence:** Trace cleanup predicates against delivery-confirmation state, verify cleanup cannot outrun publisher or connector progress, and confirm archived rows remain replayable within retention.
 
 ### 7.11. Transaction atomicity
 
@@ -358,7 +358,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - [ ] **Polling:** Locate every implementation path for polling, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Duplicate publication:** Locate every implementation path for duplicate publication, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Delivery state:** Locate every implementation path for delivery state, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **Ordering:** Inspect explain plans for every allowed sort/filter combination and test ties, nulls, Unicode, and concurrent writes.
+- [ ] **Ordering:** Deliver events out of order, with gaps, and duplicated across consumer lanes; verify per-key order holds and late retries converge by sequence or version.
 - [ ] **Transaction atomicity:** Locate every implementation path for transaction atomicity, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] Verify unauthorized, cross-tenant, malformed, duplicate, concurrent, cancelled, timed-out, dependency-failed, partial-success, stale-data, large-data, and rollback paths.
 - [ ] Verify logs, metrics, traces, audit events, alerts, cleanup, reconciliation, and runbook steps using the actual deployed topology.
@@ -375,7 +375,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - **CDC-based publishing:** State commits without an event, event publishes before rollback, or duplicate publication repeats effects.
 - **Inbox deduplication:** State commits without an event, event publishes before rollback, or duplicate publication repeats effects.
 - **Failure recovery:** A framework or provider default for failure recovery is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Ordering:** Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
+- **Ordering:** Parallel consumers apply event N+1 before N and revert aggregate state; arrival order substitutes for assigned sequence numbers.
 - **Transaction atomicity:** A framework or provider default for transaction atomicity is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 
 ## 18. AI coding-agent failure modes
@@ -408,7 +408,7 @@ An AI agent is especially likely to:
 - For **Polling**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for polling is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - For **Duplicate publication**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for duplicate publication is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - For **Delivery state**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for delivery state is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- For **Ordering**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Equal sort keys produce nondeterministic pages, locale changes reorder results, or unindexed user sorts trigger full scans.
+- For **Ordering**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: Parallel consumers apply event N+1 before N and revert aggregate state because nothing compares assigned sequence numbers.
 - Where is producer intent made durable, where is consumer effect deduplicated, and when is acknowledgement safe?
 
 ## 20. Existing-codebase checks before changing anything
@@ -424,10 +424,10 @@ An AI agent is especially likely to:
 - [ ] Run the existing suite and targeted production-like probes before edits; preserve unrelated behavior and capture a baseline for correctness and performance.
 - [ ] **Outbox table:** Crash after each boundary—before commit, after commit, after publish, before mark-sent—and verify eventual single logical effect.
 - [ ] **Polling:** Locate every implementation path for polling, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **CDC-based publishing:** Crash after each boundary—before commit, after commit, after publish, before mark-sent—and verify eventual single logical effect.
-- [ ] **Inbox deduplication:** Crash after each boundary—before commit, after commit, after publish, before mark-sent—and verify eventual single logical effect.
+- [ ] **CDC-based publishing:** Stop, crash, and resume the connector between WAL read and sink acknowledgment; verify offsets recover from connector state and sink dedupe absorbs redelivery.
+- [ ] **Inbox deduplication:** Deliver the same event twice concurrently and crash between inbox insert and effect commit; verify exactly one logical effect survives.
 - [ ] **Failure recovery:** Locate every implementation path for failure recovery, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **Ordering:** Inspect explain plans for every allowed sort/filter combination and test ties, nulls, Unicode, and concurrent writes.
+- [ ] **Ordering:** Deliver events out of order, with gaps, and duplicated across consumer lanes; verify per-key order holds and late retries converge by sequence or version.
 - [ ] **Transaction atomicity:** Locate every implementation path for transaction atomicity, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] Inspect broker retention, acknowledgment mode, visibility timeout/lease, redrive policy, partition key, and consumer concurrency.
 

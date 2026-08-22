@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Performance tests are capacity experiments with workload models and saturation signals, not single latency numbers.
 5. **Invariant 5:** Production-like data must preserve distribution and shape without exposing real PII.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -129,39 +127,39 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.1. Load tests
 
-- **SHOULD — engineering rule:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **Production failure mode:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Existing-codebase evidence:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- **SHOULD — engineering rule:** Replay the expected peak traffic shape—not a flat synthetic rate—and verify SLOs hold at expected load; treat this as baseline validation before launch and after major architecture changes, and model think time realistically because open-loop and closed-loop load generation produce different tail behavior.
+- **Production failure mode:** A flat-rate closed-loop benchmark hides overload, averages hide tail latency, and staging results mislead when data volume differs from production by orders of magnitude.
+- **Existing-codebase evidence:** Inspect load scripts for open-loop versus closed-loop mode and think-time configuration; confirm the workload replays the production request mix over production-shaped data volumes and distributions.
 
 ### 8.2. Stress tests
 
-- **SHOULD — engineering rule:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **Production failure mode:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Existing-codebase evidence:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- **SHOULD — engineering rule:** Ramp load beyond expected capacity until degradation appears; deliver the breaking point and the degradation mode—graceful shedding and degradation versus collapse through error cascades and restart loops—and document how far past normal the system bends.
+- **Production failure mode:** The team records only the request rate where errors started; production later discovers a collapse mode—retry storms, cascading pool exhaustion, restart loops—that the stress run already exhibited but nobody classified or mitigated.
+- **Existing-codebase evidence:** Check that stress reports state the breaking point, the observed degradation mode, and whether load retreat below the breaking point recovers cleanly.
 
 ### 8.3. Spike tests
 
-- **SHOULD — engineering rule:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **Production failure mode:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Existing-codebase evidence:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- **SHOULD — engineering rule:** Apply sudden rate jumps matching flash-sale and viral arrival patterns; measure recovery time back to steady state, autoscaling reaction lag and overshoot, and queue backlog drain time after the spike passes.
+- **Production failure mode:** Autoscaling reacts minutes behind the spike and then overshoots, or the backlog drains long after traffic normalizes, stretching user-visible impact far beyond the spike window.
+- **Existing-codebase evidence:** Verify spike runs record recovery-to-steady-state duration, scaling-event timestamps relative to spike onset, and backlog depth over time until fully drained.
 
 ### 8.4. Soak tests
 
-- **SHOULD — engineering rule:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **Production failure mode:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Existing-codebase evidence:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- **SHOULD — engineering rule:** Sustain moderate load for hours to days to hunt duration-dependent failures invisible in short runs—memory leaks, fd and connection leaks, log and disk growth, timer accumulation, slow cache poisoning—and compare resource curves from the start to the end of the run.
+- **Production failure mode:** Short test suites pass while production exhausts memory or connections days later; a leak whose growth rate stays below the observation window remains undetected.
+- **Existing-codebase evidence:** Compare start-versus-end memory, descriptor counts, disk usage, and active timers from soak runs, and check soak duration covers the leak class being hunted.
 
 ### 8.5. Capacity tests
 
-- **SHOULD — engineering rule:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **Production failure mode:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Existing-codebase evidence:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- **SHOULD — engineering rule:** Establish the maximum sustainable throughput per component while SLOs still hold; feed headroom math—for example, provision at most 60-70 percent of measured capacity—and scaling plans from these measurements, and rerun them when the architecture or a material dependency changes.
+- **Production failure mode:** Provisioning derives from vendor claims or short benchmark peaks instead of measured sustainable throughput, leaving no headroom for failover, retries, deployment overlap, or skew.
+- **Existing-codebase evidence:** Find the capacity measurements feeding provisioning math and their capture dates; flag components whose numbers predate the last material architecture or dependency change.
 
 ### 8.10. Bottleneck discovery
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
-- **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
+- **SHOULD — engineering rule:** Measure saturation signals per tier under load—CPU run queues, IO wait, connection-pool exhaustion, GC pause frequency and duration, lock waits, thread starvation, and queue depths—and identify the first saturating resource before optimizing anything, because optimizing non-bottlenecks yields zero end-to-end gain; apply Little's-law sanity checks (concurrency = throughput x latency) to expose measurement errors, coordinate sampling and profiling under realistic load, and check the load generator's own CPU and network before trusting results.
+- **Production failure mode:** Effort targets a visible but non-saturating component and delivers zero end-to-end improvement, or teams trust measurements taken while the load generator itself was the bottleneck.
+- **Existing-codebase evidence:** Confirm saturation signals are collected per tier, that profiling ran under realistic load, and that Little's-law arithmetic reconciles reported concurrency, throughput, and latency.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 
@@ -270,7 +268,7 @@ Tests must cover rolling compatibility and migrations, not only the final schema
 - **MUST** — Make duplicate, concurrent, timed-out, retried, and partially failed operations converge to a documented valid outcome.
 - **MUST** — Use finite deadlines and bounded resource consumption; define what happens when dependencies, caches, telemetry, or providers are unavailable.
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
-- **MUST** — For **Load tests**: Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
+- **MUST** — For **Load tests**: Replay the expected peak traffic shape and verify SLOs hold at expected load, with realistic think time and declared open-loop or closed-loop generation.
 
 ### SHOULD
 

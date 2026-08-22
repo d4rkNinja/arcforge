@@ -197,12 +197,11 @@ Each subsection answers three questions: what rule must be implemented, what fai
 - **Production failure mode:** Workers hang, retry only the failed statement, or create a synchronized retry storm.
 - **Existing-codebase evidence:** Force reversed lock order in tests and verify classification, rollback, retry, metrics, and user-visible outcome.
 
-### 7.12. Lock timeouts
+### Lock timeouts
 
-- **MUST — engineering rule:** Establish an end-to-end deadline, allocate smaller downstream budgets, propagate cancellation, and stop expensive or side-effecting work when the result is no longer useful unless explicitly designed otherwise.
-- **Production failure mode:** Requests wait indefinitely, downstream work continues after callers leave, or nested timeouts exceed the original budget.
-- **Existing-codebase evidence:** Inject slow dependencies at each hop and verify cancellation reaches database, network calls, streams, and workers.
-
+- **MUST - engineering rule:** Configure engine-specific lock-wait limits per deployment and know what a timeout actually undoes: PostgreSQL `lock_timeout` aborts only the statement that was waiting; MySQL `innodb_lock_wait_timeout` rolls back only the failed statement when `innodb_rollback_on_timeout=OFF` (the default), leaving the transaction open with earlier statements still applied. A lock-timeout error therefore requires explicit transaction-level handling (retry whole transaction or roll back deliberately), never an assumption that the transaction ended.
+- **Production failure mode:** Code treats a lock-wait timeout as full rollback, continues issuing further statements on the half-applied transaction, and commits partial state; or long blocking chains have no timeout at all and requests pile on a held lock until connection pools exhaust.
+- **Existing-codebase evidence:** Find where lock/wait timeouts are configured versus defaults; check handlers of lock-timeout errors for transaction retry-vs-abort decisions; verify no code path continues after a timeout without rolling back explicitly.
 ### 7.13. Long transactions
 
 - **MUST — engineering rule:** Define the exact semantics of **Long transactions** within Database Transactions: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.

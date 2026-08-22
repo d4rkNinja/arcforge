@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Token and session expiry limit exposure but do not by themselves provide revocation or prevent replay.
 5. **Invariant 5:** Authentication responses must resist account enumeration while still being diagnosable internally.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -142,8 +140,8 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.7. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **SHOULD — engineering rule:** Give API keys explicit expiry and rotation windows with overlapping validity: new keys issue before old ones expire, consumers migrate on their own cadence within the window, and unused keys are detected and disabled rather than left immortal.
+- **Production failure mode:** Keys without expiry accumulate in client code nobody owns, and hard cutover at expiry turns a rotation into a support incident.
 - **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
 
 ## 9. Concurrency, transactions, idempotency, and consistency

@@ -66,15 +66,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Token and session expiry limit exposure but do not by themselves provide revocation or prevent replay.
 5. **Invariant 5:** Authentication responses must resist account enumeration while still being diagnosable internally.
 
-Additional topic-specific invariants:
-
-- **SHOULD — API keys:** Define the exact semantics of **API keys** within Machine-to-Machine Authentication: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Client credentials:** Define the exact semantics of **Client credentials** within Machine-to-Machine Authentication: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — mTLS:** Define the exact semantics of **mTLS** within Machine-to-Machine Authentication: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Key scopes:** Define the exact semantics of **Key scopes** within Machine-to-Machine Authentication: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST — Revocation:** Define the exact semantics of **Revocation** within Machine-to-Machine Authentication: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Workload identity:** Define the exact semantics of **Workload identity** within Machine-to-Machine Authentication: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -183,8 +174,8 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.8. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **SHOULD — engineering rule:** Keep workload credential lifetimes short and rotated automatically: prefer federated identity that issues tokens per session; where static credentials remain, define expiry, rotation overlap, and revocation propagation as first-class lifecycle state.
+- **Production failure mode:** A service credential with no expiry leaks once and works forever; rotation without dual-acceptance bricks every dependent caller at cutover.
 - **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
 
 ### 7.9. Revocation
@@ -379,7 +370,7 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - **Client credentials:** A framework or provider default for client credentials is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Signed requests:** A framework or provider default for signed requests is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Key rotation:** A leaked environment dump or long-lived credential grants broad access, or rotation breaks live processes because only one version is accepted.
-- **Expiration:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **Expiration:** A service credential with no expiry leaks once and works forever; rotation without dual-acceptance bricks every dependent caller at cutover.
 - **Revocation:** A framework or provider default for revocation is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Workload identity:** A framework or provider default for workload identity is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 

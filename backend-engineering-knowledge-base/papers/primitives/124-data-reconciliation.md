@@ -54,15 +54,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Cleanup is a correctness process with retention, legal hold, references, and retry behavior—not a periodic delete-all query.
 5. **Invariant 5:** Temporary data is security-sensitive because its short lifetime often encourages weak storage and validation.
 
-Additional topic-specific invariants:
-
-- **SHOULD — Detecting divergence:** Define the exact semantics of **Detecting divergence** within Data Reconciliation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Missing records:** Define the exact semantics of **Missing records** within Data Reconciliation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Duplicate records:** Define the exact semantics of **Duplicate records** within Data Reconciliation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Repair:** Define the exact semantics of **Repair** within Data Reconciliation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Periodic reconciliation:** Define the exact semantics of **Periodic reconciliation** within Data Reconciliation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Manual review:** Define the exact semantics of **Manual review** within Data Reconciliation: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

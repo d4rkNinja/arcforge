@@ -62,15 +62,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Fallbacks can return stale or lower-quality data, but they must not weaken security or silently corrupt state.
 5. **Invariant 5:** Graceful degradation requires a predefined reduced contract, not ad hoc exception swallowing.
 
-Additional topic-specific invariants:
-
-- **SHOULD — Closed state:** Define the exact semantics of **Closed state** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Half-open state:** Define the exact semantics of **Half-open state** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **MUST — Recovery:** Define the exact semantics of **Recovery** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Per-provider breakers:** Define the exact semantics of **Per-provider breakers** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Fallback behavior:** Define the exact semantics of **Fallback behavior** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Distributed circuit breakers:** Define the exact semantics of **Distributed circuit breakers** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -100,6 +91,7 @@ stateDiagram-v2
     attempt --> nonretryable_failure
     attempt --> deadline_exhausted
     closed_breaker --> open_breaker --> half_open --> closed_breaker
+    half_open --> open_breaker
 ```
 
 ### Lifecycle rules
@@ -134,63 +126,63 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.1. Closed state
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Closed state** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for closed state is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for closed state, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** CLOSED passes all traffic while accumulating failure statistics — consecutive failures and/or sliding-window failure rate — atomically per breaker scope; count underlying outcomes including retried attempts, and define when statistics reset (on close or via a rolling window).
+- **Production failure mode:** Statistics never reset after reopening, so residual history re-trips the breaker on ordinary blips; or unsynchronized per-thread counters miss concurrent failures and the breaker never trips at all.
+- **Existing-codebase evidence:** Locate the counting path and its reset points; verify thread-safe increments and exactly which outcomes count (exceptions, timeouts, 5xx, slow calls).
 
 ### 7.2. Open state
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Open state** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for open state is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for open state, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** OPEN fails fast locally without touching the network — microseconds, not timeouts — raising a distinct circuit-open error (or invoking the fallback directly) so caller threads and pools shed load immediately; place the breaker between the retry loop and the network call so retries see fail-fast and stop burning budget.
+- **Production failure mode:** An open breaker that still performs the call, or serializes decisions behind a lock, protects nothing: threads accumulate inside the breaker exactly as they would inside the dependency.
+- **Existing-codebase evidence:** Measure open-state rejection latency (microseconds-to-milliseconds with zero socket activity); confirm callers receive a distinguishable error type they can branch on for fallback handling.
 
 ### 7.3. Half-open state
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Half-open state** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for half-open state is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for half-open state, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** HALF_OPEN admits bounded probe traffic: at most k concurrent trials enforced by a semaphore (who gets a probe is defined by grant order, not a race), never an unbounded probe flood; any trial failure reopens immediately with the timer reset; k successes close the breaker and reset statistics.
+- **Production failure mode:** Unbounded half-open traffic sends full production load at a barely-recovering dependency, re-trips it, and locks the breaker into open/half-open flapping.
+- **Existing-codebase evidence:** Test the full trip -> half-open -> close cycle against a stub dependency that fails then recovers; verify the k-probe cap holds under concurrent callers and probe grants are serialized.
 
 ### 7.4. Failure thresholds
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Failure thresholds** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for failure thresholds is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for failure thresholds, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Trip on a consecutive-failure count OR a sliding-window failure-rate with a minimum-volume floor (never trip on 3 low-traffic requests); include slow-call detection — calls exceeding a latency threshold count as failures — because hangs cascade faster than errors.
+- **Production failure mode:** A pure-rate threshold trips on quiet-period noise (2 of 3 slow requests), causing pointless fail-fast; without slow-call detection, an overload that degrades latency without erroring never trips and cascades anyway.
+- **Existing-codebase evidence:** Locate thresholds config (consecutive count, rate, window size, volume floor, slow-call duration); confirm retried attempts feed the same counters and thresholds are tunable per environment.
 
 ### 7.5. Recovery
 
-- **MUST — engineering rule:** Define the exact semantics of **Recovery** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for recovery is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for recovery, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Choose the open-duration policy deliberately — fixed cool-down or exponential on repeated re-trips — with hysteresis (exit criteria stricter than entry criteria) to prevent flapping; closing resets statistics so recovery starts clean; alert on transition frequency because flapping is its own incident signal.
+- **Production failure mode:** Short fixed cool-downs against a dependency needing minutes to recover produce continuous open/half-open cycling; each half-open wave slams the recovering service and re-trips it.
+- **Existing-codebase evidence:** Inspect the open-duration and re-trip handling in config; verify hysteresis exists between trip and close thresholds and that transitions-per-minute are observable.
 
 ### 7.6. Per-provider breakers
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Per-provider breakers** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for per-provider breakers is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for per-provider breakers, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** One breaker per dependency plus operation class, instantiated and configured independently: a failing analytics sink must never fail-fast payment calls; local per-instance state is the standard implementation.
+- **Production failure mode:** A single global breaker opens because one non-critical dependency degrades and fail-fasts every downstream call in the process, converting partial failure into total outage.
+- **Existing-codebase evidence:** Enumerate external dependencies and map each to its breaker instance; flag shared/global breakers and framework registries keyed by nothing (default constructor).
 
 ### 7.7. Per-endpoint breakers
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Per-endpoint breakers** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for per-endpoint breakers is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for per-endpoint breakers, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Split by operation class when failure profiles differ inside one dependency — expensive reports vs interactive reads vs writes — so a pathological batch endpoint cannot trip the breaker protecting latency-critical traffic.
+- **Production failure mode:** One breaker per host lumps a slow bulk-export route with interactive reads; opening punishes the healthy path until the team disables the breaker instead of scoping it.
+- **Existing-codebase evidence:** Compare breaker keys in code/config against the endpoint inventory; check whether timeout-sensitive routes share thresholds with bulk routes.
 
 ### 7.8. Fallback behavior
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Fallback behavior** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for fallback behavior is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for fallback behavior, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **MUST — engineering rule:** Fallbacks are product decisions with a predefined reduced contract — cached response, static default, degraded feature, or fail-fast error — chosen per route; instrument the fallback activation rate because silent fallbacks mask outages; fallback output passes the same authorization and tenant scoping as live data.
+- **Production failure mode:** A silent cached-response fallback serves stale data as truth for days; dashboards stay green because activation is uninstrumented and nobody notices the dependency died.
+- **Existing-codebase evidence:** Locate every fallback handler; require an activation metric/log per handler and verify fallback paths never fabricate authoritative results or bypass authorization.
 
 ### 7.9. Monitoring
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Monitoring** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for monitoring is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for monitoring, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Export breaker state as a metric dimension (closed/open/half-open), transition events with timestamps, rejected-request counts, probe outcomes, and fallback activations; alert on OPEN transitions, rejected-volume spikes, and transition frequency, routed to the owning team.
+- **Production failure mode:** The breaker opens nightly and self-heals before business hours; without transition alerts the recurring dependency failure never reaches a human.
+- **Existing-codebase evidence:** Confirm transition metrics exist (counter/event per state change), rejected counts are exported per scope, and an alarm binds state changes to ownership.
 
 ### 7.10. Distributed circuit breakers
 
-- **SHOULD — engineering rule:** Define the exact semantics of **Distributed circuit breakers** within Circuit Breakers: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **Production failure mode:** A framework or provider default for distributed circuit breakers is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Existing-codebase evidence:** Locate every implementation path for distributed circuit breakers, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
+- **SHOULD — engineering rule:** Local per-instance state is standard and usually sufficient; store-backed shared/distributed breaker state coordinates fleet-wide tripping but adds staleness windows and a new failure dependency — document the consistency trade-off, bound the staleness, and guarantee local breaking continues when the store is unavailable.
+- **Production failure mode:** A shared-state breaker whose store degrades either disables protection fleet-wide (stale healthy state keeps instances pounding a dead dependency) or, failing closed, blocks all traffic — both worse than per-instance breaking.
+- **Existing-codebase evidence:** Identify any store-backed breaker implementation; test it with the store down (it must degrade to local stateful breaking, never to unprotected or globally blocked) and measure the staleness window.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 

@@ -23,8 +23,8 @@ The repository's `.gitattributes` keeps text files at LF so the recorded hashes
 remain portable across fresh Windows and POSIX checkouts:
 
 ```bash
-git clone --branch v0.4.1 --depth 1 https://github.com/d4rkNinja/arcforge.git arcforge-0.4.1
-cd arcforge-0.4.1
+git clone --branch v0.4.2 --depth 1 https://github.com/d4rkNinja/arcforge.git arcforge-0.4.2
+cd arcforge-0.4.2
 shasum -a 256 -c MANIFEST.sha256
 npx --yes skills@1.5.22 add . --skill '*' -a claude-code -a codex --copy -y
 ```

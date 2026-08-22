@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Cryptographic protection fails when keys, randomness, nonces, algorithms, or lifecycle management are wrong.
 5. **Invariant 5:** Security controls require abuse-case tests and operational detection, not only happy-path unit tests.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -117,72 +115,77 @@ A production representation commonly needs the following fields or equivalent ev
 
 Each subsection answers three questions: what rule must be implemented, what fails in production, and what an agent must inspect in an existing codebase before changing it.
 
-### Default obligations
-
-These subtopics carry no additional domain-specific rule beyond the default obligation: for each, define owner, inputs, outputs, invariants, lifecycle, failure classification, and a compatibility contract; make the rule enforceable at the narrowest authoritative boundary; and do not accept a framework or provider default without proving it fits the domain.
-
-- **Local development**
-- **Log redaction**
-
 ### 8.1. Environment secrets
 
-- **MUST — engineering rule:** Store secrets in a managed secret boundary, grant workload-specific access, avoid process arguments/logs/images, support overlapping rotation, audit reads, and define emergency revocation.
-- **Production failure mode:** A leaked environment dump or long-lived credential grants broad access, or rotation breaks live processes because only one version is accepted.
-- **Existing-codebase evidence:** Scan artifacts/logs, rotate under load, revoke the old value, and verify every consumer refreshes without restart assumptions.
+- **MUST — engineering rule:** Separate environments cryptographically and administratively: production secrets live in a managed secret boundary reachable only by production principals, non-prod principals cannot resolve production paths, and every environment holds its own credential set — a shared dev/prod secret turns one leak into every environment.
+- **Production failure mode:** A staging service or developer laptop holding production credentials becomes the cheapest path into production, and one leaked shared secret forces simultaneous rotation everywhere it was reused.
+- **Existing-codebase evidence:** Inventory which secrets load from environment variables or files versus vault fetches, then verify IAM/policy scope actually denies a non-production principal reading a production secret path.
 
 ### 8.2. Secret stores
 
-- **MUST — engineering rule:** Store secrets in a managed secret boundary, grant workload-specific access, avoid process arguments/logs/images, support overlapping rotation, audit reads, and define emergency revocation.
-- **Production failure mode:** A leaked environment dump or long-lived credential grants broad access, or rotation breaks live processes because only one version is accepted.
-- **Existing-codebase evidence:** Scan artifacts/logs, rotate under load, revoke the old value, and verify every consumer refreshes without restart assumptions.
+- **MUST — engineering rule:** Keep configuration-type secrets (database passwords, API keys, third-party tokens) in a managed secret manager (Vault, AWS Secrets Manager, GCP Secret Manager) that provides versioning, IAM-scoped reads, and read auditing; never place them in committed dotenv files, container images, or process arguments.
+- **Production failure mode:** Secrets pasted into env files, Helm values, or image layers leak through git history and artifact registries; a store without version history makes rotation a breaking restart event.
+- **Existing-codebase evidence:** Inventory env-var/file-loaded secrets versus vault-fetched ones, grep images and logs for accidental secret persistence, and confirm versions are retained so consumers can pin, roll back, and verify freshness.
 
-### 8.3. Vault
+### 8.3. Vault systems
 
-- **SHOULD — engineering rule:** Store secrets in a managed secret boundary, grant workload-specific access, avoid process arguments/logs/images, support overlapping rotation, audit reads, and define emergency revocation.
-- **Production failure mode:** A leaked environment dump or long-lived credential grants broad access, or rotation breaks live processes because only one version is accepted.
-- **Existing-codebase evidence:** Scan artifacts/logs, rotate under load, revoke the old value, and verify every consumer refreshes without restart assumptions.
+- **SHOULD — engineering rule:** Treat vault platforms as policy engines, not dumb storage: bind each workload to a least-privilege policy on narrow paths, prefer dynamic/leased credentials that expire themselves, and make unseal strategy, auth methods, and audit-device enablement part of the deployment contract rather than tribal knowledge.
+- **Production failure mode:** A vault that seals on restart with no auto-unseal story takes every dependent service down at once, and wildcard policies like `secret/*` recreate the flat all-access namespace inside the vault.
+- **Existing-codebase evidence:** Read the policies bound to each auth role, compare lease/TTL settings against consumer refresh behavior, and verify an audit device is enabled and shipped off-box.
 
-### 8.4. KMS
+### 8.4. KMS integration
 
-- **SHOULD — engineering rule:** Store secrets in a managed secret boundary, grant workload-specific access, avoid process arguments/logs/images, support overlapping rotation, audit reads, and define emergency revocation.
-- **Production failure mode:** A leaked environment dump or long-lived credential grants broad access, or rotation breaks live processes because only one version is accepted.
-- **Existing-codebase evidence:** Scan artifacts/logs, rotate under load, revoke the old value, and verify every consumer refreshes without restart assumptions.
+- **SHOULD — engineering rule:** Reserve KMS/HSM-backed custody for KEY material (data keys, signing keys, token-signing private keys): cryptographic operations happen inside the service boundary, plaintext keys never persist outside the HSM except wrapped, and key policies stay separate from secret-manager policies because rotation semantics, audit surfaces, and hardware boundaries differ between the two tiers.
+- **Production failure mode:** Conflating the tiers leaves signing keys sharing a blast radius with config secrets; rotating or disabling a CMK without re-wrap planning renders existing ciphertext undecryptable.
+- **Existing-codebase evidence:** Map which key protects which data, verify key IDs/versions are recorded alongside ciphertexts so pre-rotation data still decrypts, and confirm a rotation has actually been exercised rather than merely enabled.
 
 ### 8.5. Secret access
 
-- **MUST — engineering rule:** Store secrets in a managed secret boundary, grant workload-specific access, avoid process arguments/logs/images, support overlapping rotation, audit reads, and define emergency revocation.
-- **Production failure mode:** A leaked environment dump or long-lived credential grants broad access, or rotation breaks live processes because only one version is accepted.
-- **Existing-codebase evidence:** Scan artifacts/logs, rotate under load, revoke the old value, and verify every consumer refreshes without restart assumptions.
+- **MUST — engineering rule:** Make workload identity federation the default machine authentication: cloud-native identities (IAM roles for service accounts, Azure managed identities, GCP service accounts) eliminate static credentials entirely, and OIDC-federated short-lived tokens replace stored deploy keys and cloud creds; static long-lived credentials are the legacy exception requiring documented compensating controls and a scheduled federation migration.
+- **Production failure mode:** A static cloud access key embedded in service config outlives its creator, gets copied across environments and backups, and grants access nobody remembers provisioning until it leaks.
+- **Existing-codebase evidence:** Find long-lived static credentials and map each to its federation replacement (IRSA, GCP workload identity federation, Azure managed identity); flag any survivor without an owner, rotation date, and compensating control.
 
 ### 8.6. Secret rotation
 
-- **MUST — engineering rule:** Store secrets in a managed secret boundary, grant workload-specific access, avoid process arguments/logs/images, support overlapping rotation, audit reads, and define emergency revocation.
-- **Production failure mode:** A leaked environment dump or long-lived credential grants broad access, or rotation breaks live processes because only one version is accepted.
-- **Existing-codebase evidence:** Scan artifacts/logs, rotate under load, revoke the old value, and verify every consumer refreshes without restart assumptions.
+- **MUST — engineering rule:** Rotate with overlapping versions — issue the new value while the old remains valid through consumer-refresh lag — tie cadence to blast radius (shared database credentials rotate faster than a low-value third-party API key), use provider-managed automatic rotation where supported (managed database credentials), and rehearse the full path in staging, because a rotation nobody has tested is a future outage.
+- **Production failure mode:** Single-version rotation locks out every process still holding the old value; the overlap window assumed in the runbook is shorter than real consumer cache TTLs, so cutover fails mid-migration.
+- **Existing-codebase evidence:** Test rotation end-to-end in staging with real consumers: measure how long old-version acceptance must persist, find processes needing restart to refresh, and verify dual-version support before shortening any cadence.
 
 ### 8.7. Secret revocation
 
-- **MUST — engineering rule:** Store secrets in a managed secret boundary, grant workload-specific access, avoid process arguments/logs/images, support overlapping rotation, audit reads, and define emergency revocation.
-- **Production failure mode:** A leaked environment dump or long-lived credential grants broad access, or rotation breaks live processes because only one version is accepted.
-- **Existing-codebase evidence:** Scan artifacts/logs, rotate under load, revoke the old value, and verify every consumer refreshes without restart assumptions.
+- **MUST — engineering rule:** Document the emergency revocation path BEFORE an incident: know how to kill a leaked credential by disabling the principal (not merely overwriting the secret value), and measure propagation delay honestly — effective revocation equals the longest cache/session TTL across every consumer — recording the measured number in the runbook.
+- **Production failure mode:** Mid-incident the team discovers revocation takes effect only after a 15-minute cache TTL plus a session lifetime nobody measured, while the attacker keeps a working credential throughout.
+- **Existing-codebase evidence:** Revoke a non-production principal in staging and time how long each consumer keeps accepting it; verify the kill switch disables the underlying principal or role, not just the latest secret version.
 
 ### 8.8. Secret auditing
 
-- **MUST — engineering rule:** Record real actor, effective actor, action, resource, tenant, timestamp, request/trace, policy context, outcome, and appropriately minimized change details in tamper-resistant storage.
-- **Production failure mode:** Security-sensitive changes cannot be attributed, audit data leaks secrets, or failed attempts vanish.
-- **Existing-codebase evidence:** Exercise successful/failed/admin/impersonated/bulk actions and verify atomicity, retention, search, export, and access controls.
+- **MUST — engineering rule:** Audit secret READS, not only writes — leak investigation requires knowing which principal fetched which secret when — and alert on anomalous-read patterns such as a service suddenly reading secrets it never touched.
+- **Production failure mode:** After a compromise nobody can enumerate what the attacker's principal read because reads were never logged, so incident response degenerates into rotate-everything.
+- **Existing-codebase evidence:** Verify audit coverage of reads (successful and denied) in vault/secret-manager audit logs, confirm they ship off-box with tamper resistance, and check an alert exists for reads outside a principal's historical pattern.
 
 ### 8.9. Secret leakage prevention
 
-- **MUST — engineering rule:** Store secrets in a managed secret boundary, grant workload-specific access, avoid process arguments/logs/images, support overlapping rotation, audit reads, and define emergency revocation.
-- **Production failure mode:** A leaked environment dump or long-lived credential grants broad access, or rotation breaks live processes because only one version is accepted.
-- **Existing-codebase evidence:** Scan artifacts/logs, rotate under load, revoke the old value, and verify every consumer refreshes without restart assumptions.
+- **MUST — engineering rule:** Assume secrets reach places they should not: run secret scanning on repositories and diffs, forbid secrets in process arguments/logs/images, give artifact registries their own rotatable credentials, and treat CI masking as best-effort — never as the control keeping secrets out of workflow logs.
+- **Production failure mode:** A build argument bakes a registry credential into a public image layer, or a masked variable leaks through a command echo the masker did not recognize.
+- **Existing-codebase evidence:** Grep built images and CI logs for accidental secret persistence, check build scripts for ARG/ENV-based secret injection, and confirm each registry and mirror has distinct, individually rotatable credentials.
+
+### 8.10. Local development
+
+- **SHOULD — engineering rule:** Give developers federated or brokered access to dedicated non-production secrets — dev vault namespaces, personal sandbox roles, expiring leases attributable to an individual — while local code defaults to stub credentials and can never reach production values from a laptop.
+- **Production failure mode:** A shared `dev.env` file circulates in chat for years; when it contains production endpoint credentials, the leak surface includes every laptop the file ever reached.
+- **Existing-codebase evidence:** Search the repo and onboarding docs for checked-in `.env` files and shared dev secrets; verify developer access goes through individual identity (SSO-backed vault auth) rather than a team-shared credential.
 
 ### 8.11. CI/CD secrets
 
-- **MUST — engineering rule:** Store secrets in a managed secret boundary, grant workload-specific access, avoid process arguments/logs/images, support overlapping rotation, audit reads, and define emergency revocation.
-- **Production failure mode:** A leaked environment dump or long-lived credential grants broad access, or rotation breaks live processes because only one version is accepted.
-- **Existing-codebase evidence:** Scan artifacts/logs, rotate under load, revoke the old value, and verify every consumer refreshes without restart assumptions.
+- **MUST — engineering rule:** Replace stored pipeline credentials with OIDC federation — GitHub Actions/GitLab CI OIDC tokens exchanged for short-lived, scoped cloud roles; keep permissions job-scoped, ensure fork PRs never gain access to secret scopes, pull deploy-time secrets at runtime instead of baking them into artifacts, and provision artifact registries their own credentials.
+- **Production failure mode:** A `pull_request_target` workflow exposes secrets to untrusted fork code, or a long-lived cloud key in repository variables outlives the employee who created it and ships in every exfiltrated repo mirror.
+- **Existing-codebase evidence:** List stored CI variables/secrets and map each to an OIDC-federated equivalent; verify fork PR runs cannot read secret scopes and produced images reference deploy-time injection, not build-time baking.
+
+### 8.12. Log redaction
+
+- **SHOULD — engineering rule:** Redact secret-shaped values at the logging framework level (structured field allowlists, pattern scrubbers) while assuming any single mechanism misses values — so also constrain which components receive secrets at all, and keep debug/trace levels off in production where raw headers and connection strings surface.
+- **Production failure mode:** A stack trace prints a connection string including its password, or an HTTP client logs the Authorization header verbatim after someone enables debug logging during an incident.
+- **Existing-codebase evidence:** Grep logs, crash dumps, and APM payloads for known secret prefixes and connection-string patterns; identify log statements accepting raw header/env objects and add structured redaction at those sinks.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
 

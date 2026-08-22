@@ -60,12 +60,12 @@ The primary correctness question is not “does the happy path work?” but “c
 
 Additional topic-specific invariants:
 
-- **SHOULD — Load tests:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **SHOULD — Spike tests:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **SHOULD — Capacity tests:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
+- **SHOULD — Load tests:** Replay the expected peak traffic shape and verify SLOs hold at expected load, with realistic think time; open-loop and closed-loop generation produce different tail behavior.
+- **SHOULD — Spike tests:** Apply sudden rate jumps and measure recovery time to steady state, autoscaling reaction lag and overshoot, and queue backlog drain time.
+- **SHOULD — Capacity tests:** Establish maximum sustainable throughput per component at SLO compliance and feed headroom math and scaling plans from it.
 - **SHOULD — Throughput:** Define the exact semantics of **Throughput** within Load & Performance Testing: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 - **SHOULD — Tail latency:** Define the exact semantics of **Tail latency** within Load & Performance Testing: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Bottleneck discovery:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
+- **SHOULD — Bottleneck discovery:** Measure per-tier saturation signals under realistic load and identify the first saturating resource before optimizing anything.
 
 ## 4. Architecture decisions and conflicting approaches
 
@@ -128,33 +128,33 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.1. Load tests
 
-- **SHOULD — engineering rule:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **Production failure mode:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Existing-codebase evidence:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- **SHOULD — engineering rule:** Replay the expected peak traffic shape—not a flat synthetic rate—and verify SLOs hold at expected load; treat this as baseline validation before launch and after major architecture changes, and model think time realistically because open-loop and closed-loop load generation produce different tail behavior.
+- **Production failure mode:** A flat-rate closed-loop benchmark hides overload, averages hide tail latency, and staging results mislead when data volume differs from production by orders of magnitude.
+- **Existing-codebase evidence:** Inspect load scripts for open-loop versus closed-loop mode and think-time configuration; confirm the workload replays the production request mix over production-shaped data volumes and distributions.
 
 ### 7.2. Stress tests
 
-- **SHOULD — engineering rule:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **Production failure mode:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Existing-codebase evidence:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- **SHOULD — engineering rule:** Ramp load beyond expected capacity until degradation appears; deliver the breaking point and the degradation mode—graceful shedding and degradation versus collapse through error cascades and restart loops—and document how far past normal the system bends.
+- **Production failure mode:** The team records only the request rate where errors started; production later discovers a collapse mode—retry storms, cascading pool exhaustion, restart loops—that the stress run already exhibited but nobody classified or mitigated.
+- **Existing-codebase evidence:** Check that stress reports state the breaking point, the observed degradation mode, and whether load retreat below the breaking point recovers cleanly.
 
 ### 7.3. Spike tests
 
-- **SHOULD — engineering rule:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **Production failure mode:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Existing-codebase evidence:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- **SHOULD — engineering rule:** Apply sudden rate jumps matching flash-sale and viral arrival patterns; measure recovery time back to steady state, autoscaling reaction lag and overshoot, and queue backlog drain time after the spike passes.
+- **Production failure mode:** Autoscaling reacts minutes behind the spike and then overshoots, or the backlog drains long after traffic normalizes, stretching user-visible impact far beyond the spike window.
+- **Existing-codebase evidence:** Verify spike runs record recovery-to-steady-state duration, scaling-event timestamps relative to spike onset, and backlog depth over time until fully drained.
 
 ### 7.4. Soak tests
 
-- **SHOULD — engineering rule:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **Production failure mode:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Existing-codebase evidence:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- **SHOULD — engineering rule:** Sustain moderate load for hours to days to hunt duration-dependent failures invisible in short runs—memory leaks, fd and connection leaks, log and disk growth, timer accumulation, slow cache poisoning—and compare resource curves from the start to the end of the run.
+- **Production failure mode:** Short test suites pass while production exhausts memory or connections days later; a leak whose growth rate stays below the observation window remains undetected.
+- **Existing-codebase evidence:** Compare start-versus-end memory, descriptor counts, disk usage, and active timers from soak runs, and check soak duration covers the leak class being hunted.
 
 ### 7.5. Capacity tests
 
-- **SHOULD — engineering rule:** Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **Production failure mode:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Existing-codebase evidence:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- **SHOULD — engineering rule:** Establish the maximum sustainable throughput per component while SLOs still hold; feed headroom math—for example, provision at most 60-70 percent of measured capacity—and scaling plans from these measurements, and rerun them when the architecture or a material dependency changes.
+- **Production failure mode:** Provisioning derives from vendor claims or short benchmark peaks instead of measured sustainable throughput, leaving no headroom for failover, retries, deployment overlap, or skew.
+- **Existing-codebase evidence:** Find the capacity measurements feeding provisioning math and their capture dates; flag components whose numbers predate the last material architecture or dependency change.
 
 ### 7.6. Throughput
 
@@ -182,9 +182,9 @@ Each subsection answers three questions: what rule must be implemented, what fai
 
 ### 7.10. Bottleneck discovery
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
-- **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
+- **SHOULD — engineering rule:** Measure saturation signals per tier under load—CPU run queues, IO wait, connection-pool exhaustion, GC pause frequency and duration, lock waits, thread starvation, and queue depths—and identify the first saturating resource before optimizing anything, because optimizing non-bottlenecks yields zero end-to-end gain; apply Little's-law sanity checks (concurrency = throughput x latency) to expose measurement errors, coordinate sampling and profiling under realistic load, and check the load generator's own CPU and network before trusting results.
+- **Production failure mode:** Effort targets a visible but non-saturating component and delivers zero end-to-end improvement, or teams trust measurements taken while the load generator itself was the bottleneck.
+- **Existing-codebase evidence:** Confirm saturation signals are collected per tier, that profiling ran under realistic load, and that Little's-law arithmetic reconciles reported concurrency, throughput, and latency.
 
 ## 8. Concurrency, transactions, idempotency, and consistency
 
@@ -293,9 +293,9 @@ Tests must cover rolling compatibility and migrations, not only the final schema
 - **MUST** — Make duplicate, concurrent, timed-out, retried, and partially failed operations converge to a documented valid outcome.
 - **MUST** — Use finite deadlines and bounded resource consumption; define what happens when dependencies, caches, telemetry, or providers are unavailable.
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
-- **MUST** — For **Load tests**: Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **MUST** — For **Spike tests**: Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
-- **MUST** — For **Capacity tests**: Model realistic arrival rate, concurrency, payload/cardinality/skew, cache warmth, failures, and think time; observe tail latency, errors, saturation, queues, and cost through steady and recovery periods.
+- **MUST** — For **Load tests**: Replay the expected peak traffic shape and verify SLOs hold at expected load, with realistic think time and declared open-loop or closed-loop generation.
+- **MUST** — For **Spike tests**: Inject sudden rate jumps and record recovery time to steady state, autoscaling reaction lag and overshoot, and queue backlog drain time.
+- **MUST** — For **Capacity tests**: Produce measured maximum sustainable throughput per component at SLO compliance and derive provisioning headroom and scaling plans from it.
 - **MUST** — For **Throughput**: Define the exact semantics of **Throughput** within Load & Performance Testing: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
 
 ### SHOULD
@@ -340,12 +340,12 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - [ ] Run tests independently, reordered, and in parallel; fixtures and cleanup must not leak state.
 - [ ] Compare mocks/fakes with real provider and infrastructure contracts, including error and limit behavior.
 - [ ] Preserve seeds, traces, logs, query plans, and artifacts for reproducibility while removing secrets/PII.
-- [ ] **Load tests:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
-- [ ] **Spike tests:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
-- [ ] **Capacity tests:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- [ ] **Load tests:** Inspect load scripts for open-loop versus closed-loop mode and think-time realism; replay expected peak traffic shape over production-shaped data volumes.
+- [ ] **Spike tests:** Run sudden-rate-jump scenarios and record recovery time to steady state, autoscaling reaction lag and overshoot, and backlog drain duration.
+- [ ] **Capacity tests:** Record measured maximum sustainable throughput per component at SLO compliance and show the headroom math used for provisioning.
 - [ ] **Throughput:** Locate every implementation path for throughput, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Tail latency:** Locate every implementation path for tail latency, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **Bottleneck discovery:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
+- [ ] **Bottleneck discovery:** Collect per-tier saturation signals under realistic load, identify the first saturating resource, and confirm the load generator was not the bottleneck.
 - [ ] Verify unauthorized, cross-tenant, malformed, duplicate, concurrent, cancelled, timed-out, dependency-failed, partial-success, stale-data, large-data, and rollback paths.
 - [ ] Verify logs, metrics, traces, audit events, alerts, cleanup, reconciliation, and runbook steps using the actual deployed topology.
 
@@ -356,13 +356,13 @@ Passing unit tests is not sufficient. The release needs evidence at the storage,
 - Shared test data causing order dependence.
 - Load test missing tail latency and saturation.
 - Failure injection after rather than during the critical window.
-- **Load tests:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Spike tests:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Soak tests:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- **Capacity tests:** A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
+- **Load tests:** Flat-rate closed-loop benchmarks hide overload, and staging numbers mislead when data volume differs from production by orders of magnitude.
+- **Spike tests:** Autoscaling reacts behind the spike and overshoots, or the backlog drains long after traffic normalizes.
+- **Soak tests:** Duration-dependent failures—memory, descriptor, and disk growth—stay invisible because no run sustains load long enough to compare start and end resource curves.
+- **Capacity tests:** Provisioning math trusts vendor claims or short benchmark peaks instead of measured sustainable throughput at SLO compliance.
 - **Latency:** A framework or provider default for latency is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - **Resource saturation:** A framework or provider default for resource saturation is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
-- **Bottleneck discovery:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **Bottleneck discovery:** Optimizing a non-bottleneck yields zero end-to-end gain; Little's-law checks on concurrency, throughput, and latency would have exposed the measurement error.
 
 ## 18. AI coding-agent failure modes
 
@@ -390,9 +390,9 @@ An AI agent is especially likely to:
 - What compatibility matrix must hold during rolling deployment, old-client use, schema/event evolution, and rollback?
 - What load shape, cardinality, skew, payload size, concurrency, and failure rate define production capacity?
 - What telemetry, alert, audit event, reconciliation, cleanup job, and runbook prove the feature remains correct after release?
-- For **Load tests**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- For **Spike tests**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
-- For **Capacity tests**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A closed-loop benchmark hides overload, averages hide tail latency, or a short test misses leaks and compaction effects.
+- For **Load tests**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: a flat-rate closed-loop benchmark hides overload, and staging data volume differs from production by orders of magnitude.
+- For **Spike tests**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: autoscaling reacts behind the spike, overshoots, or the backlog drains long after traffic normalizes.
+- For **Capacity tests**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: provisioning math trusts vendor claims instead of measured sustainable throughput at SLO compliance.
 - For **Throughput**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for throughput is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - For **Tail latency**, what authoritative boundary enforces the rule, and how will the team prove the failure described here cannot occur: A framework or provider default for tail latency is accepted without proving it matches the domain, causing ambiguous state, race-sensitive behavior, or an operational gap.
 - Which real infrastructure or interleaving must be used because a mock cannot reproduce the risk?
@@ -408,13 +408,13 @@ An AI agent is especially likely to:
 - [ ] Check existing API/event schemas and real client/consumer usage before renaming fields, changing defaults, strengthening validation, or altering errors.
 - [ ] Review telemetry and runbooks to learn current failure modes, latency, scale, and operational ownership before proposing architecture changes.
 - [ ] Run the existing suite and targeted production-like probes before edits; preserve unrelated behavior and capture a baseline for correctness and performance.
-- [ ] **Load tests:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
-- [ ] **Spike tests:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
-- [ ] **Soak tests:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
-- [ ] **Capacity tests:** Run baseline, breakpoint, spike, and soak experiments with production-like data and explicit stop conditions.
+- [ ] **Load tests:** Inspect load scripts for open-loop versus closed-loop mode and think-time realism; confirm data volume is production-shaped.
+- [ ] **Spike tests:** Verify spike runs recorded recovery time to steady state, autoscaling lag and overshoot, and backlog drain duration.
+- [ ] **Soak tests:** Compare start-versus-end resource curves from soak runs and check duration against the leak class being hunted.
+- [ ] **Capacity tests:** Find capacity measurements feeding provisioning math and their capture dates; flag stale or missing measurements.
 - [ ] **Latency:** Locate every implementation path for latency, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
 - [ ] **Resource saturation:** Locate every implementation path for resource saturation, compare behavior across APIs, jobs, migrations, and admin tooling, and add evidence for normal, invalid, duplicate, concurrent, timed-out, and recovery cases.
-- [ ] **Bottleneck discovery:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
+- [ ] **Bottleneck discovery:** Verify per-tier saturation signals exist and that the first saturating resource was identified before optimization work.
 - [ ] Classify tests by fidelity and invariant; identify mocks that replace the behavior under review.
 
 ## 21. Knowledge graph relationships

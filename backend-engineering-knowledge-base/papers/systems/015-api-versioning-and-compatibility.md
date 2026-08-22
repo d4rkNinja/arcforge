@@ -58,15 +58,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Bulk and asynchronous operations need per-item or job-level state rather than pretending all work is synchronous and atomic.
 5. **Invariant 5:** Public error detail must help callers recover without exposing internals or sensitive state.
 
-Additional topic-specific invariants:
-
-- **SHOULD — URL versioning:** Define the exact semantics of **URL versioning** within API Versioning & Compatibility: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Content negotiation:** Define the exact semantics of **Content negotiation** within API Versioning & Compatibility: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Deprecation:** Define the exact semantics of **Deprecation** within API Versioning & Compatibility: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Contract evolution:** Define the exact semantics of **Contract evolution** within API Versioning & Compatibility: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Mobile-client compatibility:** Define the exact semantics of **Mobile-client compatibility** within API Versioning & Compatibility: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-- **SHOULD — Compatibility tests:** Define the exact semantics of **Compatibility tests** within API Versioning & Compatibility: owner, inputs, outputs, invariants, lifecycle, failure classification, and compatibility contract. Make the rule enforceable at the narrowest authoritative boundary.
-
 ## 4. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.

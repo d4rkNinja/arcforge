@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Cryptographic protection fails when keys, randomness, nonces, algorithms, or lifecycle management are wrong.
 5. **Invariant 5:** Security controls require abuse-case tests and operational detection, not only happy-path unit tests.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
@@ -129,32 +127,32 @@ These subtopics carry no additional domain-specific rule beyond the default obli
 
 ### 8.1. Temporary tokens
 
-- **SHOULD — engineering rule:** Generate with cryptographic randomness, bind to purpose and subject/session, enforce short expiry and attempt limits, store a verifier rather than plaintext, and consume atomically once.
-- **Production failure mode:** A code can be replayed, used for another purpose, brute-forced, or accepted after a newer code was issued.
+- **SHOULD — engineering rule:** Issue temporary tokens from a CSPRNG with at least 128 bits of entropy, bind them to purpose plus subject (and session/device where the threat model demands), give them short TTLs with attempt limits, store only a hashed verifier rather than the plaintext, and consume them atomically exactly once via a conditional update/delete returning affected rows.
+- **Production failure mode:** A token gets replayed after success, redeemed for a different purpose than issued, brute-forced without attempt limits, or accepted after a newer token superseded it.
 - **Existing-codebase evidence:** Test wrong purpose, concurrent redemption, resend behavior, clock boundaries, attempt exhaustion, and cleanup.
 
 ### 8.3. OTPs
 
-- **SHOULD — engineering rule:** Generate with cryptographic randomness, bind to purpose and subject/session, enforce short expiry and attempt limits, store a verifier rather than plaintext, and consume atomically once.
-- **Production failure mode:** A code can be replayed, used for another purpose, brute-forced, or accepted after a newer code was issued.
-- **Existing-codebase evidence:** Test wrong purpose, concurrent redemption, resend behavior, clock boundaries, attempt exhaustion, and cleanup.
+- **MUST — engineering rule:** Generate OTPs from a CSPRNG at maximum practical entropy — numeric formats cap near 20 bits (6 digits = 10^6), acceptable only with aggressive rate limiting — set TTL in minutes, enforce single-use atomically via delete-on-verify returning the affected-row count (zero rows means already consumed), lock out after about five failed attempts, compare in constant time, and bind the code to session/device where the threat model demands.
+- **Production failure mode:** Verification checks existence then deletes in a second statement, so two concurrent submissions both succeed; unlimited attempts brute-force the 10^6 six-digit space; plain equality comparison leaks timing.
+- **Existing-codebase evidence:** Verify single-use atomicity by racing two verifications (both must not succeed), count allowed attempts before lockout, confirm a hashed verifier is stored rather than the plaintext code, and check resend invalidates older codes.
 
 ### 8.4. Verification codes
 
-- **MUST — engineering rule:** Generate with cryptographic randomness, bind to purpose and subject/session, enforce short expiry and attempt limits, store a verifier rather than plaintext, and consume atomically once.
-- **Production failure mode:** A code can be replayed, used for another purpose, brute-forced, or accepted after a newer code was issued.
-- **Existing-codebase evidence:** Test wrong purpose, concurrent redemption, resend behavior, clock boundaries, attempt exhaustion, and cleanup.
+- **SHOULD — engineering rule:** Apply the full OTP discipline (entropy, minute-scale TTL, atomic single-use consumption, attempt-count lockout, constant-time comparison) to email/SMS verification codes, invalidate all outstanding codes for a subject when a newer one is issued, namespace codes per purpose so a password-reset code can never verify an email change, and prefer signed one-time links so mailbox possession carries the proof.
+- **Production failure mode:** A code delivered for one purpose redeems another (reset code accepted as login MFA), or a resent code leaves the earlier one valid, widening an already-guessable window.
+- **Existing-codebase evidence:** Test wrong-purpose redemption, resend invalidation, concurrent redemption, attempt exhaustion, clock boundaries, and cleanup.
 
 ### 8.6. Draft states
 
-- **SHOULD — engineering rule:** Use a proven implementation and understand quorum membership, term/epoch, log commitment, joint configuration, disk durability, and failure detector limits. Fence old leaders at external resources.
-- **Production failure mode:** Operational changes break quorum, stale leaders serve writes, or engineers assume consensus keeps the service available through every partition.
-- **Existing-codebase evidence:** Test minority/majority partitions, membership change, disk loss, delayed messages, and recovery without manual log surgery.
+- **SHOULD — engineering rule:** Treat drafts as temporary user-visible state with explicit expiry backed by abandoned-draft cleanup jobs; make conversion-to-final the durable transition that discards the draft; choose and DOCUMENT the concurrent-edit policy per draft type — last-writer-wins or versioned merge — never leaving it accidental; drafts inherit the sensitivity classification of their contents, so a draft holding PII or credentials is that class of data with matching retention and erasure duties.
+- **Production failure mode:** Abandoned drafts accumulate forever (or get purged mid-edit); two tabs overwrite each other silently under last-writer-wins nobody decided on; a draft full of sensitive input lives in an unclassified table outside retention and DSR scope.
+- **Existing-codebase evidence:** Find draft/temp tables and check expiry jobs exist and run; trace what happens to the draft row on successful conversion and abandonment; verify the draft store inherits classification, retention, and erasure from the final entity.
 
 ### 8.7. Expiration
 
-- **SHOULD — engineering rule:** Define TTL from correctness, security, and lifecycle requirements; add jitter for synchronized populations and distinguish logical expiry from physical cleanup.
-- **Production failure mode:** Data remains valid too long, expires simultaneously causing a stampede, or code assumes expired records are immediately deleted.
+- **SHOULD — engineering rule:** Bound every temporary artifact with an explicit TTL and an owner that deletes it: sessions, tokens, drafts, and staged uploads each state their lifetime, and cleanup sweeps run on schedule so nothing depends on process memory for expiry.
+- **Production failure mode:** Temporary rows accumulate forever because creation has no matching sweep, or aggressive cleanup deletes in-progress work because "temporary" was never distinguished from "active".
 - **Existing-codebase evidence:** Test exact boundary times with controlled clocks, delayed cleanup, clock skew, and mass expiry.
 
 ## 9. Concurrency, transactions, idempotency, and consistency
@@ -264,8 +262,8 @@ Security migrations—new keys, ciphers, headers, policies, scopes, token format
 - **MUST** — Make duplicate, concurrent, timed-out, retried, and partially failed operations converge to a documented valid outcome.
 - **MUST** — Use finite deadlines and bounded resource consumption; define what happens when dependencies, caches, telemetry, or providers are unavailable.
 - **MUST** — Provide migration, rollback/forward-fix, cleanup, reconciliation, observability, audit, and testing evidence before production release.
-- **MUST** — For **Temporary tokens**: Generate with cryptographic randomness, bind to purpose and subject/session, enforce short expiry and attempt limits, store a verifier rather than plaintext, and consume atomically once.
-- **MUST** — For **Draft states**: Use a proven implementation and understand quorum membership, term/epoch, log commitment, joint configuration, disk durability, and failure detector limits. Fence old leaders at external resources.
+- **MUST** — For **Temporary tokens**: Generate from a CSPRNG, bind to purpose and subject/session, enforce short expiry with attempt limits, store only a hashed verifier, and consume atomically exactly once.
+- **MUST** — For **Draft states**: Give drafts explicit expiry with abandoned-draft cleanup, make conversion-to-final the durable transition that discards the draft, document the concurrent-edit decision, and classify drafts by their contents.
 
 ### SHOULD
 

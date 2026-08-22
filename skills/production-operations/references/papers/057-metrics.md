@@ -57,8 +57,6 @@ The primary correctness question is not “does the happy path work?” but “c
 4. **Invariant 4:** Async boundaries require explicit propagation of trace, message, job, tenant, and causation identifiers.
 5. **Invariant 5:** Observability is part of the interface: operators need version, configuration, dependency, and state-transition visibility.
 
-Additional topic-specific invariants:
-
 ## 5. Architecture decisions and conflicting approaches
 
 There is no universally correct mechanism. The design must select an option from the actual invariants, workload, trust boundary, failure tolerance, and operating model—not from fashion.
